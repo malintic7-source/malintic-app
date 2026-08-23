@@ -1,11 +1,11 @@
-name: gestion_formations
+name: malintic_app
 services:
-  gestion_formations:
+  app:
     build:
       context: .
       # Serve the prebuilt Flutter bundle from build/web with Nginx
       dockerfile: Dockerfile.fast
-    container_name: gestion_formations_app
+    container_name: malintic_app
     ports:
       - "80:80"
       - "8080:80"
@@ -25,13 +25,13 @@ services:
       api:
         condition: service_healthy
     networks:
-      - gestion_formations_network
+      - malintic_network
 
   api:
     build:
       context: ./server
       dockerfile: Dockerfile
-    container_name: gestion_formations_api
+    container_name: malintic_api
     restart: always
     init: true
     env_file:
@@ -41,7 +41,7 @@ services:
       - PORT=5001
       - DATA_DIR=/data
     volumes:
-      - gestion_formations_data:/data
+      - malintic_data:/data
     expose:
       - "5001"
     healthcheck:
@@ -51,43 +51,43 @@ services:
       retries: 3
       start_period: 5s
     networks:
-      - gestion_formations_network
+      - malintic_network
 
   ngrok:
     image: ngrok/ngrok:latest
-    container_name: gestion_formations_ngrok
+    container_name: malintic_ngrok
     restart: always
     init: true
     depends_on:
-      gestion_formations:
+      app:
         condition: service_healthy
     ports:
       - "4040:4040"
     environment:
       NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN:?Ajoutez NGROK_AUTHTOKEN dans le fichier .env}
       NGROK_DOMAIN: ${NGROK_DOMAIN:-boil-prude-curry.ngrok-free.dev}
-    command: http --domain=${NGROK_DOMAIN:-boil-prude-curry.ngrok-free.dev} http://gestion_formations_app:80
+    command: http --domain=${NGROK_DOMAIN:-boil-prude-curry.ngrok-free.dev} http://malintic_app:80
     networks:
-      - gestion_formations_network
+      - malintic_network
 
   cloudflared:
     image: cloudflare/cloudflared:latest
-    container_name: gestion_formations_tunnel
+    container_name: malintic_tunnel
     restart: always
     init: true
     depends_on:
-      gestion_formations:
+      app:
         condition: service_healthy
     environment:
       TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN}
     command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
     networks:
-      - gestion_formations_network
+      - malintic_network
 
 volumes:
-  gestion_formations_data:
+  malintic_data:
     driver: local
 
 networks:
-  gestion_formations_network:
+  malintic_network:
     driver: bridge

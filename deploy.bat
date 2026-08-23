@@ -1,10 +1,10 @@
 @echo off
 setlocal enabledelayedexpansion
 pushd "%~dp0"
-title Deploiement Securise - Gestion Formations MNTIC
+title Deploiement Securise - M@LINTIC-APP
 
 echo ======================================================================
-echo   DEPLOIEMENT ^& MISE A JOUR SECURISEE - GESTION FORMATIONS MNTIC
+echo   DEPLOIEMENT ^& MISE A JOUR SECURISEE - M@LINTIC-APP
 echo   Dossier : %CD%
 echo ======================================================================
 echo.
@@ -24,9 +24,9 @@ echo [OK] Docker operationnel.
 echo.
 echo [2/6] Sauvegarde automatique preventive des donnees de production...
 if not exist "backup" mkdir "backup" >nul 2>&1
-docker exec gestion_formations_api test -f /data/database.json >nul 2>&1
+docker exec malintic_api test -f /data/database.json >nul 2>&1
 if %ERRORLEVEL% equ 0 (
-    docker cp gestion_formations_api:/data/database.json "backup\database_auto_backup.json" >nul 2>&1
+    docker cp malintic_api:/data/database.json "backup\database_auto_backup.json" >nul 2>&1
     echo [OK] Copie de securite creee dans backup\database_auto_backup.json.
 ) else (
     echo [INFO] Aucune donnee anterieure a sauvegarder.
@@ -49,9 +49,9 @@ echo [OK] Routage reseau physique/WSL et Pare-feu configures avec succes.
 :: 4. Compilation des images Docker
 echo.
 echo [4/6] Compilation des nouvelles images applicatives...
-docker compose -p gestion_formations build gestion_formations api
+docker compose -p malintic_app build app api
 if %ERRORLEVEL% neq 0 (
-    docker-compose -p gestion_formations build gestion_formations api
+    docker-compose -p malintic_app build app api
     if %ERRORLEVEL% neq 0 (
         echo [ERREUR] La compilation des images a echoue. L'ancienne version reste active.
         pause
@@ -64,9 +64,9 @@ echo [OK] Images a jour compilees.
 :: 5. Mise a jour des conteneurs (Volume de donnees conserve intact)
 echo.
 echo [5/6] Application de la mise a jour (Toutes donnees conservees)...
-docker compose -p gestion_formations up -d --remove-orphans
+docker compose -p malintic_app up -d --remove-orphans
 if %ERRORLEVEL% neq 0 (
-    docker-compose -p gestion_formations up -d --remove-orphans
+    docker-compose -p malintic_app up -d --remove-orphans
     if %ERRORLEVEL% neq 0 (
         echo [ERREUR] Le redemarrage des services a echoue.
         pause
@@ -79,12 +79,12 @@ echo [OK] Services applicatifs et tunnels redemarres.
 :: 6. Verification de la base de donnees
 echo.
 echo [6/6] Verification des donnees...
-docker exec gestion_formations_api test -f /data/database.json >nul 2>&1
+docker exec malintic_api test -f /data/database.json >nul 2>&1
 if %ERRORLEVEL% neq 0 (
     if exist "server\initial_database.json" (
         echo Initialisation initiale de la base...
-        docker cp "server\initial_database.json" gestion_formations_api:/data/database.json >nul 2>&1
-        docker compose -p gestion_formations restart api >nul 2>&1
+        docker cp "server\initial_database.json" malintic_api:/data/database.json >nul 2>&1
+        docker compose -p malintic_app restart api >nul 2>&1
         echo [OK] Base initiale installee.
     )
 ) else (
@@ -110,7 +110,7 @@ for /f "tokens=2 delims=:" %%a in ('ipconfig ^| findstr /c:"IPv4" /c:"Adresse IP
 
 echo.
 echo Statut des services actifs :
-docker compose -p gestion_formations ps
+docker compose -p malintic_app ps
 
 echo.
 echo ======================================================================

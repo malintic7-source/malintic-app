@@ -132021,7 +132021,7 @@ A.bgr.prototype={
 $1(a){return J.a8(a)},
 $S:65}
 A.a0S.prototype={
-L(a){return new A.KY(B.Xj,"MALINTIC App",$.bx3(),$.bx2(),B.bmu,!1,null)}}
+L(a){return new A.KY(B.Xj,"M@LINTIC-APP",$.bx3(),$.bx2(),B.bmu,!1,null)}}
 A.Hu.prototype={
 ah(){return new A.a6M()}}
 A.a6M.prototype={

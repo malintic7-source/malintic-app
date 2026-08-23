@@ -1,11 +1,11 @@
 {
-    "name": "MALINTIC App",
-    "short_name": "MALINTIC",
+    "name": "M@LINTIC-APP",
+    "short_name": "M@LINTIC-APP",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#6366F1",
     "theme_color": "#6366F1",
-    "description": "MALINTIC App - Plateforme multi-services (Formations, Prestations, E-Commerce, Incubateur)",
+    "description": "M@LINTIC-APP - Plateforme multi-services (Formations, Prestations, E-Commerce, Incubateur)",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
