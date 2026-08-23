@@ -1,5 +1,5 @@
 {
-  "name": "gestion-formations-api",
+  "name": "malintic-app-api",
   "version": "2.0.0",
   "private": true,
   "scripts": { "start": "node server.js" },
