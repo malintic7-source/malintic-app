@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <!--
+    If you are serving your web app in a path other than the root, change the
+    href value below to reflect the base path you are serving from.
+
+    The path provided below has to start and end with a slash "/" in order for
+    it to work correctly.
+
+    For more details:
+    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
+
+    This is a placeholder for base href that will be replaced by the value of
+    the `--base-href` argument provided to `flutter build`.
+  -->
+  <base href="/">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="Gestion des formations M@LINTIC - Plateforme complète de gestion et suivi des formations professionnelles">
+  <meta name="theme-color" content="#0066CC">
+
+  <!-- Open Graph Tags -->
+  <meta property="og:title" content="Malintic">
+  <meta property="og:description" content="Plateforme complète de gestion et suivi des formations professionnelles Malintic">
+  <meta property="og:image" content="https://malintic.web.app/images/Malintic.png">
+  <meta property="og:url" content="https://malintic.web.app/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Malintic">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Malintic">
+  <meta name="twitter:description" content="Plateforme complète de gestion et suivi des formations professionnelles Malintic">
+  <meta name="twitter:image" content="https://malintic.web.app/images/Malintic.png">
+
+  <!-- iOS meta tags & icons -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="gestion_formations">
+  <link rel="apple-touch-icon" href="images/Malintic.png">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="images/Malintic.png"/>
+
+  <title>Malintic</title>
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <!-- Premium Loading Screen - M@LINTIC Style -->
+  <div id="loading-screen" style="
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #F8F9FA 0%, #FFFFFF 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  ">
+    <style>
+      @keyframes slideDown {
+        0% { height: 0%; }
+        100% { height: 100%; }
+      }
+
+      @keyframes fadeIn {
+        0% { opacity: 0; }
+        100% { opacity: 1; }
+      }
+
+      .loader-wrapper {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 40px;
+      }
+
+      .logo-box {
+        width: 140px;
+        height: 140px;
+        background: white;
+        border-radius: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 8px 24px rgba(0, 102, 204, 0.15);
+        animation: fadeIn 0.8s ease-out;
+      }
+
+      .logo-img {
+        width: 120px;
+        height: 120px;
+        object-fit: contain;
+      }
+
+      .loader-text {
+        text-align: center;
+        animation: fadeIn 0.8s ease-out 0.2s backwards;
+      }
+
+      .loader-title {
+        color: #1A1A1A;
+        font-size: 28px;
+        font-weight: 700;
+        margin-bottom: 8px;
+        letter-spacing: -0.5px;
+      }
+
+      .loader-subtitle {
+        color: #666666;
+        font-size: 14px;
+        font-weight: 500;
+      }
+
+      .progress-wrapper {
+        width: 100%;
+        max-width: 300px;
+        animation: fadeIn 0.8s ease-out 0.4s backwards;
+      }
+
+      .progress-label {
+        color: #666666;
+        font-size: 12px;
+        font-weight: 600;
+        margin-bottom: 12px;
+        display: block;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      .progress-bar {
+        width: 100%;
+        height: 6px;
+        background: #E0E0E0;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      }
+
+      .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #0066CC 0%, #FF6B35 100%);
+        width: 0%;
+        animation: loading 2s ease-in-out infinite;
+        border-radius: 8px;
+      }
+
+      @keyframes loading {
+        0% { width: 0%; }
+        50% { width: 100%; }
+        100% { width: 100%; }
+      }
+
+      .status-text {
+        color: #666666;
+        font-size: 12px;
+        margin-top: 16px;
+        font-weight: 500;
+        animation: fadeIn 0.8s ease-out 0.6s backwards;
+      }
+    </style>
+
+    <div class="loader-wrapper">
+      <div class="logo-box">
+        <img src="images/Malintic.png" alt="M@LINTIC" class="logo-img">
+      </div>
+
+      <div class="loader-text">
+        <div class="loader-title">M@LI-NTIC</div>
+      </div>
+
+      <div class="progress-wrapper">
+        <span class="progress-label">Chargement</span>
+        <div class="progress-bar">
+          <div class="progress-fill"></div>
+        </div>
+      </div>
+
+      <div class="status-text">Initialisation en cours...</div>
+    </div>
+  </div>
+
+  <!--
+    You can customize the "flutter_bootstrap.js" script.
+    This is useful to provide a custom configuration to the Flutter loader
+    or to give the user feedback during the initialization process.
+
+    For more details:
+    * https://docs.flutter.dev/platform-integration/web/initialization
+  -->
+  <script>
+    // This marker is stored per browser tab, unlike cookies which are shared
+    // by all tabs. Only a tab that logged in can invalidate a session on exit.
+    window.malinticActivateTabSession = function() {
+      sessionStorage.setItem('malintic_authenticated_tab', '1');
+    };
+    window.malinticDeactivateTabSession = function() {
+      sessionStorage.removeItem('malintic_authenticated_tab');
+    };
+
+    window.addEventListener('load', function() {
+      const loadingScreen = document.getElementById('loading-screen');
+      if (loadingScreen) {
+        loadingScreen.style.transition = 'opacity 0.3s ease-out';
+        loadingScreen.style.opacity = '0';
+        setTimeout(function() {
+          loadingScreen.style.display = 'none';
+        }, 300);
+      }
+    });
+  </script>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>

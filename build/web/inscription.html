@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Redirection Inscription</title>
+</head>
+<body>
+  <p>Redirection vers la page d'inscription...</p>
+  <script>
+    (function() {
+      const params = new URLSearchParams(window.location.search);
+      const formationId = params.get('formationId') || params.get('id') || '';
+      const target = `/?inscription=true&formationId=${encodeURIComponent(formationId)}`;
+      // Use replace so back button doesn't return to this redirect page
+      window.location.replace(target);
+    })();
+  </script>
+</body>
+</html>
