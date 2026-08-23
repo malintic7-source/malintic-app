@@ -16,7 +16,6 @@ npm-debug.log
 .flutter-plugins-dependencies
 .dart_tool
 .packages
-pubspec.lock
 build/*
 !build/web
 dist
