@@ -75,7 +75,13 @@ class LocalDataService {
     _syncInProgress = true;
     try {
       final response = await http
-          .get(_apiUri('state'))
+          .get(
+            _apiUri('state'),
+            headers: const {
+              'ngrok-skip-browser-warning': 'true',
+              'Accept': 'application/json',
+            },
+          )
           .timeout(const Duration(seconds: 20));
       if (response.statusCode != 200) return;
       final state = jsonDecode(response.body) as Map<String, dynamic>;
@@ -138,39 +144,53 @@ class LocalDataService {
           )
           .toList();
 
-      _users
-        ..clear()
-        ..addAll(users);
-      _formations
-        ..clear()
-        ..addAll(formations);
-      _inscriptions
-        ..clear()
-        ..addAll(inscriptions);
-      _payments
-        ..clear()
-        ..addAll(payments);
-      _notifications
-        ..clear()
-        ..addAll(notifications);
-      _auditLogs
-        ..clear()
-        ..addAll(logs);
-      _seances
-        ..clear()
-        ..addAll(seances);
-      _saveUsersToStorage();
-      _saveFormationsToStorage();
-      _saveInscriptionsToStorage();
-      _savePaymentsToStorage();
-      _saveSeancesToStorage();
-      _usersController.add(List.unmodifiable(_users));
-      _formationsController.add(List.unmodifiable(_formations));
-      _inscriptionsController.add(List.unmodifiable(_inscriptions));
-      _paymentsController.add(List.unmodifiable(_payments));
-      _notificationsController.add(List.unmodifiable(_notifications));
-      _auditLogsController.add(List.unmodifiable(_auditLogs));
-      _seancesController.add(List.unmodifiable(_seances));
+      if (formations.isNotEmpty) {
+        _formations
+          ..clear()
+          ..addAll(formations);
+        _saveFormationsToStorage();
+        _formationsController.add(List.unmodifiable(_formations));
+      }
+      if (users.isNotEmpty) {
+        _users
+          ..clear()
+          ..addAll(users);
+        _saveUsersToStorage();
+        _usersController.add(List.unmodifiable(_users));
+      }
+      if (inscriptions.isNotEmpty) {
+        _inscriptions
+          ..clear()
+          ..addAll(inscriptions);
+        _saveInscriptionsToStorage();
+        _inscriptionsController.add(List.unmodifiable(_inscriptions));
+      }
+      if (payments.isNotEmpty) {
+        _payments
+          ..clear()
+          ..addAll(payments);
+        _savePaymentsToStorage();
+        _paymentsController.add(List.unmodifiable(_payments));
+      }
+      if (notifications.isNotEmpty) {
+        _notifications
+          ..clear()
+          ..addAll(notifications);
+        _notificationsController.add(List.unmodifiable(_notifications));
+      }
+      if (logs.isNotEmpty) {
+        _auditLogs
+          ..clear()
+          ..addAll(logs);
+        _auditLogsController.add(List.unmodifiable(_auditLogs));
+      }
+      if (seances.isNotEmpty) {
+        _seances
+          ..clear()
+          ..addAll(seances);
+        _saveSeancesToStorage();
+        _seancesController.add(List.unmodifiable(_seances));
+      }
     } catch (e) {
       // #4 — Logger les erreurs de synchronisation plutôt que de les ignorer silencieusement.
       debugPrint('[Malintic] Erreur sync API: $e');
