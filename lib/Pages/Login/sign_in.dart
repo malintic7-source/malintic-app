@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gestion_formations/config/theme.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:gestion_formations/Pages/Login/welcom_page.dart';
+import 'package:gestion_formations/Pages/Login/welcome_page.dart';
 import 'package:gestion_formations/Pages/home_screen.dart';
 import 'package:gestion_formations/Services/auth_provider.dart';
 
@@ -43,7 +43,7 @@ class _SignInPageState extends State<SignInPage> {
               Navigator.of(context).pop();
             } else {
               Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (context) => const WelcomPage()),
+                MaterialPageRoute(builder: (context) => const WelcomePage()),
               );
             }
           },
@@ -54,7 +54,7 @@ class _SignInPageState extends State<SignInPage> {
           IconButton(
             onPressed: () {
               Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (context) => const WelcomPage()),
+                MaterialPageRoute(builder: (context) => const WelcomePage()),
               );
             },
             icon: const Icon(Icons.close_rounded, color: AppTheme.textPrimary),
@@ -181,41 +181,36 @@ class _SignInPageState extends State<SignInPage> {
 
   Widget _buildLogo() {
     final screenWidth = MediaQuery.of(context).size.width;
-    final logoSize = screenWidth < 600 ? 120.0 : 140.0;
-    final titleSize = screenWidth < 600 ? 26.0 : 32.0;
+    final logoSize = screenWidth < 600 ? 145.0 : 170.0;
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: logoSize,
-          height: logoSize,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: Colors.white,
-            boxShadow: AppTheme.softShadow,
+    return Container(
+      width: logoSize,
+      height: logoSize,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.primary.withValues(alpha: 0.14),
+            blurRadius: 28,
+            offset: const Offset(0, 10),
           ),
-          child: Center(
-            child: Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Image.asset(
-                'images/logo.png',
-                fit: BoxFit.contain,
-              ),
-            ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
           ),
-        ),
-        const SizedBox(height: 20),
-        Text(
-          'M@LI-NTIC',
-          style: GoogleFonts.poppins(
-            fontSize: titleSize,
-            fontWeight: FontWeight.w800,
-            color: AppTheme.textPrimary,
-            letterSpacing: -0.5,
+        ],
+      ),
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Image.asset(
+            'images/logo.png',
+            fit: BoxFit.contain,
           ),
         ),
-      ],
+      ),
     );
   }
 
@@ -324,7 +319,7 @@ class _SignInPageState extends State<SignInPage> {
       ),
       decoration: InputDecoration(
         labelText: 'Mot de passe',
-        hintText: '00000000 (par défaut)',
+        hintText: '••••••••',
         prefixIcon: const Icon(
           Icons.lock_outline_rounded,
           size: 20,
@@ -435,5 +430,8 @@ class _SignInPageState extends State<SignInPage> {
     }
   }
 }
+
+/// Backward compatibility alias
+typedef SignIn = SignInPage;
 
 

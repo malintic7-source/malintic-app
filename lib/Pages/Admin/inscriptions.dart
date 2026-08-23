@@ -81,6 +81,7 @@ Map<String, dynamic> buildStudentUserDataFromInscription(
     'phone': phone,
     'role': UserRole.apprenant.toString(),
     'estActif': true,
+    'doitChangerMotDePasse': true,
     'dateCreation': DateTime.now(),
     'dateModification': DateTime.now(),
   };
@@ -150,13 +151,41 @@ class _AdminInscriptionsState extends State<AdminInscriptions> with TickerProvid
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Gestion des Inscriptions',
-              style: GoogleFonts.poppins(
-                fontSize: isMobile ? 20 : 28,
-                fontWeight: FontWeight.w800,
-                color: Colors.white,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: Text(
+                    'Gestion des Inscriptions',
+                    style: GoogleFonts.poppins(
+                      fontSize: isMobile ? 20 : 28,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: IconButton(
+                    tooltip: 'Actualiser les inscriptions',
+                    icon: const Icon(Icons.refresh_rounded, color: Colors.white, size: 22),
+                    onPressed: () {
+                      setState(() {});
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('🔄 Liste des inscriptions actualisée !'),
+                          backgroundColor: AppTheme.primary,
+                          duration: Duration(seconds: 2),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 6),
             Text(
@@ -732,7 +761,7 @@ class _AdminInscriptionsState extends State<AdminInscriptions> with TickerProvid
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
@@ -773,7 +802,7 @@ class _AdminInscriptionsState extends State<AdminInscriptions> with TickerProvid
                   ],
                 ),
               SizedBox(height: 20),
-              _buildStatusSection(inscriptionId, currentStatusStr),
+              _buildStatusSection(inscriptionId, currentStatusStr, dialogContext),
             ],
           ),
         ),
@@ -841,7 +870,7 @@ class _AdminInscriptionsState extends State<AdminInscriptions> with TickerProvid
     }
   }
 
-  Widget _buildStatusSection(String inscriptionId, dynamic currentStatusInput) {
+  Widget _buildStatusSection(String inscriptionId, dynamic currentStatusInput, [BuildContext? dialogCtx]) {
     final currentStatusStr = (currentStatusInput is Map)
         ? (currentStatusInput['status'] ?? currentStatusInput['statut'] ?? '').toString()
         : (currentStatusInput ?? '').toString();
@@ -885,7 +914,7 @@ class _AdminInscriptionsState extends State<AdminInscriptions> with TickerProvid
                       'en_attente',
                       Colors.amber,
                       currentStatusStr,
-                      () => _updateStatus(inscriptionId, 'en_attente'),
+                      () => _updateStatus(inscriptionId, 'en_attente', dialogCtx),
                     ),
                   ),
                   SizedBox(width: 8),
@@ -895,7 +924,7 @@ class _AdminInscriptionsState extends State<AdminInscriptions> with TickerProvid
                       'valide',
                       AppTheme.success,
                       currentStatusStr,
-                      () => _updateStatus(inscriptionId, 'valide'),
+                      () => _updateStatus(inscriptionId, 'valide', dialogCtx),
                     ),
                   ),
                   SizedBox(width: 8),
@@ -905,7 +934,7 @@ class _AdminInscriptionsState extends State<AdminInscriptions> with TickerProvid
                       'rejete',
                       AppTheme.error,
                       currentStatusStr,
-                      () => _updateStatus(inscriptionId, 'rejete'),
+                      () => _updateStatus(inscriptionId, 'rejete', dialogCtx),
                     ),
                   ),
                 ],
@@ -974,20 +1003,26 @@ class _AdminInscriptionsState extends State<AdminInscriptions> with TickerProvid
     );
   }
 
-  Future<void> _updateStatus(String inscriptionId, String newStatus) async {
+  Future<void> _updateStatus(String inscriptionId, String newStatus, [BuildContext? dialogCtx]) async {
     if (newStatus == 'valide') {
-      await _showValidationDialog(inscriptionId);
+      await _showValidationDialog(inscriptionId, dialogCtx);
     } else {
       try {
         await _db.updateInscriptionStatus(inscriptionId, newStatus);
-        if (!mounted) return;
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('✅ Statut mis à jour'),
-            backgroundColor: AppTheme.success,
-          ),
-        );
+        if (dialogCtx != null && dialogCtx.mounted) {
+          Navigator.pop(dialogCtx, true);
+        } else if (mounted) {
+          Navigator.pop(context, true);
+        }
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(newStatus == 'rejete' ? '🚫 Inscription marquée comme Rejetée' : '✅ Statut mis à jour avec succès'),
+              backgroundColor: newStatus == 'rejete' ? AppTheme.error : AppTheme.success,
+            ),
+          );
+          setState(() {});
+        }
       } catch (e) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1000,7 +1035,7 @@ class _AdminInscriptionsState extends State<AdminInscriptions> with TickerProvid
     }
   }
 
-  Future<void> _showValidationDialog(String inscriptionId) async {
+  Future<void> _showValidationDialog(String inscriptionId, [BuildContext? parentDialogCtx]) async {
     final inscription = _db.getInscriptionById(inscriptionId);
     if (inscription == null) return;
 
@@ -1258,55 +1293,63 @@ class _AdminInscriptionsState extends State<AdminInscriptions> with TickerProvid
                 ),
                 child: Text('Annuler', style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
               ),
-              StatefulBuilder(
-                builder: (context, setBtnState) {
-                  bool isValidating = false;
-                  return ElevatedButton.icon(
-                    icon: isValidating
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                          )
-                        : const Icon(Icons.check_circle_rounded, size: 18),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: isValidating ? Colors.grey.shade400 : AppTheme.primary,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                      elevation: 2,
-                    ),
-                    label: Text(isValidating ? 'Validation...' : 'Valider', style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
-                    onPressed: isValidating
-                        ? null
-                        : () async {
-                            setBtnState(() => isValidating = true);
-                            try {
-                              final student = await _db.acceptInscription(
-                                inscriptionId,
-                                moduleHours: moduleHours,
-                                formationOverride: form,
-                              );
-                              if (!ctx.mounted) return;
-                              Navigator.pop(ctx);
-                              ScaffoldMessenger.of(ctx).showSnackBar(
-                                SnackBar(
-                                  content: Text('✅ Inscription validée ! Matricule attribué : ${student.matricule ?? ''}'),
-                                  backgroundColor: AppTheme.success,
-                                  duration: const Duration(seconds: 5),
-                                ),
-                              );
-                            } catch (error) {
-                              if (!ctx.mounted) return;
-                              setBtnState(() => isValidating = false);
-                              ScaffoldMessenger.of(ctx).showSnackBar(
-                                SnackBar(content: Text('❌ Validation impossible : $error'), backgroundColor: AppTheme.error),
-                              );
-                            }
-                          },
-                  );
-                },
-              ),
+              (() {
+                bool isValidating = false;
+                return StatefulBuilder(
+                  builder: (context, setBtnState) {
+                    return ElevatedButton.icon(
+                      icon: isValidating
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            )
+                          : const Icon(Icons.check_circle_rounded, size: 18),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: isValidating ? Colors.grey.shade400 : AppTheme.primary,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        elevation: 2,
+                      ),
+                      label: Text(isValidating ? 'Validation...' : 'Valider', style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
+                      onPressed: isValidating
+                          ? null
+                          : () async {
+                              setBtnState(() => isValidating = true);
+                              try {
+                                final student = await _db.acceptInscription(
+                                  inscriptionId,
+                                  moduleHours: moduleHours,
+                                  formationOverride: form,
+                                );
+                                if (!ctx.mounted) return;
+                                Navigator.pop(ctx, true); // Close sub-dialog with success signal
+                                if (parentDialogCtx != null && parentDialogCtx.mounted) {
+                                  Navigator.pop(parentDialogCtx, true); // Close parent details dialog
+                                }
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('✅ Inscription validée ! Stagiaire: ${student.prenom} ${student.nom} (${student.matricule ?? 'Sans matricule'})'),
+                                      backgroundColor: AppTheme.success,
+                                      duration: const Duration(seconds: 4),
+                                    ),
+                                  );
+                                  setState(() {});
+                                }
+                              } catch (error) {
+                                if (!ctx.mounted) return;
+                                setBtnState(() => isValidating = false);
+                                ScaffoldMessenger.of(ctx).showSnackBar(
+                                  SnackBar(content: Text('❌ Validation impossible : $error'), backgroundColor: AppTheme.error),
+                                );
+                              }
+                            },
+                    );
+                  },
+                );
+              })(),
             ],
           );
         },

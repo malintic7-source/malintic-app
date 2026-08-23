@@ -10,6 +10,7 @@ import 'package:gestion_formations/Services/db_services.dart';
 import 'package:gestion_formations/Services/payment_report_service.dart';
 import 'package:gestion_formations/Services/pdf_helper.dart';
 import 'package:gestion_formations/Widgets/chart_widgets.dart';
+import 'package:gestion_formations/Widgets/share_formation_dialog.dart';
 
 class AdminDashboard extends StatefulWidget {
   final User user;
@@ -66,6 +67,8 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
               SizedBox(height: gap + 4),
               _buildFinancialAndTrainingCharts(isMobile),
               SizedBox(height: gap + 4),
+              _buildMonthlyInscriptionsCard(isMobile),
+              SizedBox(height: isMobile ? 16 : 24),
               _buildPaymentDueAlertsSection(isMobile),
               SizedBox(height: gap + 4),
               _buildRecentActivities(isMobile),
@@ -517,7 +520,57 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
     );
   }
 
+  /// Calcule les encaissements réels des 6 derniers mois
+  List<double> _computeMonthlyRevenue() {
+    final payments = _db.getPayments();
+    final now = DateTime.now();
+    final result = List<double>.filled(6, 0);
+    for (final p in payments) {
+      if (p.status.name != 'effectue') continue;
+      final payDate = p.dateEffectuation ?? p.dateCreation;
+      final monthsAgo = (now.year - payDate.year) * 12 + (now.month - payDate.month);
+      if (monthsAgo >= 0 && monthsAgo < 6) {
+        result[5 - monthsAgo] = result[5 - monthsAgo] + p.montant;
+      }
+    }
+    return result;
+  }
+
+  /// Calcule les inscriptions réelles des 6 derniers mois
+  List<double> _computeMonthlyInscriptions() {
+    final inscriptions = _db.getInscriptions();
+    final now = DateTime.now();
+    final result = List<double>.filled(6, 0);
+    for (final ins in inscriptions) {
+      final monthsAgo = (now.year - ins.dateInscription.year) * 12 + (now.month - ins.dateInscription.month);
+      if (monthsAgo >= 0 && monthsAgo < 6) {
+        result[5 - monthsAgo] += 1;
+      }
+    }
+    return result;
+  }
+
+  /// Calcule la variation % du mois courant vs mois précédent
+  String _computeVariationLabel(List<double> data) {
+    if (data.length < 2) return 'N/A';
+    final current = data[data.length - 1];
+    final prev = data[data.length - 2];
+    if (prev == 0) return current > 0 ? '+100%' : '0%';
+    final pct = ((current - prev) / prev * 100).round();
+    return pct >= 0 ? '+$pct%' : '$pct%';
+  }
+
   Widget _buildMonthlyRevenueChartCard() {
+    final revenueData = _computeMonthlyRevenue();
+    final varLabel = _computeVariationLabel(revenueData);
+    final isPositive = varLabel.startsWith('+');
+    final now = DateTime.now();
+    final months = List.generate(6, (i) {
+      final d = DateTime(now.year, now.month - (5 - i));
+      const names = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
+      return names[(d.month - 1) % 12];
+    });
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -540,7 +593,7 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
                     style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w800, color: AppTheme.textPrimary),
                   ),
                   Text(
-                    'Encaissements réels par mois',
+                    'Encaissements réels — 6 derniers mois',
                     style: GoogleFonts.poppins(fontSize: 11, color: AppTheme.textSecondary),
                   ),
                 ],
@@ -548,12 +601,12 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: AppTheme.success.withValues(alpha: 0.12),
+                  color: (isPositive ? AppTheme.success : AppTheme.error).withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  '+18.4% ce mois',
-                  style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w700, color: AppTheme.success),
+                  '$varLabel ce mois',
+                  style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w700, color: isPositive ? AppTheme.success : AppTheme.error),
                 ),
               ),
             ],
@@ -562,11 +615,19 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
           SizedBox(
             height: 160,
             child: MiniLineChart(
-              data: const [120000, 250000, 310000, 480000, 420000, 690000, 850000],
+              data: revenueData.isEmpty ? [0, 0, 0, 0, 0, 0] : revenueData,
               colors: const [AppTheme.primary, AppTheme.accent],
               height: 160,
               width: double.infinity,
             ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: months.map((m) => Text(
+              m,
+              style: GoogleFonts.poppins(fontSize: 10, color: AppTheme.textMuted, fontWeight: FontWeight.w500),
+            )).toList(),
           ),
         ],
       ),
@@ -652,6 +713,97 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
   }
 
   // ========== 5. PAYMENT DUE ALERTS SECTION ==========
+  Widget _buildMonthlyInscriptionsCard(bool isMobile) {
+    final inscData = _computeMonthlyInscriptions();
+    final varLabel = _computeVariationLabel(inscData);
+    final isPositive = varLabel.startsWith('+');
+    final now = DateTime.now();
+    final months = List.generate(6, (i) {
+      final d = DateTime(now.year, now.month - (5 - i));
+      const names = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
+      return names[(d.month - 1) % 12];
+    });
+    final totalThis = inscData.isEmpty ? 0 : inscData.last.toInt();
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: AppTheme.cardShadow,
+        border: Border.all(color: AppTheme.indigoAccent.withValues(alpha: 0.15)),
+      ),
+      padding: EdgeInsets.all(isMobile ? 14 : 18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '📈 Nouvelles Inscriptions par Mois',
+                    style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w800, color: AppTheme.textPrimary),
+                  ),
+                  Text(
+                    'Demandes enregistrées — 6 derniers mois',
+                    style: GoogleFonts.poppins(fontSize: 11, color: AppTheme.textSecondary),
+                  ),
+                ],
+              ),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppTheme.indigoAccent.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      '$totalThis ce mois',
+                      style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w700, color: AppTheme.indigoAccent),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: (isPositive ? AppTheme.success : AppTheme.error).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      varLabel,
+                      style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w700, color: isPositive ? AppTheme.success : AppTheme.error),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            height: 120,
+            child: MiniBarChart(
+              data: inscData.isEmpty ? [0, 0, 0, 0, 0, 0] : inscData,
+              colors: const [AppTheme.indigoAccent, AppTheme.purpleAccent],
+              height: 120,
+              width: double.infinity,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: months.map((m) => Text(
+              m,
+              style: GoogleFonts.poppins(fontSize: 10, color: AppTheme.textMuted, fontWeight: FontWeight.w500),
+            )).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildPaymentDueAlertsSection(bool isMobile) {
     final acceptedInscriptions = _db.getInscriptions().where((i) => i.status == InscriptionStatus.acceptee).toList();
     final debtors = acceptedInscriptions.where((i) => _db.getInscriptionBalance(i.id) > 0).take(5).toList();
@@ -873,15 +1025,13 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) {
-          final origin = Uri.base.origin.startsWith('http') ? Uri.base.origin : '';
-          final shareUrl = origin.isNotEmpty ? '$origin/formation.html?id=${selected.id}' : '/formation.html?id=${selected.id}';
           return AlertDialog(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             title: Row(
               children: [
                 const Icon(Icons.share_rounded, color: AppTheme.primary),
                 const SizedBox(width: 8),
-                Text('Lien Public de Formation', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w800)),
+                Text('Partager une Formation', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w800)),
               ],
             ),
             content: Column(
@@ -889,7 +1039,7 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('Choisir la formation à partager :', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600)),
-                const SizedBox(height: 6),
+                const SizedBox(height: 8),
                 DropdownButtonFormField<Formation>(
                   initialValue: selected,
                   isExpanded: true,
@@ -898,14 +1048,10 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
                     if (val != null) setDialogState(() => selected = val);
                   },
                 ),
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(color: AppTheme.primary.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(10)),
-                  child: SelectableText(
-                    shareUrl,
-                    style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w700, color: AppTheme.primary),
-                  ),
+                const SizedBox(height: 12),
+                Text(
+                  'Vous pouvez générer les QR Codes et liens pour un partage à distance (Internet / WhatsApp) ou local (Wi-Fi de l\'établissement).',
+                  style: GoogleFonts.poppins(fontSize: 11, color: Colors.black54),
                 ),
               ],
             ),
@@ -913,14 +1059,11 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
               TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Fermer')),
               ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primary, foregroundColor: Colors.white),
-                icon: const Icon(Icons.copy_rounded, size: 16),
-                label: const Text('Copier le Lien'),
+                icon: const Icon(Icons.qr_code_rounded, size: 16),
+                label: const Text('Afficher QR & Liens (LAN/Public)'),
                 onPressed: () {
-                  Clipboard.setData(ClipboardData(text: shareUrl));
                   Navigator.pop(ctx);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('✅ Lien public pour "${selected.titre}" copié (${selected.id}) !'), backgroundColor: AppTheme.success),
-                  );
+                  ShareFormationDialog.show(context, selected);
                 },
               ),
             ],

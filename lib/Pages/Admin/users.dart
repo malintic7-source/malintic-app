@@ -543,9 +543,9 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
                     value: 'reset_password',
                     child: Row(
                       children: [
-                        Icon(Icons.lock_reset_rounded, size: 18),
+                        Icon(Icons.key_rounded, size: 18, color: AppTheme.primary),
                         SizedBox(width: 8),
-                        Text('Réinitialiser mot de passe'),
+                        Text('Modifier / Réinitialiser mot de passe', style: TextStyle(fontWeight: FontWeight.w600)),
                       ],
                     ),
                   ),
@@ -641,14 +641,15 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
     final phoneController = TextEditingController();
     UserRole selectedUserRole = UserRole.apprenant;
     final formations = LocalDataService().getFormations();
-    final selectedModulesByFormation = <String, Set<String>>{
-      for (final formation in formations) formation.id: <String>{},
+    final Map<String, Set<String>> selectedModulesByFormation = {
+      for (final f in formations) f.id: <String>{},
     };
+    bool isSubmitting = false;
 
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
+        builder: (context, setDialogState) => AlertDialog(
           title: Text(
             'Créer un utilisateur',
             style: GoogleFonts.poppins(fontWeight: FontWeight.w700),
@@ -705,7 +706,7 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
                       .toList(),
                   onChanged: (value) {
                     if (value != null) {
-                      setState(() => selectedUserRole = value);
+                      setDialogState(() => selectedUserRole = value);
                     }
                   },
                 ),
@@ -738,7 +739,7 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
                           contentPadding: EdgeInsets.zero,
                           value: selectedModulesByFormation[formation.id]!.contains(module),
                           title: Text(module, style: GoogleFonts.poppins(fontSize: 12)),
-                          onChanged: (checked) => setState(() {
+                          onChanged: (checked) => setDialogState(() {
                             if (checked == true) {
                               selectedModulesByFormation[formation.id]!.add(module);
                             } else {
@@ -758,7 +759,7 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    'Mot de passe par défaut: 00000000',
+                    'Un mot de passe temporaire sera généré automatiquement.',
                     style: GoogleFonts.poppins(
                       fontSize: 12,
                       color: AppTheme.primary,
@@ -774,113 +775,108 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
               onPressed: () => Navigator.pop(context),
               child: const Text('Annuler'),
             ),
-            StatefulBuilder(
-              builder: (context, setBtnState) {
-                bool isSubmitting = false;
-                return Container(
-                  decoration: BoxDecoration(
-                    gradient: isSubmitting ? null : AppTheme.primaryGradient,
-                    color: isSubmitting ? Colors.grey.shade400 : null,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: isSubmitting
-                          ? null
-                          : () async {
-                              final localContext = context;
-                              final prenom = prenomController.text.trim();
-                              final nom = nomController.text.trim();
-                              final email = emailController.text.trim().toLowerCase();
-                              final phone = phoneController.text.trim();
+            Container(
+              decoration: BoxDecoration(
+                gradient: isSubmitting ? null : AppTheme.primaryGradient,
+                color: isSubmitting ? Colors.grey.shade400 : null,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: isSubmitting
+                      ? null
+                      : () async {
+                          final localContext = context;
+                          final prenom = prenomController.text.trim();
+                          final nom = nomController.text.trim();
+                          final email = emailController.text.trim().toLowerCase();
+                          final phone = phoneController.text.trim();
 
-                              if (prenom.isEmpty || nom.isEmpty || email.isEmpty) {
-                                ScaffoldMessenger.of(localContext).showSnackBar(
-                                  const SnackBar(content: Text('Veuillez remplir tous les champs obligatoires (prénom, nom, email).')),
+                          if (prenom.isEmpty || nom.isEmpty || email.isEmpty) {
+                            ScaffoldMessenger.of(localContext).showSnackBar(
+                              const SnackBar(content: Text('Veuillez remplir tous les champs obligatoires (prénom, nom, email).')),
+                            );
+                            return;
+                          }
+
+                          final emailRegExp = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+');
+                          if (!emailRegExp.hasMatch(email)) {
+                            ScaffoldMessenger.of(localContext).showSnackBar(
+                              const SnackBar(content: Text('Veuillez fournir une adresse email valide.')),
+                            );
+                            return;
+                          }
+
+                          final existingUser = LocalDataService().getUsers().where((u) => u.email.toLowerCase() == email).firstOrNull;
+                          if (existingUser != null) {
+                            ScaffoldMessenger.of(localContext).showSnackBar(
+                              const SnackBar(content: Text('Un compte avec cette adresse email existe déjà.')),
+                            );
+                            return;
+                          }
+
+                          setDialogState(() => isSubmitting = true);
+                          try {
+                            await AuthProvider().createUserByAdmin(
+                              email: email,
+                              nom: nom,
+                              prenom: prenom,
+                              phone: phone,
+                              role: selectedUserRole,
+                            );
+
+                            if (selectedUserRole == UserRole.formateur) {
+                              final hasManualAssignments = selectedModulesByFormation.values
+                                  .any((modules) => modules.isNotEmpty);
+                              if (hasManualAssignments) {
+                                final formateur = LocalDataService().getUsers().firstWhere(
+                                  (user) => user.email.toLowerCase() == email,
                                 );
-                                return;
-                              }
-
-                              final emailRegExp = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+');
-                              if (!emailRegExp.hasMatch(email)) {
-                                ScaffoldMessenger.of(localContext).showSnackBar(
-                                  const SnackBar(content: Text('Veuillez fournir une adresse email valide.')),
-                                );
-                                return;
-                              }
-
-                              final existingUser = LocalDataService().getUsers().where((u) => u.email.toLowerCase() == email).firstOrNull;
-                              if (existingUser != null) {
-                                ScaffoldMessenger.of(localContext).showSnackBar(
-                                  const SnackBar(content: Text('Un compte avec cette adresse email existe déjà.')),
-                                );
-                                return;
-                              }
-
-                              setBtnState(() => isSubmitting = true);
-                              try {
-                                await AuthProvider().createUserByAdmin(
-                                  email: email,
-                                  nom: nom,
-                                  prenom: prenom,
-                                  phone: phone,
-                                  role: selectedUserRole,
-                                );
-
-                                if (selectedUserRole == UserRole.formateur) {
-                                  final hasManualAssignments = selectedModulesByFormation.values
-                                      .any((modules) => modules.isNotEmpty);
-                                  if (hasManualAssignments) {
-                                    final formateur = LocalDataService().getUsers().firstWhere(
-                                      (user) => user.email.toLowerCase() == email,
-                                    );
-                                    await LocalDataService().replaceFormateurAssignments(
-                                      formateur.id,
-                                      selectedModulesByFormation.map(
-                                        (id, modules) => MapEntry(id, modules.toList()),
-                                      ),
-                                    );
-                                  }
-                                }
-
-                                if (!localContext.mounted) return;
-                                Navigator.pop(localContext);
-                                if (mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Utilisateur créé avec succès'),
-                                      backgroundColor: AppTheme.success,
-                                    ),
-                                  );
-                                }
-                              } catch (e) {
-                                if (!localContext.mounted) return;
-                                setBtnState(() => isSubmitting = false);
-                                ScaffoldMessenger.of(localContext).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Erreur: ${e.toString()}'),
-                                    backgroundColor: AppTheme.error,
+                                await LocalDataService().replaceFormateurAssignments(
+                                  formateur.id,
+                                  selectedModulesByFormation.map(
+                                    (id, modules) => MapEntry(id, modules.toList()),
                                   ),
                                 );
                               }
-                            },
-                      borderRadius: BorderRadius.circular(8),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                        child: Text(
-                          isSubmitting ? 'Création...' : 'Créer',
-                          style: GoogleFonts.poppins(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14,
-                          ),
-                        ),
+                            }
+
+                            if (!localContext.mounted) return;
+                            Navigator.pop(localContext);
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Utilisateur créé avec succès'),
+                                  backgroundColor: AppTheme.success,
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            if (!localContext.mounted) return;
+                            setDialogState(() => isSubmitting = false);
+                            ScaffoldMessenger.of(localContext).showSnackBar(
+                              SnackBar(
+                                content: Text('Erreur: ${e.toString()}'),
+                                backgroundColor: AppTheme.error,
+                              ),
+                            );
+                          }
+                        },
+                  borderRadius: BorderRadius.circular(8),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    child: Text(
+                      isSubmitting ? 'Création...' : 'Créer',
+                      style: GoogleFonts.poppins(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
                       ),
                     ),
                   ),
-                );
-              },
+                ),
+              ),
             ),
           ],
         ),
@@ -893,11 +889,12 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
     final nomController = TextEditingController(text: user.nom);
     final phoneController = TextEditingController(text: user.phone);
     UserRole selectedUserRole = user.role;
+    bool isSubmitting = false;
 
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
+        builder: (context, setDialogState) => AlertDialog(
           title: Text(
             'Modifier l\'utilisateur',
             style: GoogleFonts.poppins(fontWeight: FontWeight.w700),
@@ -945,7 +942,7 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
                       .toList(),
                   onChanged: (value) {
                     if (value != null) {
-                      setState(() => selectedUserRole = value);
+                      setDialogState(() => selectedUserRole = value);
                     }
                   },
                 ),
@@ -957,86 +954,81 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
               onPressed: () => Navigator.pop(context),
               child: const Text('Annuler'),
             ),
-            StatefulBuilder(
-              builder: (context, setBtnState) {
-                bool isSubmitting = false;
-                return Container(
-                  decoration: BoxDecoration(
-                    gradient: isSubmitting ? null : AppTheme.primaryGradient,
-                    color: isSubmitting ? Colors.grey.shade400 : null,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: isSubmitting
-                          ? null
-                          : () async {
-                              final localContext = context;
-                              final prenom = prenomController.text.trim();
-                              final nom = nomController.text.trim();
-                              final phone = phoneController.text.trim();
+            Container(
+              decoration: BoxDecoration(
+                gradient: isSubmitting ? null : AppTheme.primaryGradient,
+                color: isSubmitting ? Colors.grey.shade400 : null,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: isSubmitting
+                      ? null
+                      : () async {
+                          final localContext = context;
+                          final prenom = prenomController.text.trim();
+                          final nom = nomController.text.trim();
+                          final phone = phoneController.text.trim();
 
-                              if (prenom.isEmpty || nom.isEmpty) {
-                                ScaffoldMessenger.of(localContext).showSnackBar(
-                                  const SnackBar(content: Text('Veuillez remplir le prénom et le nom.')),
-                                );
-                                return;
-                              }
+                          if (prenom.isEmpty || nom.isEmpty) {
+                            ScaffoldMessenger.of(localContext).showSnackBar(
+                              const SnackBar(content: Text('Veuillez remplir le prénom et le nom.')),
+                            );
+                            return;
+                          }
 
-                              setBtnState(() => isSubmitting = true);
-                              try {
-                                final updatedUser = User(
-                                  id: user.id,
-                                  email: user.email,
-                                  nom: nom,
-                                  prenom: prenom,
-                                  phone: phone,
-                                  role: selectedUserRole,
-                                  estActif: user.estActif,
-                                  dateCreation: user.dateCreation,
-                                  dateModification: DateTime.now(),
-                                );
+                          setDialogState(() => isSubmitting = true);
+                          try {
+                            final updatedUser = User(
+                              id: user.id,
+                              email: user.email,
+                              nom: nom,
+                              prenom: prenom,
+                              phone: phone,
+                              role: selectedUserRole,
+                              estActif: user.estActif,
+                              dateCreation: user.dateCreation,
+                              dateModification: DateTime.now(),
+                            );
 
-                                await AuthProvider().updateUser(updatedUser);
+                            await AuthProvider().updateUser(updatedUser);
 
-                                if (!localContext.mounted) return;
-                                Navigator.pop(localContext);
-                                if (mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Utilisateur modifié avec succès'),
-                                      backgroundColor: AppTheme.success,
-                                    ),
-                                  );
-                                }
-                              } catch (e) {
-                                if (!localContext.mounted) return;
-                                setBtnState(() => isSubmitting = false);
-                                ScaffoldMessenger.of(localContext).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Erreur: ${e.toString()}'),
-                                    backgroundColor: AppTheme.error,
-                                  ),
-                                );
-                              }
-                            },
-                      borderRadius: BorderRadius.circular(8),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                        child: Text(
-                          isSubmitting ? 'Modification...' : 'Modifier',
-                          style: GoogleFonts.poppins(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14,
-                          ),
-                        ),
+                            if (!localContext.mounted) return;
+                            Navigator.pop(localContext);
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Utilisateur modifié avec succès'),
+                                  backgroundColor: AppTheme.success,
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            if (!localContext.mounted) return;
+                            setDialogState(() => isSubmitting = false);
+                            ScaffoldMessenger.of(localContext).showSnackBar(
+                              SnackBar(
+                                content: Text('Erreur: ${e.toString()}'),
+                                backgroundColor: AppTheme.error,
+                              ),
+                            );
+                          }
+                        },
+                  borderRadius: BorderRadius.circular(8),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    child: Text(
+                      isSubmitting ? 'Modification...' : 'Modifier',
+                      style: GoogleFonts.poppins(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
                       ),
                     ),
                   ),
-                );
-              },
+                ),
+              ),
             ),
           ],
         ),
@@ -1045,34 +1037,241 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
   }
 
   void _resetUserPassword(BuildContext context, User user) {
+    _showChangeOrResetPasswordDialog(context, user);
+  }
+
+  void _showChangeOrResetPasswordDialog(BuildContext context, User user) {
+    final passwordController = TextEditingController(text: '00000000');
+    bool obscurePassword = true;
+    bool mustChangeOnNextLogin = true;
+    bool isSubmitting = false;
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Réinitialiser le mot de passe', style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
-        content: Text('Le mot de passe de ${user.nomComplet} sera réinitialisé à "00000000". Voulez-vous continuer ?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Annuler'),
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppTheme.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.lock_reset_rounded, color: AppTheme.primary, size: 24),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Modifier le mot de passe',
+                      style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16),
+                    ),
+                    Text(
+                      user.nomComplet,
+                      style: GoogleFonts.poppins(color: AppTheme.textSecondary, fontSize: 12, fontWeight: FontWeight.w500),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () async {
-              final localContext = context;
-              await AuthProvider().resetUserPassword(user.id);
-              if (!localContext.mounted) return;
-              Navigator.pop(localContext);
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Mot de passe réinitialisé à 00000000'),
-                    backgroundColor: AppTheme.success,
+          content: SizedBox(
+            width: 420,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.info_outline_rounded, size: 18, color: Color(0xFF475569)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'En tant qu\'administrateur, vous pouvez définir un mot de passe personnalisé ou réinitialiser à la valeur par défaut.',
+                            style: GoogleFonts.poppins(fontSize: 11, color: const Color(0xFF475569)),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                );
-              }
-            },
-            child: const Text('Réinitialiser'),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Nouveau mot de passe',
+                    style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
+                  ),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: passwordController,
+                    obscureText: obscurePassword,
+                    decoration: InputDecoration(
+                      hintText: 'Minimum 6 caractères',
+                      prefixIcon: const Icon(Icons.key_rounded, size: 20),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          obscurePassword ? Icons.visibility_rounded : Icons.visibility_off_rounded,
+                          size: 20,
+                        ),
+                        onPressed: () {
+                          setDialogState(() => obscurePassword = !obscurePassword);
+                        },
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey.shade50,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(color: AppTheme.primary, width: 2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
+                    children: [
+                      OutlinedButton.icon(
+                        icon: const Icon(Icons.restore_rounded, size: 16),
+                        label: const Text('Valeur standard (00000000)'),
+                        style: OutlinedButton.styleFrom(
+                          visualDensity: VisualDensity.compact,
+                          foregroundColor: AppTheme.primary,
+                          side: BorderSide(color: AppTheme.primary.withValues(alpha: 0.4)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        onPressed: () {
+                          setDialogState(() {
+                            passwordController.text = '00000000';
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  InkWell(
+                    onTap: () {
+                      setDialogState(() => mustChangeOnNextLogin = !mustChangeOnNextLogin);
+                    },
+                    borderRadius: BorderRadius.circular(8),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(
+                        children: [
+                          Checkbox(
+                            value: mustChangeOnNextLogin,
+                            onChanged: (val) {
+                              setDialogState(() => mustChangeOnNextLogin = val ?? true);
+                            },
+                            activeColor: AppTheme.primary,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                          ),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Forcer le changement à la 1ère connexion',
+                                  style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600),
+                                ),
+                                Text(
+                                  'L\'utilisateur devra choisir un nouveau mot de passe dès qu\'il se connectera.',
+                                  style: GoogleFonts.poppins(fontSize: 10, color: AppTheme.textSecondary),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
-        ],
+          actions: [
+            TextButton(
+              onPressed: isSubmitting ? null : () => Navigator.pop(dialogContext),
+              child: const Text('Annuler'),
+            ),
+            ElevatedButton.icon(
+              icon: isSubmitting
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Icon(Icons.check_rounded, size: 18),
+              label: Text(isSubmitting ? 'Enregistrement...' : 'Appliquer le mot de passe'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              onPressed: isSubmitting
+                  ? null
+                  : () async {
+                      final newPass = passwordController.text.trim();
+                      if (newPass.length < 6) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Le mot de passe doit contenir au moins 6 caractères.'),
+                            backgroundColor: AppTheme.error,
+                          ),
+                        );
+                        return;
+                      }
+
+                      setDialogState(() => isSubmitting = true);
+                      try {
+                        await AuthProvider().adminChangeUserPassword(
+                          user.id,
+                          newPassword: newPass,
+                          mustChangePassword: mustChangeOnNextLogin,
+                        );
+
+                        if (!context.mounted) return;
+                        Navigator.pop(dialogContext);
+
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Mot de passe de ${user.nomComplet} mis à jour avec succès.'),
+                            backgroundColor: AppTheme.success,
+                            duration: const Duration(seconds: 4),
+                          ),
+                        );
+                      } catch (e) {
+                        if (!context.mounted) return;
+                        setDialogState(() => isSubmitting = false);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Erreur: ${e.toString().replaceAll('Exception: ', '')}'),
+                            backgroundColor: AppTheme.error,
+                          ),
+                        );
+                      }
+                    },
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1228,8 +1427,10 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
                             children: [
                               Radio<UserRole>(
                                 value: role,
+                                // ignore: deprecated_member_use
                                 groupValue: selectedRole,
                                 activeColor: color,
+                                // ignore: deprecated_member_use
                                 onChanged: (val) {
                                   if (val != null) setDialogState(() => selectedRole = val);
                                 },

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:gestion_formations/config/theme.dart';
 import 'package:gestion_formations/Models/user.dart';
-import 'package:gestion_formations/Pages/Login/welcom_page.dart';
+import 'package:gestion_formations/Pages/Login/welcome_page.dart';
 import 'package:gestion_formations/Pages/INSCRIPTIONS/formulaire.dart';
 import 'package:gestion_formations/Pages/home_screen.dart';
 import 'package:gestion_formations/Services/auth_provider.dart';
@@ -21,15 +21,40 @@ Future<void> main() async {
       await _importLocalInscriptionQueue();
       await _importFromApi();
     } catch (e) {
-      debugPrint('Import queue error: $e');
+      debugPrint('[Malintic] Import queue error: $e');
     }
   });
+}
+
+/// Helper to parse and create an inscription from a JSON Map (Task #3)
+Future<void> _processInscriptionMap(LocalDataService db, Map<String, dynamic> map) async {
+  final etudiantId = map['etudiantId']?.toString() ?? 'web_${DateTime.now().millisecondsSinceEpoch}';
+  final prenom = map['prenom']?.toString();
+  final nom = map['nom']?.toString();
+  final email = map['email']?.toString();
+  final telephone = map['telephone']?.toString();
+  final formationId = map['formationId']?.toString() ?? '';
+  final modules = (map['modules'] as List<dynamic>?)?.map((e) => e.toString()).toList();
+  final description = map['description']?.toString();
+  final typeFormation = map['typeFormation']?.toString();
+
+  await db.createInscription(
+    etudiantId: etudiantId,
+    formationId: formationId,
+    prenom: prenom,
+    nom: nom,
+    email: email,
+    telephone: telephone,
+    description: description,
+    modules: modules,
+    typeFormation: typeFormation,
+  );
 }
 
 Future<void> _importLocalInscriptionQueue() async {
   try {
     final storage = LocalStorage();
-    final key = 'local_inscriptions';
+    const key = 'local_inscriptions';
     final raw = storage.getItem(key);
     if (raw == null || raw.isEmpty) return;
 
@@ -38,38 +63,17 @@ Future<void> _importLocalInscriptionQueue() async {
 
     for (final item in list) {
       try {
-        final Map<String, dynamic> map = Map<String, dynamic>.from(item);
-        final etudiantId = map['etudiantId']?.toString() ?? 'web_${DateTime.now().millisecondsSinceEpoch}';
-        final prenom = map['prenom']?.toString();
-        final nom = map['nom']?.toString();
-        final email = map['email']?.toString();
-        final telephone = map['telephone']?.toString();
-        final formationId = map['formationId']?.toString() ?? '';
-        final modules = (map['modules'] as List<dynamic>?)?.map((e) => e.toString()).toList();
-        final description = map['description']?.toString();
-        final typeFormation = map['typeFormation']?.toString();
-        // Import administrative enrolments only. Payments are recorded from
-        // the dedicated Payments module when money is actually received.
-        await db.createInscription(
-          etudiantId: etudiantId,
-          formationId: formationId,
-          prenom: prenom,
-          nom: nom,
-          email: email,
-          telephone: telephone,
-          description: description,
-          modules: modules,
-          typeFormation: typeFormation,
-        );
+        if (item is Map<String, dynamic>) {
+          await _processInscriptionMap(db, item);
+        }
       } catch (e) {
-        // ignore individual item errors
+        debugPrint('[Malintic] Erreur import local inscription item: $e');
       }
     }
 
-    // Clear queue after import
     storage.removeItem(key);
   } catch (e) {
-    // ignore
+    debugPrint('[Malintic] Erreur import queue locale: $e');
   }
 }
 
@@ -77,10 +81,10 @@ Future<void> _importFromApi() async {
   try {
     if (!kIsWeb) return;
     final db = LocalDataService();
-    // Use current page origin to call the API through nginx proxy
     if (!Uri.base.hasAuthority) return;
     final origin = Uri.base.origin;
     if (origin.isEmpty || !origin.startsWith('http')) return;
+
     final response = await http.get(
       Uri.parse('$origin/api/inscriptions'),
       headers: {'Accept': 'application/json'},
@@ -88,36 +92,19 @@ Future<void> _importFromApi() async {
     if (response.statusCode != 200) return;
     final text = response.body;
     if (text.isEmpty) return;
+
     final List<dynamic> list = jsonDecode(text);
     for (final item in list) {
       try {
-        final Map<String, dynamic> map = Map<String, dynamic>.from(item);
-        final etudiantId = map['etudiantId']?.toString() ?? 'web_${DateTime.now().millisecondsSinceEpoch}';
-        final prenom = map['prenom']?.toString();
-        final nom = map['nom']?.toString();
-        final email = map['email']?.toString();
-        final telephone = map['telephone']?.toString();
-        final formationId = map['formationId']?.toString() ?? '';
-        final modules = (map['modules'] as List<dynamic>?)?.map((e) => e.toString()).toList();
-        final description = map['description']?.toString();
-        final typeFormation = map['typeFormation']?.toString();
-        await db.createInscription(
-          etudiantId: etudiantId,
-          formationId: formationId,
-          prenom: prenom,
-          nom: nom,
-          email: email,
-          telephone: telephone,
-          description: description,
-          modules: modules,
-          typeFormation: typeFormation,
-        );
+        if (item is Map<String, dynamic>) {
+          await _processInscriptionMap(db, item);
+        }
       } catch (e) {
-        // ignore
+        debugPrint('[Malintic] Erreur import API inscription item: $e');
       }
     }
   } catch (e) {
-    // ignore if API not reachable
+    debugPrint('[Malintic] API inscriptions non joignable: $e');
   }
 }
 
@@ -127,8 +114,10 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Malintic',
+      title: 'Malintic — Gestion des Formations',
       theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: ThemeMode.light,
       debugShowCheckedModeBanner: false,
       home: const AuthWrapper(),
     );
@@ -143,32 +132,43 @@ class AuthWrapper extends StatefulWidget {
 }
 
 class _AuthWrapperState extends State<AuthWrapper> {
-  @override
-  Widget build(BuildContext context) {
-    final uri = Uri.base;
-    String? preselectedFormationId =
-        uri.queryParameters['formationId'] ?? uri.queryParameters['id'];
-    bool showInscriptionPage = uri.queryParameters['inscription'] == 'true';
+  String? _preselectedFormationId;
+  bool _showInscriptionPage = false;
 
-    if (!showInscriptionPage) {
-      final frag = uri.fragment;
-      if (frag.isNotEmpty && frag.contains('inscription')) {
-        try {
+  @override
+  void initState() {
+    super.initState();
+    _parseUrlParameters();
+  }
+
+  void _parseUrlParameters() {
+    try {
+      final uri = Uri.base;
+      _preselectedFormationId =
+          uri.queryParameters['formationId'] ?? uri.queryParameters['id'];
+      _showInscriptionPage = uri.queryParameters['inscription'] == 'true';
+
+      if (!_showInscriptionPage) {
+        final frag = uri.fragment;
+        if (frag.isNotEmpty && frag.contains('inscription')) {
           final fragPart = frag.contains('?') ? frag.split('?').last : '';
           final fragParams = Uri.splitQueryString(fragPart.isNotEmpty ? fragPart : '');
           if (fragParams['inscription'] == 'true' || frag.contains('inscription')) {
-            showInscriptionPage = true;
+            _showInscriptionPage = true;
           }
-          if (preselectedFormationId == null || preselectedFormationId.isEmpty) {
-            preselectedFormationId =
+          if (_preselectedFormationId == null || _preselectedFormationId!.isEmpty) {
+            _preselectedFormationId =
                 fragParams['formationId'] ?? fragParams['id'];
           }
-        } catch (e) {
-          // ignore parsing errors and continue
         }
       }
+    } catch (e) {
+      debugPrint('[Malintic] Erreur parsing URL: $e');
     }
+  }
 
+  @override
+  Widget build(BuildContext context) {
     return StreamBuilder<User?>(
       stream: AuthProvider().watchCurrentUser(),
       initialData: AuthProvider().currentUser,
@@ -178,18 +178,43 @@ class _AuthWrapperState extends State<AuthWrapper> {
           return HomeScreen(user: activeUser);
         }
 
-        if (showInscriptionPage) {
-          return InscriptionPage(formationId: preselectedFormationId);
+        if (_showInscriptionPage) {
+          return InscriptionPage(formationId: _preselectedFormationId);
         }
 
         if (snapshot.connectionState == ConnectionState.waiting &&
             snapshot.data == null) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator(color: AppTheme.primary)),
+          return Scaffold(
+            backgroundColor: AppTheme.background,
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Image.asset(
+                    'images/logo.png',
+                    width: 120,
+                    errorBuilder: (context, error, stackTrace) => const Icon(
+                      Icons.school_rounded,
+                      size: 64,
+                      color: AppTheme.primary,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  const SizedBox(
+                    width: 36,
+                    height: 36,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 3,
+                      valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primary),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           );
         }
 
-        return const WelcomPage();
+        return const WelcomePage();
       },
     );
   }

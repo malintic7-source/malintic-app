@@ -688,9 +688,21 @@ class _ProfilePageState extends State<ProfilePage> with TickerProviderStateMixin
                       child: InkWell(
                         onTap: () async {
                           final localContext = context;
+                          if (oldPasswordController.text.isEmpty) {
+                            ScaffoldMessenger.of(localContext).showSnackBar(
+                              const SnackBar(content: Text('Veuillez saisir votre ancien mot de passe')),
+                            );
+                            return;
+                          }
+                          if (newPasswordController.text.length < 8) {
+                            ScaffoldMessenger.of(localContext).showSnackBar(
+                              const SnackBar(content: Text('Le nouveau mot de passe doit contenir au moins 8 caractères')),
+                            );
+                            return;
+                          }
                           if (newPasswordController.text != confirmPasswordController.text) {
                             ScaffoldMessenger.of(localContext).showSnackBar(
-                              SnackBar(content: Text('Les mots de passe ne correspondent pas')),
+                              const SnackBar(content: Text('Les mots de passe ne correspondent pas')),
                             );
                             return;
                           }
@@ -701,12 +713,14 @@ class _ProfilePageState extends State<ProfilePage> with TickerProviderStateMixin
                             );
                             if (!localContext.mounted) return;
                             Navigator.pop(localContext);
-                            ScaffoldMessenger.of(localContext)
-                                .showSnackBar(SnackBar(content: Text('✅ Mot de passe changé')));
+                            ScaffoldMessenger.of(localContext).showSnackBar(
+                              const SnackBar(content: Text('✅ Mot de passe modifié avec succès')),
+                            );
                           } catch (e) {
                             if (!localContext.mounted) return;
-                            ScaffoldMessenger.of(localContext)
-                                .showSnackBar(SnackBar(content: Text('❌ Erreur: $e')));
+                            ScaffoldMessenger.of(localContext).showSnackBar(
+                              SnackBar(content: Text('❌ $e')),
+                            );
                           }
                         },
                         borderRadius: BorderRadius.circular(12),

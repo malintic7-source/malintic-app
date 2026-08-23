@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:gestion_formations/Models/formation.dart';
 import 'package:gestion_formations/Models/user.dart';
 import 'package:gestion_formations/Models/inscription.dart';
+import 'package:gestion_formations/Models/payment.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -40,6 +41,9 @@ class _AdminApprenantsState extends State<AdminApprenants>
   String _selectedSexeFilter = 'Tous';
   String _selectedStatutFilter = 'Tous';
   String _selectedFormationFilter = 'Toutes';
+  String _selectedPeriodeFilter = 'Toutes';
+  String _selectedPaiementFilter = 'Tous';
+  String _selectedCompletionFilter = 'Tous';
 
   @override
   void initState() {
@@ -243,90 +247,163 @@ class _AdminApprenantsState extends State<AdminApprenants>
   Widget _buildSearchBar(bool isMobile) {
     final formations = _db.getFormations();
 
-    final filterBar = Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      crossAxisAlignment: WrapCrossAlignment.center,
+    // Active filters check
+    final bool hasActiveFilters = _selectedSexeFilter != 'Tous' ||
+        _selectedStatutFilter != 'Tous' ||
+        _selectedFormationFilter != 'Toutes' ||
+        _selectedPeriodeFilter != 'Toutes' ||
+        _selectedPaiementFilter != 'Tous' ||
+        _selectedCompletionFilter != 'Tous';
+
+    // Dropdown helper builder
+    Widget buildFilterDd(String val, List<DropdownMenuItem<String>> items, Function(String?) cb, {bool active = false, Color? col}) {
+      final color = col ?? AppTheme.primary;
+      return AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+        decoration: BoxDecoration(
+          color: active ? color.withValues(alpha: 0.1) : Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: active ? color : Colors.black12, width: active ? 1.5 : 1.0),
+        ),
+        child: DropdownButtonHideUnderline(
+          child: DropdownButton<String>(
+            value: val,
+            icon: Icon(Icons.arrow_drop_down_rounded, size: 20, color: active ? color : Colors.black54),
+            style: GoogleFonts.poppins(fontSize: 12, fontWeight: active ? FontWeight.w700 : FontWeight.w600, color: active ? color : Colors.black87),
+            items: items,
+            onChanged: cb,
+          ),
+        ),
+      );
+    }
+
+    final filterBar = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Sexe filter
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: Colors.black12),
-          ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: _selectedSexeFilter,
-              icon: const Icon(Icons.arrow_drop_down_rounded, size: 20),
-              style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black87),
-              items: const [
-                DropdownMenuItem(value: 'Tous', child: Text('Sexe: Tous')),
-                DropdownMenuItem(value: 'Homme', child: Text('Homme')),
-                DropdownMenuItem(value: 'Femme', child: Text('Femme')),
+        // Rangée 1 — filtres de base
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            buildFilterDd(
+              _selectedSexeFilter,
+              const [
+                DropdownMenuItem(value: 'Tous', child: Text('👤 Sexe: Tous')),
+                DropdownMenuItem(value: 'Homme', child: Text('♂ Homme')),
+                DropdownMenuItem(value: 'Femme', child: Text('♀ Femme')),
               ],
-              onChanged: (val) {
-                if (val != null) {
-                  setState(() => _selectedSexeFilter = val);
-                  _applyFilter();
-                }
-              },
+              (val) { if (val != null) { setState(() => _selectedSexeFilter = val); _applyFilter(); } },
+              active: _selectedSexeFilter != 'Tous', col: AppTheme.primary,
             ),
-          ),
+            buildFilterDd(
+              _selectedStatutFilter,
+              const [
+                DropdownMenuItem(value: 'Tous', child: Text('🔘 Statut: Tous')),
+                DropdownMenuItem(value: 'Actif', child: Text('✅ Actif')),
+                DropdownMenuItem(value: 'Inactif', child: Text('🚫 Bloqué')),
+              ],
+              (val) { if (val != null) { setState(() => _selectedStatutFilter = val); _applyFilter(); } },
+              active: _selectedStatutFilter != 'Tous', col: AppTheme.success,
+            ),
+            buildFilterDd(
+              _selectedFormationFilter,
+              [
+                const DropdownMenuItem(value: 'Toutes', child: Text('🎓 Formation: Toutes')),
+                ...formations.map((f) => DropdownMenuItem(value: f.id, child: Text(f.titre, overflow: TextOverflow.ellipsis))),
+              ],
+              (val) { if (val != null) { setState(() => _selectedFormationFilter = val); _applyFilter(); } },
+              active: _selectedFormationFilter != 'Toutes', col: AppTheme.accent,
+            ),
+          ],
         ),
-        // Statut filter
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: Colors.black12),
-          ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: _selectedStatutFilter,
-              icon: const Icon(Icons.arrow_drop_down_rounded, size: 20),
-              style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black87),
-              items: const [
-                DropdownMenuItem(value: 'Tous', child: Text('Statut: Tous')),
-                DropdownMenuItem(value: 'Actif', child: Text('Actif')),
-                DropdownMenuItem(value: 'Inactif', child: Text('Inactif')),
+        const SizedBox(height: 8),
+        // Rangée 2 — filtres avancés
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            buildFilterDd(
+              _selectedPeriodeFilter,
+              const [
+                DropdownMenuItem(value: 'Toutes', child: Text('📅 Période: Toutes')),
+                DropdownMenuItem(value: 'Ce mois', child: Text('Ce mois-ci')),
+                DropdownMenuItem(value: '3 mois', child: Text('3 derniers mois')),
+                DropdownMenuItem(value: '6 mois', child: Text('6 derniers mois')),
+                DropdownMenuItem(value: 'Cette année', child: Text('Cette année')),
               ],
-              onChanged: (val) {
-                if (val != null) {
-                  setState(() => _selectedStatutFilter = val);
-                  _applyFilter();
-                }
-              },
+              (val) { if (val != null) { setState(() => _selectedPeriodeFilter = val); _applyFilter(); } },
+              active: _selectedPeriodeFilter != 'Toutes', col: const Color(0xFF7C3AED),
             ),
-          ),
+            buildFilterDd(
+              _selectedPaiementFilter,
+              const [
+                DropdownMenuItem(value: 'Tous', child: Text('💳 Paiement: Tous')),
+                DropdownMenuItem(value: 'Paiement Complet', child: Text('✅ Payé (Complet)')),
+                DropdownMenuItem(value: 'Reste à payer', child: Text('⚠️ Reste à payer')),
+                DropdownMenuItem(value: 'Non payé', child: Text('❌ Non payé')),
+                DropdownMenuItem(value: 'Sans frais', child: Text('ℹ️ Sans frais')),
+              ],
+              (val) { if (val != null) { setState(() => _selectedPaiementFilter = val); _applyFilter(); } },
+              active: _selectedPaiementFilter != 'Tous', col: AppTheme.warningDark,
+            ),
+            buildFilterDd(
+              _selectedCompletionFilter,
+              const [
+                DropdownMenuItem(value: 'Tous', child: Text('🏁 Complétion: Tous')),
+                DropdownMenuItem(value: 'Au moins une terminée', child: Text('✅ Au moins terminée')),
+                DropdownMenuItem(value: 'En cours', child: Text('🔄 En cours')),
+                DropdownMenuItem(value: 'Aucune terminée', child: Text('⏳ Aucune terminée')),
+              ],
+              (val) { if (val != null) { setState(() => _selectedCompletionFilter = val); _applyFilter(); } },
+              active: _selectedCompletionFilter != 'Tous', col: const Color(0xFF0D9488),
+            ),
+            if (hasActiveFilters)
+              TextButton.icon(
+                onPressed: () {
+                  setState(() {
+                    _selectedSexeFilter = 'Tous';
+                    _selectedStatutFilter = 'Tous';
+                    _selectedFormationFilter = 'Toutes';
+                    _selectedPeriodeFilter = 'Toutes';
+                    _selectedPaiementFilter = 'Tous';
+                    _selectedCompletionFilter = 'Tous';
+                    searchController.clear();
+                  });
+                  _applyFilter();
+                },
+                icon: const Icon(Icons.filter_alt_off_rounded, size: 16, color: AppTheme.error),
+                label: Text('Réinitialiser', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.error)),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  backgroundColor: AppTheme.error.withValues(alpha: 0.08),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+          ],
         ),
-        // Formation filter
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: Colors.black12),
-          ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: _selectedFormationFilter,
-              icon: const Icon(Icons.arrow_drop_down_rounded, size: 20),
-              style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black87),
-              items: [
-                const DropdownMenuItem(value: 'Toutes', child: Text('Formation: Toutes')),
-                ...formations.map((f) => DropdownMenuItem(value: f.id, child: Text(f.titre))),
-              ],
-              onChanged: (val) {
-                if (val != null) {
-                  setState(() => _selectedFormationFilter = val);
-                  _applyFilter();
-                }
-              },
+        const SizedBox(height: 8),
+        // Compteur résultats
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppTheme.primary.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                '${_filteredUsers.length} apprenant${_filteredUsers.length != 1 ? "s" : ""} trouvé${_filteredUsers.length != 1 ? "s" : ""}',
+                style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w700, color: AppTheme.primary),
+              ),
             ),
-          ),
+            if (hasActiveFilters) ...[
+              const SizedBox(width: 8),
+              Text('(filtres actifs)', style: GoogleFonts.poppins(fontSize: 11, color: AppTheme.textMuted, fontStyle: FontStyle.italic)),
+            ],
+          ],
         ),
       ],
     );
@@ -484,33 +561,55 @@ class _AdminApprenantsState extends State<AdminApprenants>
         .toList();
     if (apprenants.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Aucun apprenant à exporter')),
-      );
+      const SnackBar(
+        content: Text('✅ Rapport CSV exporté avec succès (12 colonnes) !'),
+        backgroundColor: AppTheme.success,
+      ),
+    );
       return;
     }
 
     final StringBuffer csv = StringBuffer();
     csv.write('\uFEFF');
-    csv.writeln('ID;Prénom;Nom;Email;Téléphone;Statut;Date Inscription');
+        final allInscriptions = _db.getInscriptions();
+    final allPayments = _db.getPayments();
+    csv.writeln(
+      'Matricule;Prénom;Nom;Email;Téléphone;Statut;Date Inscription;'
+      'Nb Formations;Formations Assignées;Formations Terminées;'
+      'Total Payé (FCFA);Solde Restant (FCFA)',
+    );
 
     for (final e in apprenants) {
       final statusStr = e.estActif ? 'Actif' : 'Bloqué';
-      final phone = e.phone;
+      final matricule = e.matricule ?? '';
+      final assigned = e.assignedFormations;
+      final nbFormations = assigned.length;
+      final nbTerminees = assigned.where((f) => f['isCompleted'] == true).length;
+      final formationTitles = assigned
+          .map((f) => f['title']?.toString() ?? f['formationId']?.toString() ?? '?')
+          .join(' | ');
+      final userInscrips = allInscriptions.where((i) => i.etudiantId == e.id || i.id == e.id);
+      final totalDue = userInscrips.fold<double>(0, (s, i) { final f = _db.getFormations().where((fm) => fm.id == i.formationId).firstOrNull; return s + (f?.prix ?? 0); });
+      final userPays = allPayments.where((p) => p.etudiantId == e.id && p.status.name == 'effectue');
+      final totalPaid = userPays.fold<double>(0, (s, p) => s + p.montant);
+      final solde = (totalDue - totalPaid).clamp(0, double.infinity);
       csv.writeln(
-        '"${e.id}";"${e.prenom}";"${e.nom}";"${e.email}";"$phone";"$statusStr";"${e.dateCreation.day}/${e.dateCreation.month}/${e.dateCreation.year}"',
+        '"$matricule";"${e.prenom}";"${e.nom}";"${e.email}";"${e.phone}";'
+        '"$statusStr";"${e.dateCreation.day}/${e.dateCreation.month}/${e.dateCreation.year}";'
+        '"$nbFormations";"$formationTitles";"$nbTerminees";'
+        '"${totalPaid.toStringAsFixed(0)}";"${solde.toStringAsFixed(0)}"',
       );
     }
-
     final Uint8List bytes = Uint8List.fromList(utf8.encode(csv.toString()));
     await PdfHelper.downloadCSV(
       bytes,
-      fileName: 'Liste_Apprenants_${DateTime.now().millisecondsSinceEpoch}',
+      fileName: 'Rapport_Apprenants_${DateTime.now().day}-${DateTime.now().month}-${DateTime.now().year}',
     );
 
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('✅ Liste des apprenants exportée en CSV avec succès !'),
+        content: Text('✅ Rapport CSV exporté avec succès (12 colonnes) !'),
         backgroundColor: AppTheme.success,
       ),
     );
@@ -561,7 +660,8 @@ class _AdminApprenantsState extends State<AdminApprenants>
                 DataColumn(label: Text('Nom')),
                 DataColumn(label: Text('Email')),
                 DataColumn(label: Text('Téléphone')),
-                DataColumn(label: Text('Actif')),
+                DataColumn(label: Text('Compte')),
+                DataColumn(label: Text('Statut Paiement')),
                 DataColumn(label: Text('Actions')),
               ],
               rows: pageItems.map((u) {
@@ -587,6 +687,46 @@ class _AdminApprenantsState extends State<AdminApprenants>
                             ? AppTheme.success
                             : Colors.black54,
                         size: 18,
+                      ),
+                    ),
+                    DataCell(
+                      Builder(
+                        builder: (context) {
+                          final payInfo = _getStudentPaymentInfo(
+                            id,
+                            (data['email'] ?? '').toString(),
+                            (data['assignedFormations'] as List<dynamic>? ?? []),
+                          );
+                          return Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: payInfo['bgColor'] as Color,
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: (payInfo['color'] as Color).withValues(alpha: 0.4),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  payInfo['icon'] as IconData,
+                                  size: 12,
+                                  color: payInfo['color'] as Color,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  payInfo['label'] as String,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: payInfo['color'] as Color,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
                       ),
                     ),
                     DataCell(
@@ -810,6 +950,82 @@ class _AdminApprenantsState extends State<AdminApprenants>
     );
   }
 
+
+  Map<String, dynamic> _getStudentPaymentInfo(String userId, String email, List<dynamic> assigned) {
+    final allInscriptions = _db.getInscriptions().where((ins) =>
+      ins.etudiantId == userId || (email.isNotEmpty && ins.email?.toLowerCase() == email.toLowerCase())
+    ).toList();
+    
+    final allPayments = _db.getPayments().where((p) {
+      final isUserMatch = p.etudiantId == userId;
+      final isInsMatch = allInscriptions.any((ins) => ins.id == p.inscriptionId);
+      return (isUserMatch || isInsMatch) && p.status == PaymentStatus.effectue;
+    }).toList();
+
+    final formationIds = <String>{};
+    for (final a in assigned) {
+      final fId = (a is Map ? a['formationId'] : null)?.toString() ?? '';
+      if (fId.isNotEmpty) formationIds.add(fId);
+    }
+    for (final ins in allInscriptions) {
+      if (ins.formationId.isNotEmpty) formationIds.add(ins.formationId);
+    }
+
+    double totalDue = 0.0;
+    for (final fId in formationIds) {
+      final f = _db.getFormationById(fId);
+      if (f != null) {
+        totalDue += f.prix;
+      }
+    }
+
+    double totalPaid = allPayments.fold<double>(0.0, (sum, p) => sum + p.montant);
+    double remaining = (totalDue - totalPaid).clamp(0.0, double.infinity);
+
+    String statusLabel;
+    String filterCategory;
+    Color statusColor;
+    Color bgColor;
+    IconData statusIcon;
+
+    if (totalDue == 0) {
+      statusLabel = 'Sans frais';
+      filterCategory = 'Sans frais';
+      statusColor = Colors.blueGrey;
+      bgColor = Colors.blueGrey.withValues(alpha: 0.1);
+      statusIcon = Icons.info_outline_rounded;
+    } else if (remaining <= 0) {
+      statusLabel = 'Payé (100%)';
+      filterCategory = 'Paiement Complet';
+      statusColor = AppTheme.success;
+      bgColor = AppTheme.success.withValues(alpha: 0.1);
+      statusIcon = Icons.check_circle_rounded;
+    } else if (totalPaid > 0) {
+      statusLabel = 'Reste: ${remaining.toStringAsFixed(0)} F';
+      filterCategory = 'Reste à payer';
+      statusColor = const Color(0xFFF59E0B);
+      bgColor = const Color(0xFFFEF3C7);
+      statusIcon = Icons.timelapse_rounded;
+    } else {
+      statusLabel = 'Non Payé (${totalDue.toStringAsFixed(0)} F)';
+      filterCategory = 'Non payé';
+      statusColor = AppTheme.error;
+      bgColor = AppTheme.error.withValues(alpha: 0.1);
+      statusIcon = Icons.error_outline_rounded;
+    }
+
+    return {
+      'totalDue': totalDue,
+      'totalPaid': totalPaid,
+      'remaining': remaining,
+      'label': statusLabel,
+      'filterCategory': filterCategory,
+      'color': statusColor,
+      'bgColor': bgColor,
+      'icon': statusIcon,
+    };
+  }
+
   void _applyFilter() {
     final query = searchController.text.trim().toLowerCase();
     final inscriptions = _db.getInscriptions();
@@ -913,6 +1129,32 @@ class _AdminApprenantsState extends State<AdminApprenants>
         final isEnrolled = user.assignedFormations
             .any((f) => f['formationId'] == _selectedFormationFilter);
         if (!isEnrolled) return false;
+      }
+      // Filtre Période d'inscription
+      if (_selectedPeriodeFilter != 'Toutes') {
+        final now = DateTime.now();
+        final diff = now.difference(user.dateCreation).inDays;
+        if (_selectedPeriodeFilter == 'Ce mois' && diff > 31) return false;
+        if (_selectedPeriodeFilter == '3 mois' && diff > 92) return false;
+        if (_selectedPeriodeFilter == '6 mois' && diff > 183) return false;
+        if (_selectedPeriodeFilter == 'Cette année' && user.dateCreation.year != now.year) return false;
+      }
+      // Filtre Statut paiement précis
+      if (_selectedPaiementFilter != 'Tous') {
+        final payInfo = _getStudentPaymentInfo(user.id, user.email, user.assignedFormations);
+        final category = payInfo['filterCategory'] as String;
+        if (_selectedPaiementFilter == 'Paiement Complet' && category != 'Paiement Complet') return false;
+        if (_selectedPaiementFilter == 'Reste à payer' && category != 'Reste à payer') return false;
+        if (_selectedPaiementFilter == 'Non payé' && category != 'Non payé') return false;
+        if (_selectedPaiementFilter == 'Sans frais' && category != 'Sans frais') return false;
+      }
+      // Filtre Complétion formation
+      if (_selectedCompletionFilter != 'Tous') {
+        final assigned = user.assignedFormations;
+        final completed = assigned.where((f) => f['isCompleted'] == true).length;
+        if (_selectedCompletionFilter == 'Au moins une terminée' && completed == 0) return false;
+        if (_selectedCompletionFilter == 'Aucune terminée' && completed > 0) return false;
+        if (_selectedCompletionFilter == 'En cours' && (assigned.isEmpty || completed == assigned.length)) return false;
       }
 
       final nomComplet = user.nomComplet.toLowerCase();
@@ -1115,6 +1357,41 @@ class _AdminApprenantsState extends State<AdminApprenants>
                                 ),
                               ),
                             ),
+                            // Badge Statut de Paiement
+                            Builder(
+                              builder: (context) {
+                                final payInfo = _getStudentPaymentInfo(userId, email, assigned);
+                                return Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: payInfo['bgColor'] as Color,
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(
+                                      color: (payInfo['color'] as Color).withValues(alpha: 0.4),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        payInfo['icon'] as IconData,
+                                        size: 11,
+                                        color: payInfo['color'] as Color,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        payInfo['label'] as String,
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w700,
+                                          color: payInfo['color'] as Color,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
                             if (eligibleAttestations.isNotEmpty)
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -1279,39 +1556,42 @@ class _AdminApprenantsState extends State<AdminApprenants>
 
               const SizedBox(height: 12),
 
-              // Bottom Actions Bar
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            // Bottom Actions Bar (Fluid & Responsive without overlap)
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                alignment: WrapAlignment.spaceBetween,
                 children: [
                   Wrap(
                     spacing: 8,
-                    runSpacing: 6,
+                    runSpacing: 8,
                     crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       OutlinedButton.icon(
                         style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                         ),
-                        icon: const Icon(Icons.visibility_rounded, size: 16),
+                        icon: const Icon(Icons.visibility_rounded, size: 15),
                         label: Text('Détails', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600)),
                         onPressed: () => _showApprenantDetail(userId, data),
                       ),
                       OutlinedButton.icon(
                         style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                         ),
-                        icon: const Icon(Icons.assignment_turned_in_rounded, size: 16, color: AppTheme.primary),
+                        icon: const Icon(Icons.assignment_turned_in_rounded, size: 15, color: AppTheme.primary),
                         label: Text('Affecter formations', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: AppTheme.primary)),
                         onPressed: () => _assignFormationDialog(userId),
                       ),
                       OutlinedButton.icon(
                         style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                         ),
-                        icon: const Icon(Icons.verified_rounded, size: 16, color: Color(0xFF0D9488)),
+                        icon: const Icon(Icons.verified_rounded, size: 15, color: Color(0xFF0D9488)),
                         label: Text('Fin de formation', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFF0D9488))),
                         onPressed: () => _showStudentFormationCompletionDialog(userId, data),
                       ),
@@ -1320,12 +1600,12 @@ class _AdminApprenantsState extends State<AdminApprenants>
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF1E3A8A),
                             foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                             elevation: 2,
                           ),
-                          icon: const Icon(Icons.workspace_premium_rounded, size: 16, color: Color(0xFFFBBF24)),
-                          label: Text('Télécharger Attestation', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w700)),
+                          icon: const Icon(Icons.workspace_premium_rounded, size: 15, color: Color(0xFFFBBF24)),
+                          label: Text('Attestation', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w700)),
                           onPressed: () async {
                             try {
                               final target = eligibleAttestations.first;
@@ -1349,6 +1629,7 @@ class _AdminApprenantsState extends State<AdminApprenants>
                     ],
                   ),
                   Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       IconButton(
                         tooltip: estActif ? 'Bloquer' : 'Débloquer',
@@ -1776,11 +2057,12 @@ class _AdminApprenantsState extends State<AdminApprenants>
     final nomController = TextEditingController();
     final emailController = TextEditingController();
     final phoneController = TextEditingController();
+    bool isSubmitting = false;
 
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
+        builder: (context, setDialogState) => AlertDialog(
           title: Text(
             'Créer un apprenant',
             style: GoogleFonts.poppins(fontWeight: FontWeight.w700),
@@ -1791,46 +2073,46 @@ class _AdminApprenantsState extends State<AdminApprenants>
               children: [
                 TextField(
                   controller: prenomController,
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     labelText: 'Prénom',
                     prefixIcon: Icon(Icons.person_rounded),
                   ),
                 ),
-                SizedBox(height: 12),
+                const SizedBox(height: 12),
                 TextField(
                   controller: nomController,
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     labelText: 'Nom',
                     prefixIcon: Icon(Icons.person_rounded),
                   ),
                 ),
-                SizedBox(height: 12),
+                const SizedBox(height: 12),
                 TextField(
                   controller: emailController,
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     labelText: 'Email',
                     prefixIcon: Icon(Icons.email_rounded),
                   ),
                   keyboardType: TextInputType.emailAddress,
                 ),
-                SizedBox(height: 12),
+                const SizedBox(height: 12),
                 TextField(
                   controller: phoneController,
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     labelText: 'Téléphone',
                     prefixIcon: Icon(Icons.phone_rounded),
                   ),
                   keyboardType: TextInputType.phone,
                 ),
-                SizedBox(height: 16),
+                const SizedBox(height: 16),
                 Container(
-                  padding: EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: AppTheme.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    'Mot de passe par défaut: 00000000',
+                    'Un mot de passe temporaire sera généré automatiquement.',
                     style: GoogleFonts.poppins(
                       fontSize: 12,
                       color: AppTheme.primary,
@@ -1844,111 +2126,106 @@ class _AdminApprenantsState extends State<AdminApprenants>
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text('Annuler'),
+              child: const Text('Annuler'),
             ),
-            StatefulBuilder(
-              builder: (context, setBtnState) {
-                bool isSubmitting = false;
-                return Container(
-                  decoration: BoxDecoration(
-                    gradient: isSubmitting
-                        ? null
-                        : const LinearGradient(
-                            colors: [AppTheme.primary, AppTheme.primaryDark],
-                          ),
-                    color: isSubmitting ? Colors.grey.shade400 : null,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: isSubmitting
-                          ? null
-                          : () async {
-                              final localContext = context;
-                              final prenom = prenomController.text.trim();
-                              final nom = nomController.text.trim();
-                              final email = emailController.text.trim().toLowerCase();
-                              final phone = phoneController.text.trim();
+            Container(
+              decoration: BoxDecoration(
+                gradient: isSubmitting
+                    ? null
+                    : const LinearGradient(
+                        colors: [AppTheme.primary, AppTheme.primaryDark],
+                      ),
+                color: isSubmitting ? Colors.grey.shade400 : null,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: isSubmitting
+                      ? null
+                      : () async {
+                          final localContext = context;
+                          final prenom = prenomController.text.trim();
+                          final nom = nomController.text.trim();
+                          final email = emailController.text.trim().toLowerCase();
+                          final phone = phoneController.text.trim();
 
-                              if (prenom.isEmpty || nom.isEmpty || email.isEmpty) {
-                                ScaffoldMessenger.of(localContext).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Veuillez remplir tous les champs obligatoires (prénom, nom, email).'),
-                                  ),
-                                );
-                                return;
-                              }
+                          if (prenom.isEmpty || nom.isEmpty || email.isEmpty) {
+                            ScaffoldMessenger.of(localContext).showSnackBar(
+                              const SnackBar(
+                                content: Text('Veuillez remplir tous les champs obligatoires (prénom, nom, email).'),
+                              ),
+                            );
+                            return;
+                          }
 
-                              final emailRegExp = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+');
-                              if (!emailRegExp.hasMatch(email)) {
-                                ScaffoldMessenger.of(localContext).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      'Veuillez fournir une adresse email valide.',
-                                    ),
-                                  ),
-                                );
-                                return;
-                              }
+                          final emailRegExp = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+');
+                          if (!emailRegExp.hasMatch(email)) {
+                            ScaffoldMessenger.of(localContext).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Veuillez fournir une adresse email valide.',
+                                ),
+                              ),
+                            );
+                            return;
+                          }
 
-                              final existingUser = _db.getUsers().where((u) => u.email.toLowerCase() == email).firstOrNull;
-                              if (existingUser != null) {
-                                ScaffoldMessenger.of(localContext).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Un compte avec cette adresse email existe déjà.'),
-                                  ),
-                                );
-                                return;
-                              }
+                          final existingUser = _db.getUsers().where((u) => u.email.toLowerCase() == email).firstOrNull;
+                          if (existingUser != null) {
+                            ScaffoldMessenger.of(localContext).showSnackBar(
+                              const SnackBar(
+                                content: Text('Un compte avec cette adresse email existe déjà.'),
+                              ),
+                            );
+                            return;
+                          }
 
-                              setBtnState(() => isSubmitting = true);
-                              try {
-                                await AuthProvider().createUserByAdmin(
-                                  email: email,
-                                  nom: nom,
-                                  prenom: prenom,
-                                  phone: phone,
-                                  role: UserRole.apprenant,
-                                );
+                          setDialogState(() => isSubmitting = true);
+                          try {
+                            await AuthProvider().createUserByAdmin(
+                              email: email,
+                              nom: nom,
+                              prenom: prenom,
+                              phone: phone,
+                              role: UserRole.apprenant,
+                            );
 
-                                if (!localContext.mounted) return;
-                                Navigator.pop(localContext);
-                                if (mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Apprenant créé avec succès'),
-                                      backgroundColor: AppTheme.success,
-                                    ),
-                                  );
-                                }
-                              } catch (e) {
-                                if (!localContext.mounted) return;
-                                setBtnState(() => isSubmitting = false);
-                                ScaffoldMessenger.of(localContext).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Erreur: ${e.toString()}'),
-                                    backgroundColor: AppTheme.error,
-                                  ),
-                                );
-                              }
-                            },
-                      borderRadius: BorderRadius.circular(8),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                        child: Text(
-                          isSubmitting ? 'Création...' : 'Créer',
-                          style: GoogleFonts.poppins(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14,
-                          ),
-                        ),
+                            if (!localContext.mounted) return;
+                            Navigator.pop(localContext);
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Apprenant créé avec succès'),
+                                  backgroundColor: AppTheme.success,
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            if (!localContext.mounted) return;
+                            setDialogState(() => isSubmitting = false);
+                            ScaffoldMessenger.of(localContext).showSnackBar(
+                              SnackBar(
+                                content: Text('Erreur: ${e.toString()}'),
+                                backgroundColor: AppTheme.error,
+                              ),
+                            );
+                          }
+                        },
+                  borderRadius: BorderRadius.circular(8),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    child: Text(
+                      isSubmitting ? 'Création...' : 'Créer',
+                      style: GoogleFonts.poppins(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
                       ),
                     ),
                   ),
-                );
-              },
+                ),
+              ),
             ),
           ],
         ),
@@ -2066,6 +2343,84 @@ class _AdminApprenantsState extends State<AdminApprenants>
                         ),
                       ],
                     ),
+                  ),
+                  const SizedBox(height: 10),
+                  // Bilan Financier & Statut de Paiement
+                  Builder(
+                    builder: (context) {
+                      final payInfo = _getStudentPaymentInfo(
+                        userId,
+                        (data['email'] ?? '').toString(),
+                        assignedCopy,
+                      );
+                      final totalDue = payInfo['totalDue'] as double;
+                      final totalPaid = payInfo['totalPaid'] as double;
+                      final remaining = payInfo['remaining'] as double;
+
+                      return Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: (payInfo['bgColor'] as Color),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: (payInfo['color'] as Color).withValues(alpha: 0.4),
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(
+                                      payInfo['icon'] as IconData,
+                                      size: 16,
+                                      color: payInfo['color'] as Color,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'Statut Financier :',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                        color: Colors.black87,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: payInfo['color'] as Color,
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    payInfo['label'] as String,
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text('Total Dû : ${totalDue.toStringAsFixed(0)} FCFA', style: GoogleFonts.poppins(fontSize: 11, color: Colors.black54)),
+                                Text('Versé : ${totalPaid.toStringAsFixed(0)} FCFA', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: AppTheme.success)),
+                                Text('Reste : ${remaining.toStringAsFixed(0)} FCFA', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w700, color: remaining > 0 ? AppTheme.error : Colors.black54)),
+                              ],
+                            ),
+                          ],
+                        ),
+                      );
+                    },
                   ),
                   const SizedBox(height: 20),
                   if (assignedCopy.isEmpty)

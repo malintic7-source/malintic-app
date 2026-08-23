@@ -120,13 +120,14 @@ class _NotificationsPageState extends State<NotificationsPage> with TickerProvid
                 const Spacer(),
                 TextButton.icon(
                   onPressed: () async {
+                    final messenger = ScaffoldMessenger.of(context);
                     await _notificationsService.markAllAsReadForUser(
                       userId: widget.user.id,
                       userEmail: widget.user.email,
                       userRole: widget.user.role.toString(),
                     );
                     if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
+                      messenger.showSnackBar(
                         const SnackBar(
                           content: Text('Toutes les notifications ont été marquées comme lues.'),
                           backgroundColor: AppTheme.success,

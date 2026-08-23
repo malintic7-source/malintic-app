@@ -417,8 +417,8 @@ class PaymentReportService {
                                 ),
                               ),
                               if (reference.isNotEmpty && reference != 'N/A')
-                                pw.Text(
-                                  'Réf: ${reference.length > 12 ? reference.substring(0, 12) + "..." : reference}',
+                                  pw.Text(
+                                    'Réf: ${reference.length > 12 ? '${reference.substring(0, 12)}...' : reference}',
                                   style: pw.TextStyle(
                                     fontSize: 7,
                                     color: PdfColor.fromInt(0xFF9CA3AF),

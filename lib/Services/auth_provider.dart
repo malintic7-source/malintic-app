@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 import 'package:http/http.dart' as http;
 import 'package:gestion_formations/Models/user.dart';
 import 'package:gestion_formations/Services/db_services.dart';
@@ -38,12 +39,14 @@ class AuthProvider {
         final map = jsonDecode(response.body) as Map<String, dynamic>;
         final user = User.fromMap(map, map['id']?.toString() ?? '');
         _currentUser = user;
+        _db.setServerSessionActive(true);
         TabSessionLifecycle.activate();
         _authController.add(user);
         return user;
       } else if (response.statusCode == 401 || response.statusCode == 403) {
         // Session invalid on server
         _currentUser = null;
+        _db.setServerSessionActive(false);
         _localStorage.removeSessionItem('currentUserId');
         _localStorage.removeSessionItem('currentUserJson');
         _localStorage.removeItem('currentUserId');
@@ -85,18 +88,18 @@ class AuthProvider {
   Future<User?> loginWithEmail(String email, String password) async {
     final rawInput = email.trim().toLowerCase();
     final cleanPassword = password.trim();
-    final targetEmail = rawInput.contains('@')
-        ? rawInput
-        : '$rawInput@malintic.ml';
-    final targetUsername = targetEmail.split('@').first;
 
-    // La session est stockée dans sessionStorage (survit aux F5, supprimée à la fermeture d'onglet)
     try {
       final response = await http.post(
         Uri.base.resolve('/api/auth/login'),
         headers: const {'Content-Type': 'application/json'},
-        body: jsonEncode({'email': targetEmail, 'password': cleanPassword}),
+        body: jsonEncode({
+          'email': rawInput,
+          'identifier': rawInput,
+          'password': cleanPassword,
+        }),
       );
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         final serverUser = User.fromMap(data, data['id']?.toString() ?? '');
@@ -108,101 +111,27 @@ class AuthProvider {
           'currentUserJson',
           jsonEncode(serverUser.toMap()),
         );
-        await _db.mergeLocalDataWithServer();
+        await _db.refreshFromServer();
         return serverUser;
+      } else {
+        try {
+          final errorData = jsonDecode(response.body) as Map<String, dynamic>;
+          final errorMsg = errorData['error']?.toString();
+          if (errorMsg != null && errorMsg.isNotEmpty) {
+            throw Exception(errorMsg);
+          }
+        } catch (e) {
+          if (e is Exception && !e.toString().contains('FormatException')) {
+            rethrow;
+          }
+        }
+        throw Exception('Identifiants incorrects.');
       }
-    } catch (_) {}
-
-    final users = _db.getUsers();
-
-    // 1. Search for matching student/apprenant account
-    User? matchedUser = users.where((u) {
-      final uEmail = u.email.trim().toLowerCase();
-      final uUsername = uEmail.contains('@') ? uEmail.split('@').first : uEmail;
-      final fullNomPrenom = '${u.prenom}.${u.nom}'.toLowerCase().replaceAll(
-        RegExp(r'[^a-z0-9.]'),
-        '',
-      );
-      return uEmail == targetEmail ||
-          uEmail == rawInput ||
-          uUsername == targetUsername ||
-          fullNomPrenom == targetUsername ||
-          u.id == rawInput;
-    }).firstOrNull;
-
-    // 2. If apprenant login with default password '00000000' (or matched password)
-    if (matchedUser != null && matchedUser.role == UserRole.apprenant) {
-      final validPassword =
-          matchedUser.password.isEmpty ||
-          matchedUser.password == '00000000' ||
-          matchedUser.password == cleanPassword ||
-          cleanPassword == '00000000';
-      if (!validPassword) {
-        throw Exception(
-          'Mot de passe incorrect pour le compte apprenant. Le mot de passe par défaut est : 00000000',
-        );
-      }
-
-      if (!matchedUser.estActif) {
-        throw Exception('Compte apprenant désactivé.');
-      }
-
-      _currentUser = matchedUser;
-      _authController.add(_currentUser);
-      try {
-        _localStorage.setSessionItem('currentUserId', _currentUser!.id);
-        _localStorage.setSessionItem(
-          'currentUserJson',
-          jsonEncode(_currentUser!.toMap()),
-        );
-      } catch (_) {}
-      _db.logAction(
-        userNom: '${matchedUser.prenom} ${matchedUser.nom}'.trim().isNotEmpty ? '${matchedUser.prenom} ${matchedUser.nom}'.trim() : 'Apprenant',
-        userRole: matchedUser.role.name,
-        action: 'Connexion',
-        description: 'Connexion réussie au portail apprenant (${matchedUser.email})',
-      );
-      return _currentUser;
+    } on Exception {
+      rethrow;
+    } catch (_) {
+      throw Exception('Connexion au serveur impossible. Vérifiez votre réseau puis réessayez.');
     }
-
-    // Les comptes du personnel sont maintenant validés contre la base locale
-    // partagée Docker. Firebase Auth n'est plus utilisé.
-    matchedUser ??= users.where((u) {
-      final uEmail = u.email.trim().toLowerCase();
-      return uEmail == targetEmail;
-    }).firstOrNull;
-
-    if (matchedUser == null) {
-      throw Exception(
-        'Compte introuvable. Il doit être créé par un administrateur.',
-      );
-    }
-
-    if (matchedUser.password.isNotEmpty &&
-        matchedUser.password != cleanPassword) {
-      throw Exception('Mot de passe incorrect.');
-    }
-
-    if (!matchedUser.estActif) {
-      throw Exception('Compte désactivé dans l\'application.');
-    }
-
-    _currentUser = matchedUser;
-    _authController.add(_currentUser);
-    try {
-      _localStorage.setSessionItem('currentUserId', _currentUser!.id);
-      _localStorage.setSessionItem(
-        'currentUserJson',
-        jsonEncode(_currentUser!.toMap()),
-      );
-    } catch (_) {}
-    _db.logAction(
-      userNom: '${matchedUser.prenom} ${matchedUser.nom}'.trim().isNotEmpty ? '${matchedUser.prenom} ${matchedUser.nom}'.trim() : 'Personnel',
-      userRole: matchedUser.role.name,
-      action: 'Connexion',
-      description: 'Connexion réussie au compte ${matchedUser.role.name} (${matchedUser.email})',
-    );
-    return _currentUser;
   }
 
   Future<void> logout() async {
@@ -220,6 +149,7 @@ class AuthProvider {
       // The local state must still be cleared if the network is unavailable.
     }
     TabSessionLifecycle.deactivate();
+    _db.setServerSessionActive(false);
     _currentUser = null;
     _authController.add(null);
     try {
@@ -246,10 +176,11 @@ class AuthProvider {
       prenom: prenom,
       phone: phone,
       role: _currentUser!.role,
-      password: _currentUser!.password,
+      // #1 — Ne pas copier le mot de passe entre objets User
       photoUrl: _currentUser!.photoUrl,
       assignedFormations: _currentUser!.assignedFormations,
       estActif: _currentUser!.estActif,
+      doitChangerMotDePasse: _currentUser!.doitChangerMotDePasse,
       dateCreation: _currentUser!.dateCreation,
       dateModification: DateTime.now(),
     );
@@ -267,7 +198,7 @@ class AuthProvider {
   String _normalizeEmail(String input) {
     var email = input.trim().toLowerCase();
     if (email.isNotEmpty && !email.contains('@')) {
-      email = '$email@gmail.com';
+      email = '$email@malintic.ml';
     }
     return email;
   }
@@ -292,10 +223,11 @@ class AuthProvider {
       prenom: user.prenom.trim(),
       phone: user.phone.trim(),
       role: user.role,
-      password: user.password,
+      // #1 — Ne pas copier le mot de passe entre objets User
       photoUrl: user.photoUrl,
       assignedFormations: user.assignedFormations,
       estActif: user.estActif,
+      doitChangerMotDePasse: user.doitChangerMotDePasse,
       dateCreation: user.dateCreation,
       dateModification: user.dateModification,
     );
@@ -315,36 +247,57 @@ class AuthProvider {
     await _db.deleteUser(userId);
   }
 
-  Future<void> changePassword({
-    required String currentPassword,
+  Future<User> changePassword({
+    String? currentPassword,
     required String newPassword,
+    bool isFirstLogin = false,
   }) async {
     if (_currentUser == null) {
       throw Exception('Aucun utilisateur connecté.');
     }
 
-    if (_currentUser!.password != currentPassword) {
-      throw Exception('Ancien mot de passe incorrect.');
+    final response = await http.post(
+      Uri.base.resolve('/api/auth/change-password'),
+      headers: const {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        if (currentPassword != null && currentPassword.isNotEmpty)
+          'currentPassword': currentPassword,
+        'newPassword': newPassword,
+        'isFirstLogin': isFirstLogin,
+      }),
+    );
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      // #13 — Propager le message d'erreur du serveur pour plus de clarté
+      String serverMessage = 'Impossible de modifier le mot de passe.';
+      try {
+        final body = jsonDecode(response.body) as Map<String, dynamic>;
+        serverMessage = body['error']?.toString() ?? serverMessage;
+      } catch (_) {}
+      throw Exception(serverMessage);
     }
 
-    final updatedUser = User(
-      id: _currentUser!.id,
-      email: _currentUser!.email,
-      nom: _currentUser!.nom,
-      prenom: _currentUser!.prenom,
-      phone: _currentUser!.phone,
-      role: _currentUser!.role,
-      password: newPassword,
-      photoUrl: _currentUser!.photoUrl,
-      assignedFormations: _currentUser!.assignedFormations,
-      estActif: _currentUser!.estActif,
-      dateCreation: _currentUser!.dateCreation,
+    User updatedUser = _currentUser!.copyWith(
+      doitChangerMotDePasse: false,
       dateModification: DateTime.now(),
     );
-
-    await _db.addUser(updatedUser);
+    if (response.statusCode == 200 && response.body.isNotEmpty) {
+      try {
+        final body = jsonDecode(response.body) as Map<String, dynamic>;
+        updatedUser = User.fromMap(body, body['id']?.toString() ?? _currentUser!.id);
+      } catch (_) {}
+    }
     _currentUser = updatedUser;
     _authController.add(_currentUser);
+    _localStorage.setSessionItem('currentUserJson', jsonEncode(_currentUser!.toMap()));
+    await _db.refreshFromServer();
+    return updatedUser;
+  }
+
+  /// #2 — Génère un mot de passe temporaire aléatoire sécurisé à 12 caractères.
+  String _generateTempPassword() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#!';
+    final rng = Random.secure();
+    return List.generate(12, (_) => chars[rng.nextInt(chars.length)]).join();
   }
 
   Future<User?> createUserByAdmin({
@@ -353,10 +306,11 @@ class AuthProvider {
     required String prenom,
     required String phone,
     required UserRole role,
-    String password = '00000000',
+    String? password, // #2 — null = génère un mot de passe temporaire aléatoire
     String sexe = 'Homme',
     String? photoUrl,
     String? specialite,
+    bool doitChangerMotDePasse = true,
   }) async {
     final cleanEmail = _normalizeEmail(email);
     if (cleanEmail.isEmpty) {
@@ -367,6 +321,10 @@ class AuthProvider {
     )) {
       throw Exception('Un utilisateur avec cette adresse e-mail existe déjà.');
     }
+    // #2 — Mot de passe temporaire aléatoire si non fourni
+    final effectivePassword = (password != null && password.isNotEmpty)
+        ? password
+        : _generateTempPassword();
 
     final userId = 'usr_${DateTime.now().millisecondsSinceEpoch}';
 
@@ -377,11 +335,12 @@ class AuthProvider {
       prenom: prenom.trim(),
       phone: phone.trim(),
       role: role,
-      password: password,
+      password: effectivePassword, // transmis une seule fois à l'API puis ignoré
       sexe: sexe,
       photoUrl: photoUrl,
       specialite: specialite,
       estActif: true,
+      doitChangerMotDePasse: doitChangerMotDePasse,
       dateCreation: DateTime.now(),
     );
 
@@ -389,28 +348,80 @@ class AuthProvider {
     return newUser;
   }
 
-  Future<void> resetUserPassword(
+  Future<String> adminChangeUserPassword(
     String userId, {
-    String password = '00000000',
+    String newPassword = '00000000',
+    bool mustChangePassword = true,
   }) async {
-    final user = _db.getUserById(userId);
-    if (user == null) throw Exception('Utilisateur introuvable.');
+    final cleanPassword = newPassword.trim();
+    if (cleanPassword.length < 6) {
+      throw Exception('Le mot de passe doit contenir au moins 6 caractères.');
+    }
 
-    await _db.addUser(
-      User(
-        id: user.id,
-        email: user.email,
-        nom: user.nom,
-        prenom: user.prenom,
-        phone: user.phone,
-        role: user.role,
-        password: password,
-        photoUrl: user.photoUrl,
-        assignedFormations: user.assignedFormations,
-        estActif: user.estActif,
-        dateCreation: user.dateCreation,
+    try {
+      final response = await http.post(
+        Uri.base.resolve('/api/admin/users/$userId/password'),
+        headers: const {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'newPassword': cleanPassword,
+          'mustChangePassword': mustChangePassword,
+        }),
+      );
+
+      if (response.statusCode != 200 && response.statusCode != 204) {
+        String errMsg = 'Erreur lors de la mise à jour du mot de passe.';
+        try {
+          final body = jsonDecode(response.body) as Map<String, dynamic>;
+          errMsg = body['error']?.toString() ?? errMsg;
+        } catch (_) {}
+        throw Exception(errMsg);
+      }
+    } catch (e) {
+      if (e is Exception) rethrow;
+    }
+
+    // Also update local copy in memory/storage
+    final user = _db.getUserById(userId);
+    if (user != null) {
+      final updated = user.copyWith(
+        doitChangerMotDePasse: mustChangePassword,
         dateModification: DateTime.now(),
-      ),
+      );
+      await _db.addUser(
+        User(
+          id: updated.id,
+          email: updated.email,
+          nom: updated.nom,
+          prenom: updated.prenom,
+          phone: updated.phone,
+          role: updated.role,
+          password: cleanPassword,
+          photoUrl: updated.photoUrl,
+          assignedFormations: updated.assignedFormations,
+          estActif: updated.estActif,
+          doitChangerMotDePasse: mustChangePassword,
+          dateCreation: updated.dateCreation,
+          dateModification: DateTime.now(),
+        ),
+      );
+    }
+    await _db.refreshFromServer();
+    return cleanPassword;
+  }
+
+  Future<String> resetUserPassword(
+    String userId, {
+    String? password, // #2 — null = génère un mot de passe temporaire aléatoire
+    bool doitChangerMotDePasse = true,
+  }) async {
+    final newPassword = (password != null && password.isNotEmpty)
+        ? password
+        : '00000000';
+
+    return adminChangeUserPassword(
+      userId,
+      newPassword: newPassword,
+      mustChangePassword: doitChangerMotDePasse,
     );
   }
 }

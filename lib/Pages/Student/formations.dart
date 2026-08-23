@@ -1,7 +1,4 @@
-import 'dart:typed_data';
-import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:gestion_formations/Models/user.dart';
@@ -10,9 +7,7 @@ import 'package:gestion_formations/Models/inscription.dart';
 import 'package:gestion_formations/Services/db_services.dart';
 import 'package:gestion_formations/Services/pdf_service.dart';
 import 'package:gestion_formations/config/theme.dart';
-import 'package:gestion_formations/utils/share_helper.dart';
-import 'package:qr_flutter/qr_flutter.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:gestion_formations/Widgets/share_formation_dialog.dart';
 
 class StudentFormations extends StatefulWidget {
   final User user;
@@ -513,20 +508,7 @@ class _StudentFormationsState extends State<StudentFormations> with TickerProvid
                 ),
                 onPressed: () async {
                   try {
-                    final targetInscription = inscription ??
-                        Inscription(
-                          id: 'ins_${widget.user.id}_${formation.id}',
-                          etudiantId: widget.user.id,
-                          formationId: formation.id,
-                          status: InscriptionStatus.acceptee,
-                          dateInscription: DateTime.now(),
-                          paiementEffectue: true,
-                          nom: widget.user.nom,
-                          prenom: widget.user.prenom,
-                          email: widget.user.email,
-                          telephone: widget.user.phone,
-                          modules: formation.modules,
-                        );
+                    final targetInscription = inscription;
 
                     final pdfBytes = await PdfService().generateAttestationPdf(
                       inscription: targetInscription,
@@ -538,7 +520,7 @@ class _StudentFormationsState extends State<StudentFormations> with TickerProvid
                       filename: 'Attestation_${widget.user.prenom}_${widget.user.nom}_${formation.titre}.pdf',
                     );
 
-                    if (context.mounted) {
+                    if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text('Attestation téléchargée avec succès !', style: GoogleFonts.poppins()),
@@ -547,7 +529,7 @@ class _StudentFormationsState extends State<StudentFormations> with TickerProvid
                       );
                     }
                   } catch (e) {
-                    if (context.mounted) {
+                    if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text('Erreur: $e'), backgroundColor: AppTheme.error),
                       );
@@ -652,159 +634,20 @@ class _StudentFormationsState extends State<StudentFormations> with TickerProvid
   }
 
   Future<void> _showFormationQrDialog(BuildContext context, String formationTitle, String formationId) async {
-    final localContext = context;
-    final shareUrl = await _buildLocalShareUrl(formationId);
-    if (!localContext.mounted) return;
-
-    await showDialog(
-      context: localContext,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(
-          'Partager la formation',
-          style: GoogleFonts.poppins(
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-            color: Colors.black87,
-          ),
-        ),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              RepaintBoundary(
-                key: qrKey,
-                child: Container(
-                  color: Colors.white,
-                  padding: EdgeInsets.all(12),
-                  child: QrImageView(
-                    data: shareUrl,
-                    version: QrVersions.auto,
-                    size: 240,
-                    backgroundColor: Colors.white,
-                    embeddedImage: const AssetImage('images/Malintic.png'),
-                    embeddedImageStyle: QrEmbeddedImageStyle(
-                      size: const Size(30, 30),
-                    ),
-                  ),
-                ),
-              ),
-              SizedBox(height: 16),
-              Container(
-                padding: EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppTheme.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: SelectableText(
-                    shareUrl,
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.poppins(
-                      fontSize: 12,
-                      color: AppTheme.primary,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Fermer'),
-          ),
-          TextButton(
-            onPressed: () async {
-              final dialogContext = context;
-              final uri = Uri.parse(shareUrl);
-              if (await canLaunchUrl(uri)) {
-                await launchUrl(uri, mode: LaunchMode.externalApplication);
-              } else if (!dialogContext.mounted) {
-                return;
-              } else {
-                ScaffoldMessenger.of(dialogContext).showSnackBar(
-                  SnackBar(content: Text('Impossible d’ouvrir le lien local.')),
-                );
-              }
-            },
-            child: Text('Ouvrir sur le réseau'),
-          ),
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [AppTheme.primary, AppTheme.primaryDark],
-              ),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: () async {
-                  final dialogContext = context;
-                  final bytes = await _captureQrPng(qrKey);
-                  if (bytes == null) {
-                    if (!dialogContext.mounted) return;
-                    ScaffoldMessenger.of(dialogContext).showSnackBar(
-                      SnackBar(content: Text('Impossible de générer le QR.')),
-                    );
-                    return;
-                  }
-                  final shareText = '''
-📚 *$formationTitle*
-
-🔗 Découvrez plus:
-$shareUrl
-
-👇 Scannez le QR code ci-dessous pour accéder directement!
-                  ''';
-
-                  await shareBytes(bytes, shareText, 'formation_qr.png');
-                },
-                borderRadius: BorderRadius.circular(8),
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.share_rounded, color: Colors.white, size: 18),
-                      SizedBox(width: 6),
-                      Text(
-                        'Partager',
-                        style: GoogleFonts.poppins(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
+    final formation = _db.getFormationById(formationId) ?? Formation(
+      id: formationId,
+      titre: formationTitle,
+      description: 'Formation professionnelle $formationTitle',
+      prix: 0,
+      dureeSemaines: 4,
+      dateDebut: DateTime.now(),
+      status: FormationStatus.programmee,
+      type: FormationType.presentielle,
+      formateurIds: const [],
+      horaires: const [],
+      dateCreation: DateTime.now(),
+      modules: const [],
     );
-  }
-
-  Future<String> _buildLocalShareUrl(String formationId) async {
-    try {
-      final origin = Uri.base.origin.startsWith('http') ? Uri.base.origin : '';
-      if (origin.isNotEmpty) return '$origin/formation.html?id=$formationId';
-    } catch (_) {}
-    return '/formation.html?id=$formationId';
-  }
-
-  Future<Uint8List?> _captureQrPng(GlobalKey key) async {
-    final boundary = key.currentContext?.findRenderObject() as RenderRepaintBoundary?;
-    if (boundary == null) return null;
-    final image = await boundary.toImage(pixelRatio: 3.0);
-    final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-    return byteData?.buffer.asUint8List();
+    await ShareFormationDialog.show(context, formation);
   }
 }

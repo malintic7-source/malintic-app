@@ -81,8 +81,10 @@ class _HomeScreenState extends State<HomeScreen> {
           NavigationItem(label: 'Inscriptions', icon: Icons.receipt_long_rounded),
           NavigationItem(label: 'Stagiaires / Apprenants', icon: Icons.badge_rounded),
           NavigationItem(label: 'Paiements & Caisse', icon: Icons.payments_rounded),
+          NavigationItem(label: 'Utilisateurs & Rôles', icon: Icons.manage_accounts_rounded),
           NavigationItem(label: 'Planning', icon: Icons.calendar_month_rounded),
           NavigationItem(label: 'Attestations & Diplômes', icon: Icons.workspace_premium_rounded),
+          NavigationItem(label: 'Logs & Audit', icon: Icons.history_edu_rounded),
           NavigationItem(label: 'Notifications', icon: Icons.notifications_rounded),
           NavigationItem(label: 'Profil', icon: Icons.account_circle_rounded),
         ];
@@ -186,6 +188,7 @@ class _HomeScreenState extends State<HomeScreen> {
         return AdminDashboard(
           user: widget.user,
           onNavigateTab: (index) {
+            if (!mounted) return;
             setState(() => _selectedIndex = index.clamp(0, navigationItems.length - 1));
           },
         );
@@ -222,6 +225,7 @@ class _HomeScreenState extends State<HomeScreen> {
         return AdminDashboard(
           user: widget.user,
           onNavigateTab: (index) {
+            if (!mounted) return;
             setState(() => _selectedIndex = index.clamp(0, navigationItems.length - 1));
           },
         );
@@ -235,10 +239,14 @@ class _HomeScreenState extends State<HomeScreen> {
         return const AdminApprenants();
       case 'Paiements & Caisse':
         return const AdminPaiements();
+      case 'Utilisateurs & Rôles':
+        return const AdminUsers();
       case 'Planning':
         return const AdminPlanning();
       case 'Attestations & Diplômes':
         return AdminAttestationsCartes(user: widget.user);
+      case 'Logs & Audit':
+        return const AdminAuditLogs();
       case 'Notifications':
         return NotificationsPage(user: widget.user);
       case 'Profil':
@@ -254,6 +262,7 @@ class _HomeScreenState extends State<HomeScreen> {
         return AdminDashboard(
           user: widget.user,
           onNavigateTab: (index) {
+            if (!mounted) return;
             setState(() => _selectedIndex = index.clamp(0, navigationItems.length - 1));
           },
         );
@@ -280,6 +289,7 @@ class _HomeScreenState extends State<HomeScreen> {
         return AdminDashboard(
           user: widget.user,
           onNavigateTab: (index) {
+            if (!mounted) return;
             setState(() => _selectedIndex = index.clamp(0, navigationItems.length - 1));
           },
         );
@@ -306,6 +316,7 @@ class _HomeScreenState extends State<HomeScreen> {
         return AdminDashboard(
           user: widget.user,
           onNavigateTab: (index) {
+            if (!mounted) return;
             setState(() => _selectedIndex = index.clamp(0, navigationItems.length - 1));
           },
         );

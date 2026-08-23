@@ -315,8 +315,8 @@ class _AdminFormateursState extends State<AdminFormateurs> with TickerProviderSt
     final assignedModules = assignedFormations
         .expand((formation) {
           final mods = _db.getModulesForFormateur(formation, userId);
-          if (mods.isEmpty || (mods.length == 1 && mods.first == formation.titre)) {
-            return ['${formation.titre} (Formation complète)'];
+          if (formation.modules.isEmpty && mods.isNotEmpty) {
+            return [formation.titre];
           }
           return mods.map((module) => '${formation.titre} · $module');
         })
@@ -602,6 +602,16 @@ class _AdminFormateursState extends State<AdminFormateurs> with TickerProviderSt
                           );
                         }).toList(),
                       ),
+                    ] else ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        'Aucune formation affectée pour le moment.',
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          fontStyle: FontStyle.italic,
+                          color: Colors.black45,
+                        ),
+                      ),
                     ],
                   ],
                 ),
@@ -819,53 +829,55 @@ class _AdminFormateursState extends State<AdminFormateurs> with TickerProviderSt
               onPressed: () => Navigator.pop(dialogContext),
               child: const Text('Annuler'),
             ),
-            StatefulBuilder(
-              builder: (context, setBtnState) {
-                bool isSaving = false;
-                return ElevatedButton.icon(
-                  icon: isSaving
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                        )
-                      : const Icon(Icons.save_rounded, size: 18),
-                  label: Text(isSaving ? 'Enregistrement...' : 'Enregistrer'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: isSaving ? Colors.grey.shade400 : AppTheme.primary,
-                    foregroundColor: Colors.white,
-                  ),
-                  onPressed: isSaving
-                      ? null
-                      : () async {
-                          setBtnState(() => isSaving = true);
-                          try {
-                            await _db.replaceFormateurAssignments(
-                              userId,
-                              selectedModulesByFormation.map((id, modules) => MapEntry(id, modules.toList())),
-                            );
-                            if (!dialogContext.mounted) return;
-                            Navigator.pop(dialogContext);
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Affectations du formateur enregistrées avec succès.'),
-                                  backgroundColor: AppTheme.success,
-                                ),
+            (() {
+              bool isSaving = false;
+              return StatefulBuilder(
+                builder: (context, setBtnState) {
+                  return ElevatedButton.icon(
+                    icon: isSaving
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          )
+                        : const Icon(Icons.save_rounded, size: 18),
+                    label: Text(isSaving ? 'Enregistrement...' : 'Enregistrer'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isSaving ? Colors.grey.shade400 : AppTheme.primary,
+                      foregroundColor: Colors.white,
+                    ),
+                    onPressed: isSaving
+                        ? null
+                        : () async {
+                            setBtnState(() => isSaving = true);
+                            try {
+                              await _db.replaceFormateurAssignments(
+                                userId,
+                                selectedModulesByFormation.map((id, modules) => MapEntry(id, modules.toList())),
                               );
-                              setState(() {});
+                              if (!dialogContext.mounted) return;
+                              Navigator.pop(dialogContext);
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Affectations du formateur enregistrées avec succès.'),
+                                    backgroundColor: AppTheme.success,
+                                  ),
+                                );
+                                setState(() {});
+                              }
+                            } catch (e) {
+                              if (!dialogContext.mounted) return;
+                              setBtnState(() => isSaving = false);
+                              ScaffoldMessenger.of(dialogContext).showSnackBar(
+                                SnackBar(content: Text('Erreur: $e'), backgroundColor: AppTheme.error),
+                              );
                             }
-                          } catch (e) {
-                            if (!dialogContext.mounted) return;
-                            setBtnState(() => isSaving = false);
-                            ScaffoldMessenger.of(dialogContext).showSnackBar(
-                              SnackBar(content: Text('Erreur: $e'), backgroundColor: AppTheme.error),
-                            );
-                          }
-                        },
-                );
-              },
-            ),
+                          },
+                  );
+                },
+              );
+            })(),
           ],
         ),
       ),

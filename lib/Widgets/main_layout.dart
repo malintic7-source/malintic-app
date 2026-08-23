@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:gestion_formations/Models/user.dart';
-import 'package:gestion_formations/Pages/Login/welcom_page.dart';
+import 'package:gestion_formations/Pages/Login/welcome_page.dart';
 import 'package:gestion_formations/Pages/Screens/notifications.dart';
 import 'package:gestion_formations/Services/auth_provider.dart';
 import 'package:gestion_formations/Services/notifications_services.dart';
+import 'package:gestion_formations/Widgets/first_login_password_dialog.dart';
 import 'package:gestion_formations/config/theme.dart';
 
 class MainLayout extends StatefulWidget {
@@ -43,6 +44,13 @@ class _MainLayoutState extends State<MainLayout> with TickerProviderStateMixin {
       duration: const Duration(milliseconds: 800),
       vsync: this,
     )..repeat();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final user = widget.user ?? AuthProvider().currentUser;
+      if (user != null && user.doitChangerMotDePasse && mounted) {
+        FirstLoginPasswordDialog.showIfNeeded(context, user);
+      }
+    });
   }
 
   @override
@@ -50,6 +58,10 @@ class _MainLayoutState extends State<MainLayout> with TickerProviderStateMixin {
     super.didUpdateWidget(oldWidget);
     if (widget.selectedIndex != null && widget.selectedIndex != _selectedIndex) {
       setState(() => _selectedIndex = widget.selectedIndex!);
+    }
+    final user = widget.user ?? AuthProvider().currentUser;
+    if (user != null && user.doitChangerMotDePasse && mounted) {
+      FirstLoginPasswordDialog.showIfNeeded(context, user);
     }
   }
 
@@ -433,7 +445,7 @@ class _MainLayoutState extends State<MainLayout> with TickerProviderStateMixin {
                   await AuthProvider().logout();
                   if (!mounted) return;
                   nav.pushAndRemoveUntil(
-                    MaterialPageRoute(builder: (context) => const WelcomPage()),
+                    MaterialPageRoute(builder: (context) => const WelcomePage()),
                     (route) => false,
                   );
                 },
@@ -730,7 +742,7 @@ class _MainLayoutState extends State<MainLayout> with TickerProviderStateMixin {
                     await AuthProvider().logout();
                     if (!mounted) return;
                     nav.pushAndRemoveUntil(
-                      MaterialPageRoute(builder: (context) => const WelcomPage()),
+                      MaterialPageRoute(builder: (context) => const WelcomePage()),
                       (route) => false,
                     );
                   },

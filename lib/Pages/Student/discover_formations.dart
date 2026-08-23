@@ -1,16 +1,12 @@
-import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:gestion_formations/Models/user.dart';
 import 'package:gestion_formations/Models/formation.dart';
 import 'package:gestion_formations/Services/db_services.dart';
 import 'package:gestion_formations/config/theme.dart';
-import 'package:gestion_formations/utils/share_helper.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:flutter/services.dart';
+import 'package:gestion_formations/Widgets/share_formation_dialog.dart';
 
 class DiscoverFormationsPage extends StatefulWidget {
   final User user;
@@ -410,12 +406,8 @@ class _DiscoverFormationsPageState extends State<DiscoverFormationsPage> with Ti
                           ],
                         ),
                         IconButton(
-                          tooltip: 'Partager',
-                          onPressed: () async {
-                            final shareUrl = await _buildLocalShareUrl(formation.id);
-                            final shareText = _composeShareText(formation, shareUrl);
-                            await shareBytes(null, shareText, 'formation_share.txt');
-                          },
+                          tooltip: 'Partager la formation',
+                          onPressed: () => _showFormationQrDialog(context, formation),
                           icon: Icon(Icons.share_rounded, size: 18, color: Colors.black54),
                         ),
                         PopupMenuButton<String>(
@@ -587,181 +579,7 @@ class _DiscoverFormationsPageState extends State<DiscoverFormationsPage> with Ti
   }
 
   void _showFormationQrDialog(BuildContext context, Formation formation) async {
-    final shareUrl = await _buildLocalShareUrl(formation.id);
-    if (!context.mounted) return;
-
-    await showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(
-          'Partager la formation',
-          style: GoogleFonts.poppins(
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-            color: Colors.black87,
-          ),
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  IconButton(
-                    tooltip: 'WhatsApp',
-                    onPressed: () async {
-                      final waUrl = 'https://wa.me/?text=${Uri.encodeComponent(_composeShareText(formation, shareUrl))}';
-                      await launchUrl(Uri.parse(waUrl), mode: LaunchMode.externalApplication);
-                    },
-                    icon: Icon(Icons.share, color: Color(0xFF25D366)),
-                  ),
-                  IconButton(
-                    tooltip: 'Facebook',
-                    onPressed: () async {
-                      final fb = 'https://www.facebook.com/sharer/sharer.php?u=${Uri.encodeComponent(shareUrl)}';
-                      await launchUrl(Uri.parse(fb), mode: LaunchMode.externalApplication);
-                    },
-                    icon: Icon(Icons.facebook, color: Color(0xFF1877F2)),
-                  ),
-                  IconButton(
-                    tooltip: 'Copier le lien',
-                    onPressed: () async {
-                      await Clipboard.setData(ClipboardData(text: shareUrl));
-                      if (!context.mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Lien copié dans le presse-papier')),
-                      );
-                    },
-                    icon: Icon(Icons.link, color: Colors.black54),
-                  ),
-                  IconButton(
-                    tooltip: 'Partager',
-                    onPressed: () async {
-                      final bytes = await _captureQrPng(qrKey);
-                      final shareText = _composeShareText(formation, shareUrl);
-                      await shareBytes(bytes, shareText, 'formation_qr.png');
-                    },
-                    icon: Icon(Icons.share_rounded, color: AppTheme.primary),
-                  ),
-                ],
-              ),
-              SizedBox(height: 16),
-              RepaintBoundary(
-                key: qrKey,
-                child: Container(
-                  color: Colors.white,
-                  padding: EdgeInsets.all(12),
-                  child: QrImageView(
-                    data: shareUrl,
-                    version: QrVersions.auto,
-                    size: 240,
-                    backgroundColor: Colors.white,
-                    embeddedImage: const AssetImage('images/Malintic.png'),
-                    embeddedImageStyle: QrEmbeddedImageStyle(
-                      size: const Size(30, 30),
-                    ),
-                  ),
-                ),
-              ),
-              SizedBox(height: 16),
-              Container(
-                padding: EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppTheme.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: SelectableText(
-                    shareUrl,
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.poppins(
-                      fontSize: 12,
-                      color: AppTheme.primary,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Fermer'),
-          ),
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [AppTheme.primary, AppTheme.primaryDark],
-              ),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: () async {
-                  final bytes = await _captureQrPng(qrKey);
-                  if (bytes == null) {
-                    if (!context.mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Impossible de générer le QR.')),
-                    );
-                    return;
-                  }
-
-                  final shareText = '''
-📚 *${formation.titre}*
-
-${formation.description}
-
-💰 *Prix:* ${(formation.type == FormationType.enligne || formation.type == FormationType.mixte ? (formation.prixEnLigne ?? formation.prix) : formation.prix)} F CFA
-⏱️ *Durée:* ${formation.dureeSemaines} semaine(s)
-📍 *Type:* ${formation.type.toString().split('.').last == 'enligne' ? 'En ligne' : 'Présentielle'}
-
-✨ *Modules:*
-${formation.modules.map((m) => '• $m').join('\n')}
-
-🔗 Découvrez plus:
-$shareUrl
-
-👇 Scannez le QR code ci-dessous pour accéder directement!
-''';
-
-                  await shareBytes(bytes, shareText, 'formation_qr.png');
-                },
-                borderRadius: BorderRadius.circular(8),
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.share_rounded, color: Colors.white, size: 18),
-                      SizedBox(width: 6),
-                      Text(
-                        'Partager',
-                        style: GoogleFonts.poppins(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _composeShareText(Formation formation, String url) {
-    return '''📚 ${formation.titre}\n\n${formation.description}\n\nPrix: ${(formation.type == FormationType.enligne || formation.type == FormationType.mixte ? (formation.prixEnLigne ?? formation.prix) : formation.prix)} F CFA\nDurée: ${formation.dureeSemaines} semaine(s)\n\nModules:\n${formation.modules.map((m) => '• $m').join('\n')}\n\nDécouvrez: $url''';
+    await ShareFormationDialog.show(context, formation);
   }
 
   Future<void> _showEnrollDialog(BuildContext context, Formation formation) async {
@@ -1208,21 +1026,5 @@ $shareUrl
     }
 
     return formations;
-  }
-
-  Future<String> _buildLocalShareUrl(String formationId) async {
-    try {
-      final origin = Uri.base.origin.startsWith('http') ? Uri.base.origin : '';
-      if (origin.isNotEmpty) return '$origin/formation.html?id=$formationId';
-    } catch (_) {}
-    return '/formation.html?id=$formationId';
-  }
-
-  Future<Uint8List?> _captureQrPng(GlobalKey key) async {
-    final boundary = key.currentContext?.findRenderObject() as RenderRepaintBoundary?;
-    if (boundary == null) return null;
-    final image = await boundary.toImage(pixelRatio: 3.0);
-    final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-    return byteData?.buffer.asUint8List();
   }
 }

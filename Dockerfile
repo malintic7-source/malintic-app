@@ -3,15 +3,15 @@ FROM ghcr.io/cirruslabs/flutter:stable AS builder
 
 WORKDIR /app
 
-# Copy pubspec files
-COPY pubspec.yaml ./
-COPY pubspec.lock* ./
-
-# Get dependencies
-RUN flutter pub get
-
 # Copy source code
 COPY . .
+
+# Some legacy projects do not carry the generated platform metadata in the
+# Docker build context. Generate the web runner inside the disposable builder.
+RUN flutter create . --platforms=web
+
+# Get dependencies after platform configuration has been generated.
+RUN flutter pub get
 
 # Build web app
 RUN flutter build web --release --no-web-resources-cdn

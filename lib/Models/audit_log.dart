@@ -1,3 +1,6 @@
+/// Niveaux de sévérité pour le journal d'audit.
+enum AuditSeverity { info, warning, critical }
+
 class AuditLog {
   final String id;
   final String userNom;
@@ -6,6 +9,11 @@ class AuditLog {
   final String description;
   final DateTime timestamp;
 
+  /// #20 — Champs structurés ajoutés pour faciliter le filtrage et les exports.
+  final String? targetId;
+  final String? targetType;
+  final AuditSeverity severity;
+
   AuditLog({
     required this.id,
     required this.userNom,
@@ -13,6 +21,9 @@ class AuditLog {
     required this.action,
     required this.description,
     required this.timestamp,
+    this.targetId,
+    this.targetType,
+    this.severity = AuditSeverity.info,
   });
 
   Map<String, dynamic> toMap() {
@@ -23,6 +34,9 @@ class AuditLog {
       'action': action,
       'description': description,
       'timestamp': timestamp.toIso8601String(),
+      'targetId': targetId,
+      'targetType': targetType,
+      'severity': severity.name,
     };
   }
 
@@ -38,6 +52,17 @@ class AuditLog {
       return DateTime.now();
     }
 
+    AuditSeverity parseSeverity(dynamic value) {
+      switch (value?.toString()) {
+        case 'warning':
+          return AuditSeverity.warning;
+        case 'critical':
+          return AuditSeverity.critical;
+        default:
+          return AuditSeverity.info;
+      }
+    }
+
     return AuditLog(
       id: map['id'] ?? '',
       userNom: map['userNom'] ?? 'Système',
@@ -45,6 +70,9 @@ class AuditLog {
       action: map['action'] ?? 'ACTION',
       description: map['description'] ?? '',
       timestamp: parseTimestamp(map['timestamp']),
+      targetId: map['targetId']?.toString(),
+      targetType: map['targetType']?.toString(),
+      severity: parseSeverity(map['severity']),
     );
   }
 }

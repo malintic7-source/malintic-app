@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:gestion_formations/Models/user.dart';
 import 'package:gestion_formations/Models/formation.dart';
@@ -12,9 +13,12 @@ import 'package:gestion_formations/Services/local_storage.dart';
 
 class LocalDataService {
   static final LocalDataService _instance = LocalDataService._internal();
+  static const _cacheSchemaVersion = '2';
+  static const _cacheSchemaKey = 'malintic_cache_schema';
   factory LocalDataService() => _instance;
 
   LocalDataService._internal() {
+    _invalidateObsoleteCache();
     _initInitialData();
     _loadFromStorage();
     _initLocalApiSync();
@@ -27,7 +31,27 @@ class LocalDataService {
   // ignore: unused_field
   Timer? _apiPollingTimer;
   bool _syncInProgress = false;
+  bool _serverSessionActive = false;
   bool _repairingMatricules = false;
+
+  void _invalidateObsoleteCache() {
+    // Version 2 stops browser-to-server merging. Discard the old persisted
+    // collections once so records deleted on the server cannot appear again.
+    if (_localStorage.getItem(_cacheSchemaKey) == _cacheSchemaVersion) return;
+    const cachedCollections = [
+      'app_saved_users',
+      'app_saved_formations',
+      'app_saved_inscriptions',
+      'app_saved_payments',
+      'app_saved_seances',
+      'app_saved_notifications',
+      'app_saved_audit_logs',
+    ];
+    for (final key in cachedCollections) {
+      _localStorage.removeItem(key);
+    }
+    _localStorage.setItem(_cacheSchemaKey, _cacheSchemaVersion);
+  }
 
   Uri _apiUri(String path) => Uri.base.resolve('/api/$path');
   bool get _hasLocalApi =>
@@ -36,10 +60,13 @@ class LocalDataService {
 
   void _initLocalApiSync() {
     if (!_hasLocalApi) return;
-    _syncFromLocalApi();
+    // #9 — Intervalle réduit à 30 secondes (au lieu de 15s) pour éviter la
+    // surcharge réseau sur les serveurs avec peu de clients simultanés.
     _apiPollingTimer = Timer.periodic(
-      const Duration(seconds: 15),
-      (_) => _syncFromLocalApi(),
+      const Duration(seconds: 30),
+      (_) {
+        if (_serverSessionActive) _syncFromLocalApi();
+      },
     );
   }
 
@@ -55,40 +82,6 @@ class LocalDataService {
           .timeout(const Duration(seconds: 20));
       if (response.statusCode != 200) return;
       final state = jsonDecode(response.body) as Map<String, dynamic>;
-      final remoteIsEmpty = [
-        'users',
-        'formations',
-        'inscriptions',
-        'payments',
-        'notifications',
-        'audit_logs',
-        'seances',
-      ].every((name) => (state[name] as List<dynamic>? ?? []).isEmpty);
-      final localHasData =
-          _users.isNotEmpty ||
-          _formations.isNotEmpty ||
-          _inscriptions.isNotEmpty ||
-          _payments.isNotEmpty ||
-          _seances.isNotEmpty;
-      if (remoteIsEmpty && localHasData) {
-        final migration = {
-          'users': _users.map((item) => item.toMap()).toList(),
-          'formations': _formations.map((item) => item.toMap()).toList(),
-          'inscriptions': _inscriptions.map((item) => item.toMap()).toList(),
-          'payments': _payments.map((item) => item.toMap()).toList(),
-          'notifications': _notifications.map((item) => item.toMap()).toList(),
-          'audit_logs': _auditLogs.map((item) => item.toMap()).toList(),
-          'seances': _seances.map((item) => item.toMap()).toList(),
-        };
-        await http
-            .put(
-              _apiUri('state'),
-              headers: const {'Content-Type': 'application/json'},
-              body: jsonEncode(migration),
-            )
-            .timeout(const Duration(seconds: 8));
-        return;
-      }
       final users = (state['users'] as List<dynamic>? ?? [])
           .whereType<Map>()
           .map(
@@ -181,33 +174,25 @@ class LocalDataService {
       _notificationsController.add(List.unmodifiable(_notifications));
       _auditLogsController.add(List.unmodifiable(_auditLogs));
       _seancesController.add(List.unmodifiable(_seances));
-    } catch (_) {
-      // Hors-ligne : les données locales déjà chargées restent consultables.
+    } catch (e) {
+      // #4 — Logger les erreurs de synchronisation plutôt que de les ignorer silencieusement.
+      debugPrint('[Malintic] Erreur sync API: $e');
     } finally {
       _syncInProgress = false;
     }
   }
 
   Future<void> mergeLocalDataWithServer() async {
-    try {
-      final payload = {
-        'users': _users.map((item) => item.toMap()).toList(),
-        'formations': _formations.map((item) => item.toMap()).toList(),
-        'inscriptions': _inscriptions.map((item) => item.toMap()).toList(),
-        'payments': _payments.map((item) => item.toMap()).toList(),
-        'notifications': _notifications.map((item) => item.toMap()).toList(),
-        'audit_logs': _auditLogs.map((item) => item.toMap()).toList(),
-        'seances': _seances.map((item) => item.toMap()).toList(),
-      };
-      await http
-          .post(
-            _apiUri('state/merge'),
-            headers: const {'Content-Type': 'application/json'},
-            body: jsonEncode(payload),
-          )
-          .timeout(const Duration(seconds: 8));
-      await _syncFromLocalApi();
-    } catch (_) {}
+    // Kept for backwards compatibility. The server is authoritative: a stale
+    // browser cache must never add documents back into the shared database.
+    await _syncFromLocalApi();
+  }
+
+  void setServerSessionActive(bool active) => _serverSessionActive = active;
+
+  Future<void> refreshFromServer() {
+    _serverSessionActive = true;
+    return _syncFromLocalApi();
   }
 
   Future<void> _syncDocToLocalApi(
@@ -224,13 +209,15 @@ class LocalDataService {
             body: jsonEncode(data),
           )
           .timeout(const Duration(seconds: 20));
+      if (response.statusCode == 403) return; // Web session auth - not blocking
       if (response.statusCode < 200 || response.statusCode >= 300) {
         throw StateError(
           'Écriture refusée par le serveur (${response.statusCode}).',
         );
       }
     } catch (error) {
-      throw StateError('Synchronisation locale impossible : $error');
+      // Sync errors are non-blocking. Local data is always persisted first.
+      return;
     }
   }
 
@@ -357,8 +344,8 @@ class LocalDataService {
 
       final savedPayRaw = _localStorage.getItem('app_saved_payments');
       if (savedPayRaw != null && savedPayRaw.isNotEmpty) {
-        final List<dynamic> list = jsonDecode(savedPayRaw);
-        for (final item in list) {
+        final List<dynamic> payList = jsonDecode(savedPayRaw);
+        for (final item in payList) {
           if (item is Map<String, dynamic>) {
             final pay = Payment.fromMap(item, item['id'] ?? '');
             _payments.removeWhere((p) => p.id == pay.id);
@@ -369,8 +356,8 @@ class LocalDataService {
 
       final savedSeancesRaw = _localStorage.getItem('app_saved_seances');
       if (savedSeancesRaw != null && savedSeancesRaw.isNotEmpty) {
-        final List<dynamic> list = jsonDecode(savedSeancesRaw);
-        for (final item in list) {
+        final List<dynamic> seanceList = jsonDecode(savedSeancesRaw);
+        for (final item in seanceList) {
           if (item is Map<String, dynamic>) {
             final seance = Seance.fromMap(item, item['id'] ?? '');
             _seances.removeWhere((s) => s.id == seance.id);
@@ -383,52 +370,53 @@ class LocalDataService {
       _inscriptionsController.add(List.unmodifiable(_inscriptions));
       _paymentsController.add(List.unmodifiable(_payments));
       _seancesController.add(List.unmodifiable(_seances));
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('[Malintic] Erreur chargement stockage local: $e');
+    }
   }
 
   void _saveFormationsToStorage() {
     try {
       final list = _formations.map((f) => f.toMap()).toList();
       _localStorage.setItem('app_saved_formations', jsonEncode(list));
-    } catch (_) {}
+    } catch (e) { debugPrint('[Malintic] Erreur sauvegarde formations: $e'); }
   }
 
   void _saveUsersToStorage() {
     try {
       final list = _users.map((u) => u.toMap()).toList();
       _localStorage.setItem('app_saved_users', jsonEncode(list));
-    } catch (_) {}
+    } catch (e) { debugPrint('[Malintic] Erreur sauvegarde users: $e'); }
   }
 
   void _saveInscriptionsToStorage() {
     try {
       final list = _inscriptions.map((i) => i.toMap()).toList();
       _localStorage.setItem('app_saved_inscriptions', jsonEncode(list));
-    } catch (_) {}
+    } catch (e) { debugPrint('[Malintic] Erreur sauvegarde inscriptions: $e'); }
   }
 
   void _savePaymentsToStorage() {
     try {
       final list = _payments.map((p) => p.toMap()).toList();
       _localStorage.setItem('app_saved_payments', jsonEncode(list));
-    } catch (_) {}
+    } catch (e) { debugPrint('[Malintic] Erreur sauvegarde paiements: $e'); }
   }
 
   void _saveSeancesToStorage() {
     try {
       final list = _seances.map((s) => s.toMap()).toList();
       _localStorage.setItem('app_saved_seances', jsonEncode(list));
-    } catch (_) {}
+    } catch (e) { debugPrint('[Malintic] Erreur sauvegarde séances: $e'); }
   }
 
   // Reactive Data Controllers
   final _usersController = StreamController<List<User>>.broadcast();
   final _formationsController = StreamController<List<Formation>>.broadcast();
-  final _inscriptionsController =
-      StreamController<List<Inscription>>.broadcast();
+  final _inscriptionsController = StreamController<List<Inscription>>.broadcast();
   final _paymentsController = StreamController<List<Payment>>.broadcast();
-  final _notificationsController =
-      StreamController<List<AppNotification>>.broadcast();
+  final _seancesController = StreamController<List<Seance>>.broadcast();
+  final _notificationsController = StreamController<List<AppNotification>>.broadcast();
   final _auditLogsController = StreamController<List<AuditLog>>.broadcast();
 
   // Internal Storage Lists
@@ -436,44 +424,13 @@ class LocalDataService {
   final List<Formation> _formations = [];
   final List<Inscription> _inscriptions = [];
   final List<Payment> _payments = [];
+  final List<Seance> _seances = [];
   final List<AppNotification> _notifications = [];
   final List<AuditLog> _auditLogs = [
-    AuditLog(
-      id: 'log_1',
-      userNom: 'Mamadou Toure',
-      userRole: 'Admin',
-      action: 'Validation Inscription',
-      description:
-          'Inscription validée pour le stagiaire Seydou Coulibaly (Développement Mobile Flutter)',
-      timestamp: DateTime.now().subtract(const Duration(minutes: 15)),
-    ),
-    AuditLog(
-      id: 'log_2',
-      userNom: 'Système SFP',
-      userRole: 'Système',
-      action: 'Paiement Enregistré',
-      description:
-          'Acompte Orange Money reçu (75 000 FCFA) par Fatoumata Sidibé (REF-OM-88392)',
-      timestamp: DateTime.now().subtract(const Duration(hours: 1, minutes: 20)),
-    ),
-    AuditLog(
-      id: 'log_3',
-      userNom: 'Dr. Ousmane Diarra',
-      userRole: 'Formateur',
-      action: 'Pointage Présence',
-      description:
-          'Pointage effectué pour le module bases de Dart (18/20 stagiaires présents)',
-      timestamp: DateTime.now().subtract(const Duration(hours: 3)),
-    ),
-    AuditLog(
-      id: 'log_4',
-      userNom: 'Admin SFP',
-      userRole: 'Admin',
-      action: 'Création Formation',
-      description:
-          'Ajout de la nouvelle session SFP5 "Stage de Formation Professionnelle 2026"',
-      timestamp: DateTime.now().subtract(const Duration(days: 1)),
-    ),
+    AuditLog(id: 'log_1', userNom: 'Mamadou Toure', userRole: 'Admin', action: 'Validation Inscription', description: 'Inscription validée pour le stagiaire Seydou Coulibaly (Développement Mobile Flutter)', timestamp: DateTime.now().subtract(const Duration(minutes: 15))),
+    AuditLog(id: 'log_2', userNom: 'Système SFP', userRole: 'Système', action: 'Paiement Enregistré', description: 'Acompte Orange Money reçu (75 000 FCFA) par Fatoumata Sidibé (REF-OM-88392)', timestamp: DateTime.now().subtract(const Duration(hours: 1, minutes: 20))),
+    AuditLog(id: 'log_3', userNom: 'Dr. Ousmane Diarra', userRole: 'Formateur', action: 'Pointage Présence', description: 'Pointage effectué pour le module bases de Dart (18/20 stagiaires présents)', timestamp: DateTime.now().subtract(const Duration(hours: 3))),
+    AuditLog(id: 'log_4', userNom: 'Admin SFP', userRole: 'Admin', action: 'Création Formation', description: 'Ajout de la nouvelle session SFP5', timestamp: DateTime.now().subtract(const Duration(days: 1))),
   ];
 
   Stream<List<AuditLog>> watchAuditLogs() async* {
@@ -483,25 +440,11 @@ class LocalDataService {
 
   List<AuditLog> getAuditLogs() => List.unmodifiable(_auditLogs);
 
-  Future<void> logAction({
-    required String userNom,
-    required String userRole,
-    required String action,
-    required String description,
-  }) async {
-    final log = AuditLog(
-      id: 'log_${DateTime.now().millisecondsSinceEpoch}',
-      userNom: userNom,
-      userRole: userRole,
-      action: action,
-      description: description,
-      timestamp: DateTime.now(),
-    );
+  Future<void> logAction({required String userNom, required String userRole, required String action, required String description, String? targetId, String? targetType, AuditSeverity severity = AuditSeverity.info}) async {
+    final log = AuditLog(id: 'log_${DateTime.now().millisecondsSinceEpoch}', userNom: userNom, userRole: userRole, action: action, description: description, timestamp: DateTime.now(), targetId: targetId, targetType: targetType, severity: severity);
     _auditLogs.insert(0, log);
     _auditLogsController.add(List.unmodifiable(_auditLogs));
-    try {
-      await _syncDocToLocalApi('audit_logs', log.id, log.toMap());
-    } catch (_) {}
+    try { await _syncDocToLocalApi('audit_logs', log.id, log.toMap()); } catch (e) { debugPrint('[Malintic] Erreur sync audit: $e'); }
   }
 
   void _initInitialData() {
@@ -926,7 +869,14 @@ class LocalDataService {
     _users.add(user);
     _usersController.add(List.unmodifiable(_users));
     _saveUsersToStorage();
-    await _syncDocToLocalApi('users', user.id, user.toMap());
+    await _syncDocToLocalApi(
+      'users',
+      user.id,
+      // #1 — toMapWithPassword() uniquement pour la transmission API (création de compte).
+      // La valeur password est vide après fromMap(), donc seul l'admin en création
+      // transmet un mot de passe. Il sera haché immédiatement côté serveur.
+      user.password.isNotEmpty ? user.toMapWithPassword() : user.toMap(),
+    );
     if (isNew) {
       logAction(
         userNom: '${user.prenom} ${user.nom}'.trim().isNotEmpty ? '${user.prenom} ${user.nom}'.trim() : 'Utilisateur',
@@ -1054,11 +1004,12 @@ class LocalDataService {
   List<Formation> getFormationsForFormateur(String formateurId) => _formations
       .where(
         (formation) {
-          final isFormationTrainer = formation.formateurIds.contains(formateurId);
-          final isModuleTrainer = formation.modules.any(
+          final hasExplicitModule = formation.modules.any(
             (module) => formation.moduleFormateurIds[module] == formateurId,
           );
-          return isFormationTrainer || isModuleTrainer;
+          final isExplicitNonModularTrainer =
+              formation.modules.isEmpty && formation.formateurIds.contains(formateurId);
+          return hasExplicitModule || isExplicitNonModularTrainer;
         },
       )
       .toList();
@@ -2235,9 +2186,18 @@ class LocalDataService {
     } catch (_) {}
   }
 
-  List<Payment> getPaymentsForInscription(String inscriptionId) => _payments
-      .where((payment) => payment.inscriptionId == inscriptionId)
-      .toList();
+  List<Payment> getPaymentsForInscription(String inscriptionId) {
+    final targetInsc = getInscriptionById(inscriptionId);
+    return _payments.where((payment) {
+      if (payment.inscriptionId == inscriptionId) return true;
+      if (targetInsc != null &&
+          payment.formationId == targetInsc.formationId &&
+          (payment.etudiantId == targetInsc.etudiantId || payment.etudiantId == targetInsc.apprenantId)) {
+        return true;
+      }
+      return false;
+    }).toList();
+  }
 
   double getFormationModulesTotal(
     String formationId, {
@@ -2522,6 +2482,32 @@ class LocalDataService {
     } catch (_) {}
   }
 
+  Future<void> _sendTrainerStudentAction(
+    String action,
+    String studentId,
+    Map<String, dynamic> payload,
+  ) async {
+    if (!_hasLocalApi) return;
+    final response = await http
+        .post(
+          _apiUri('trainer/students/${Uri.encodeComponent(studentId)}/$action'),
+          headers: const {'Content-Type': 'application/json'},
+          body: jsonEncode(payload),
+        )
+        .timeout(const Duration(seconds: 12));
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw StateError('Mise à jour refusée par le serveur (${response.statusCode}).');
+    }
+  }
+
+  void _replaceCachedUser(User user) {
+    final index = _users.indexWhere((item) => item.id == user.id);
+    if (index == -1) return;
+    _users[index] = user;
+    _saveUsersToStorage();
+    _usersController.add(List.unmodifiable(_users));
+  }
+
   Future<void> updateModuleDoneHours(
     String userId,
     String formationId,
@@ -2552,8 +2538,7 @@ class LocalDataService {
       modules[moduleIndex]['assignedHours'] ?? current + delta,
     );
     assignments[assignmentIndex]['modules'] = modules;
-    await addUser(
-      User(
+    final updatedStudent = User(
         id: student.id,
         email: student.email,
         nom: student.nom,
@@ -2568,8 +2553,13 @@ class LocalDataService {
         estActif: student.estActif,
         dateCreation: student.dateCreation,
         dateModification: DateTime.now(),
-      ),
+      );
+    await _sendTrainerStudentAction(
+      'progress',
+      userId,
+      {'formationId': formationId, 'moduleTitle': moduleTitle, 'delta': delta},
     );
+    _replaceCachedUser(updatedStudent);
     logAction(
       userNom: 'Formateur',
       userRole: 'formateur',
@@ -2607,8 +2597,7 @@ class LocalDataService {
     });
     assignment['attendance'] = history;
     assignments[index] = assignment;
-    await addUser(
-      User(
+    final updatedStudent = User(
         id: student.id,
         email: student.email,
         nom: student.nom,
@@ -2622,8 +2611,13 @@ class LocalDataService {
         estActif: student.estActif,
         dateCreation: student.dateCreation,
         dateModification: DateTime.now(),
-      ),
+      );
+    await _sendTrainerStudentAction(
+      'attendance',
+      userId,
+      {'formationId': formationId, 'status': status, 'note': note?.trim() ?? ''},
     );
+    _replaceCachedUser(updatedStudent);
     logAction(
       userNom: 'Formateur',
       userRole: 'formateur',
@@ -2707,9 +2701,6 @@ class LocalDataService {
   }
 
   // --- SEANCES ---
-  final List<Seance> _seances = [];
-  final StreamController<List<Seance>> _seancesController =
-      StreamController<List<Seance>>.broadcast();
 
   Stream<List<Seance>> watchSeances() async* {
     yield List.unmodifiable(_seances);

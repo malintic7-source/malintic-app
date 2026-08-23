@@ -24,7 +24,7 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 Write-Host "[2/4] Construction de la nouvelle image..."
-docker compose build $service $apiService
+docker compose -p gestion_formations build $service $apiService
 if ($LASTEXITCODE -ne 0) {
     throw "La construction Docker a échoué. La version actuellement en ligne est conservée."
 }
@@ -32,11 +32,11 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host "[3/4] Mise à jour contrôlée du seul service applicatif..."
 # Sans `down` ni suppression de volume : Docker conserve les données locales
 # de l'API et le tunnel. Les deux services sont mis à jour de façon contrôlée.
-docker compose up -d --no-deps $apiService
+docker compose -p gestion_formations up -d --no-deps $apiService
 if ($LASTEXITCODE -ne 0) {
     throw "La mise à jour de l'API locale a échoué."
 }
-docker compose up -d --no-deps $service
+docker compose -p gestion_formations up -d --no-deps $service
 if ($LASTEXITCODE -ne 0) {
     throw "La mise à jour Docker a échoué."
 }

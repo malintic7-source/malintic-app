@@ -51,6 +51,7 @@ void main() {
       expect(result['email'], 'aminata@example.com');
       expect(result['role'], UserRole.apprenant.toString());
       expect(result['estActif'], isTrue);
+      expect(result['doitChangerMotDePasse'], isTrue);
     });
   });
 

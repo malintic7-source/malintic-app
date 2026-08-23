@@ -152,6 +152,27 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
               label: Text('Rapport PDF', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w700)),
               onPressed: _generatePaymentReport,
             ),
+            const SizedBox(width: 8),
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.18),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: IconButton(
+                tooltip: 'Actualiser les paiements',
+                icon: const Icon(Icons.refresh_rounded, color: Colors.white, size: 20),
+                onPressed: () {
+                  setState(() {});
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('🔄 Données des paiements actualisées !'),
+                      backgroundColor: AppTheme.primary,
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                },
+              ),
+            ),
           ],
         ),
       ),
@@ -622,7 +643,7 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: filteredPayments.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 10),
+            separatorBuilder: (context, index) => const SizedBox(height: 10),
             itemBuilder: (context, index) {
               final p = filteredPayments[index];
               final student = _db.getUserById(p.etudiantId);
@@ -1067,7 +1088,6 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
               TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Annuler')),
               StatefulBuilder(
                 builder: (context, setBtnState) {
-                  bool isSubmitting = false;
                   return ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(backgroundColor: AppTheme.success, foregroundColor: Colors.white),
                     icon: const Icon(Icons.check_circle_rounded, size: 18),
@@ -1075,8 +1095,9 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
                     onPressed: () async {
                       setDialogState(() {});
                       final saved = await _submitPayment();
-                      if (saved && ctx.mounted) {
-                        Navigator.of(ctx).pop();
+                      if (saved) {
+                        if (ctx.mounted) Navigator.of(ctx).pop(true);
+                        if (mounted) setState(() {});
                       }
                     },
                   );

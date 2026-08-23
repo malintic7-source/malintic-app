@@ -21,16 +21,18 @@ class _AdminAuditLogsState extends State<AdminAuditLogs> with TickerProviderStat
   late AnimationController _fadeController;
   String _searchQuery = '';
   String _selectedCategory = 'Tous';
+  String _selectedUserNom = 'Tous';
 
   final List<Map<String, dynamic>> _categories = [
     {'label': 'Tous', 'icon': Icons.all_inclusive_rounded},
-    {'label': 'Formateurs', 'icon': Icons.co_present_rounded},
-    {'label': 'Apprenants', 'icon': Icons.school_rounded},
-    {'label': 'Staff & Admin', 'icon': Icons.admin_panel_settings_rounded},
-    {'label': 'Paiements', 'icon': Icons.payments_rounded},
+    {'label': 'Authentification', 'icon': Icons.login_rounded},
+    {'label': 'Sécurité & Mots de passe', 'icon': Icons.key_rounded},
     {'label': 'Inscriptions', 'icon': Icons.how_to_reg_rounded},
-    {'label': 'Formations', 'icon': Icons.menu_book_rounded},
-    {'label': 'Suppressions', 'icon': Icons.delete_sweep_rounded},
+    {'label': 'Paiements & Caisse', 'icon': Icons.payments_rounded},
+    {'label': 'Formations & Modules', 'icon': Icons.menu_book_rounded},
+    {'label': 'Présences & Séances', 'icon': Icons.co_present_rounded},
+    {'label': 'Staff & Admin', 'icon': Icons.admin_panel_settings_rounded},
+    {'label': 'Alertes & Suppr.', 'icon': Icons.delete_sweep_rounded},
   ];
 
   @override
@@ -65,7 +67,7 @@ class _AdminAuditLogsState extends State<AdminAuditLogs> with TickerProviderStat
           const SizedBox(height: 20),
           _buildKpiSummary(),
           const SizedBox(height: 20),
-          _buildSearchBar(isMobile),
+          _buildSearchAndUserFilter(isMobile),
           const SizedBox(height: 14),
           _buildCategoryFilters(),
           const SizedBox(height: 20),
@@ -250,56 +252,116 @@ class _AdminAuditLogsState extends State<AdminAuditLogs> with TickerProviderStat
     );
   }
 
-  Widget _buildSearchBar(bool isMobile) {
-    return Row(
-      children: [
-        Expanded(
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.03),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
+  Widget _buildSearchAndUserFilter(bool isMobile) {
+    return StreamBuilder<List<AuditLog>>(
+      stream: _db.watchAuditLogs(),
+      builder: (context, snapshot) {
+        final logs = snapshot.data ?? [];
+        final userNames = <String>{'Tous'};
+        for (final l in logs) {
+          if (l.userNom.trim().isNotEmpty) userNames.add(l.userNom.trim());
+        }
+
+        return Column(
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  flex: 3,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.03),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: TextField(
+                      controller: searchController,
+                      style: GoogleFonts.poppins(fontSize: 13),
+                      decoration: InputDecoration(
+                        hintText: 'Rechercher par auteur, action ou détails...',
+                        hintStyle: GoogleFonts.poppins(color: Colors.black38, fontSize: 13),
+                        prefixIcon: const Icon(Icons.search_rounded, color: AppTheme.primary, size: 20),
+                        suffixIcon: searchController.text.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear_rounded, size: 18),
+                                onPressed: () => searchController.clear(),
+                              )
+                            : null,
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      ),
+                    ),
+                  ),
                 ),
+                const SizedBox(width: 10),
+                Expanded(
+                  flex: 2,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.03),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: userNames.contains(_selectedUserNom) ? _selectedUserNom : 'Tous',
+                        isExpanded: true,
+                        icon: const Icon(Icons.person_search_rounded, color: AppTheme.primary, size: 20),
+                        items: userNames.map((name) {
+                          return DropdownMenuItem<String>(
+                            value: name,
+                            child: Text(
+                              name == 'Tous' ? '👤 Tous les utilisateurs' : '👤 $name',
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                fontWeight: name == _selectedUserNom ? FontWeight.w700 : FontWeight.w500,
+                                color: name == _selectedUserNom ? AppTheme.primary : Colors.black87,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (val) {
+                          if (val != null) setState(() => _selectedUserNom = val);
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+                if (isMobile) ...[
+                  const SizedBox(width: 8),
+                  IconButton(
+                    style: IconButton.styleFrom(
+                      backgroundColor: AppTheme.primary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    icon: const Icon(Icons.file_download_outlined, size: 20),
+                    tooltip: 'Exporter CSV',
+                    onPressed: _exportLogsCsv,
+                  ),
+                ],
               ],
             ),
-            child: TextField(
-              controller: searchController,
-              style: GoogleFonts.poppins(fontSize: 13),
-              decoration: InputDecoration(
-                hintText: 'Rechercher par auteur, rôle, action ou détails...',
-                hintStyle: GoogleFonts.poppins(color: Colors.black38, fontSize: 13),
-                prefixIcon: const Icon(Icons.search_rounded, color: AppTheme.primary, size: 20),
-                suffixIcon: searchController.text.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear_rounded, size: 18),
-                        onPressed: () => searchController.clear(),
-                      )
-                    : null,
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              ),
-            ),
-          ),
-        ),
-        if (isMobile) ...[
-          const SizedBox(width: 8),
-          IconButton(
-            style: IconButton.styleFrom(
-              backgroundColor: AppTheme.primary,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-            icon: const Icon(Icons.file_download_outlined, size: 20),
-            tooltip: 'Exporter CSV',
-            onPressed: _exportLogsCsv,
-          ),
-        ],
-      ],
+          ],
+        );
+      },
     );
   }
 
@@ -367,31 +429,38 @@ class _AdminAuditLogsState extends State<AdminAuditLogs> with TickerProviderStat
         final logs = snapshot.data ?? [];
 
         final filteredLogs = logs.where((log) {
-          // 1. Text Search filter
+          // 1. User Filter
+          if (_selectedUserNom != 'Tous' && log.userNom.trim().toLowerCase() != _selectedUserNom.trim().toLowerCase()) {
+            return false;
+          }
+
+          // 2. Text Search filter
           final text = '${log.userNom} ${log.userRole} ${log.action} ${log.description}'.toLowerCase();
           final matchesSearch = _searchQuery.isEmpty || text.contains(_searchQuery);
           if (!matchesSearch) return false;
 
-          // 2. Category / Role filter
+          // 3. Category filter
           if (_selectedCategory == 'Tous') return true;
           final act = log.action.toLowerCase();
           final desc = log.description.toLowerCase();
           final role = log.userRole.toLowerCase();
 
-          if (_selectedCategory == 'Formateurs') {
-            return role.contains('formateur') || act.contains('avancement') || act.contains('émargement') || act.contains('présence');
-          } else if (_selectedCategory == 'Apprenants') {
-            return role.contains('apprenant') || role.contains('etudiant') || desc.contains('apprenant') || desc.contains('étudiant');
-          } else if (_selectedCategory == 'Staff & Admin') {
-            return role.contains('admin') || role.contains('daf') || role.contains('dg') || role.contains('comptable') || role.contains('assistant') || role.contains('it');
-          } else if (_selectedCategory == 'Paiements') {
-            return act.contains('paiement') || desc.contains('fcfa') || desc.contains('paiement') || act.contains('caisse') || act.contains('versement');
+          if (_selectedCategory == 'Authentification') {
+            return act.contains('connexion') || act.contains('déconnexion') || act.contains('login') || act.contains('logout');
+          } else if (_selectedCategory == 'Sécurité & Mots de passe') {
+            return act.contains('mot de passe') || act.contains('password') || act.contains('rôle') || act.contains('role') || act.contains('désactiv');
           } else if (_selectedCategory == 'Inscriptions') {
             return act.contains('inscript') || act.contains('accept') || act.contains('rejet') || desc.contains('inscript');
-          } else if (_selectedCategory == 'Formations') {
+          } else if (_selectedCategory == 'Paiements & Caisse') {
+            return act.contains('paiement') || desc.contains('fcfa') || desc.contains('paiement') || act.contains('caisse') || act.contains('versement');
+          } else if (_selectedCategory == 'Formations & Modules') {
             return act.contains('formation') || act.contains('module') || desc.contains('formation') || desc.contains('module');
-          } else if (_selectedCategory == 'Suppressions') {
-            return act.contains('suppr') || act.contains('rejet') || act.contains('bloc') || desc.contains('supprim');
+          } else if (_selectedCategory == 'Présences & Séances') {
+            return act.contains('présence') || act.contains('pointage') || act.contains('séance') || act.contains('émargement') || desc.contains('présen');
+          } else if (_selectedCategory == 'Staff & Admin') {
+            return role.contains('admin') || role.contains('daf') || role.contains('dg') || role.contains('comptable') || role.contains('assistant') || role.contains('it');
+          } else if (_selectedCategory == 'Alertes & Suppr.') {
+            return act.contains('suppr') || act.contains('rejet') || act.contains('bloc') || desc.contains('supprim') || log.severity == AuditSeverity.warning || log.severity == AuditSeverity.critical;
           }
           return true;
         }).toList();
@@ -469,9 +538,28 @@ class _AdminAuditLogsState extends State<AdminAuditLogs> with TickerProviderStat
                         children: [
                           Row(
                             children: [
-                              Text(
-                                log.userNom.trim().isNotEmpty ? log.userNom : 'Utilisateur Système',
-                                style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.black87),
+                              InkWell(
+                                onTap: () => setState(() => _selectedUserNom = log.userNom.trim()),
+                                borderRadius: BorderRadius.circular(6),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        log.userNom.trim().isNotEmpty ? log.userNom : 'Utilisateur Système',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w700,
+                                          color: _selectedUserNom == log.userNom.trim() ? AppTheme.primary : Colors.black87,
+                                          decoration: _selectedUserNom == log.userNom.trim() ? TextDecoration.underline : null,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      const Icon(Icons.filter_alt_rounded, size: 13, color: AppTheme.primary),
+                                    ],
+                                  ),
+                                ),
                               ),
                               const SizedBox(width: 6),
                               Container(

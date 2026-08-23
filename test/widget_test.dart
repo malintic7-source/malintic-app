@@ -7,15 +7,19 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:gestion_formations/Pages/Login/welcom_page.dart';
+import 'package:gestion_formations/Pages/Login/welcome_page.dart';
 
 void main() {
-  testWidgets('WelcomPage renders logo and access button', (WidgetTester tester) async {
-    // Build our app welcome page directly.
-    await tester.pumpWidget(const MaterialApp(home: WelcomPage()));
+  testWidgets('WelcomePage renders logo and poles on mobile and desktop', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1280, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() => tester.view.resetPhysicalSize());
+
+    await tester.pumpWidget(const MaterialApp(home: WelcomePage()));
     await tester.pumpAndSettle();
 
     expect(find.byType(Image), findsWidgets);
-    expect(find.text('Formations'), findsOneWidget);
+    expect(find.textContaining('4 pôles à votre service'), findsWidgets);
   });
 }
+

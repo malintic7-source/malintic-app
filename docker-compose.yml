@@ -1,10 +1,13 @@
+name: gestion_formations
 services:
   gestion_formations:
     build:
       context: .
+      # Serve the prebuilt Flutter bundle from build/web with Nginx
       dockerfile: Dockerfile.fast
     container_name: gestion_formations_app
     ports:
+      - "80:80"
       - "8080:80"
     restart: always
     init: true
@@ -22,8 +25,7 @@ services:
       api:
         condition: service_healthy
     networks:
-      gestion_formations_network:
-        ipv4_address: 172.28.0.20
+      - gestion_formations_network
 
   api:
     build:
@@ -49,8 +51,7 @@ services:
       retries: 3
       start_period: 5s
     networks:
-      gestion_formations_network:
-        ipv4_address: 172.28.0.10
+      - gestion_formations_network
 
   ngrok:
     image: ngrok/ngrok:latest
@@ -65,10 +66,9 @@ services:
     environment:
       NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN:?Ajoutez NGROK_AUTHTOKEN dans le fichier .env}
       NGROK_DOMAIN: ${NGROK_DOMAIN:-boil-prude-curry.ngrok-free.dev}
-    command: http --domain=${NGROK_DOMAIN:-boil-prude-curry.ngrok-free.dev} http://172.28.0.20:80
+    command: http --domain=${NGROK_DOMAIN:-boil-prude-curry.ngrok-free.dev} http://gestion_formations_app:80
     networks:
-      gestion_formations_network:
-        ipv4_address: 172.28.0.30
+      - gestion_formations_network
 
   cloudflared:
     image: cloudflare/cloudflared:latest
@@ -82,8 +82,7 @@ services:
       TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN}
     command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
     networks:
-      gestion_formations_network:
-        ipv4_address: 172.28.0.40
+      - gestion_formations_network
 
 volumes:
   gestion_formations_data:
@@ -92,8 +91,3 @@ volumes:
 networks:
   gestion_formations_network:
     driver: bridge
-    ipam:
-      driver: default
-      config:
-        - subnet: 172.28.0.0/16
-          gateway: 172.28.0.1

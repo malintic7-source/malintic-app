@@ -460,6 +460,7 @@ class PdfService {
   }
 
   /// Generates the exact Official Certificate / Attestation de Stage M@LI-NTIC
+  /// strictly matching images/attestation_model.png
   Future<Uint8List> generateAttestationPdf({
     required Inscription inscription,
     required Formation formation,
@@ -467,16 +468,15 @@ class PdfService {
   }) async {
     final pdf = pw.Document();
 
-    final darkBlue = PdfColor.fromHex('#1A3B70');
+    final darkBlue = PdfColor.fromHex('#163E75');
     final crimsonRed = PdfColor.fromHex('#A6192E');
-    final darkTextColor = PdfColor.fromHex('#111827');
     final goldColor = PdfColor.fromHex('#F59E0B');
     final lightGold = PdfColor.fromHex('#FEF3C7');
 
-    pw.ImageProvider? templateImage;
-    try {
-      templateImage = await imageFromAssetBundle('images/attestation_model.png');
-    } catch (_) {}
+    final fontTimes = pw.Font.times();
+    final fontTimesBold = pw.Font.timesBold();
+    final fontTimesItalic = pw.Font.timesItalic();
+    final fontTimesBoldItalic = pw.Font.timesBoldItalic();
 
     pw.ImageProvider? logoImage;
     try {
@@ -494,17 +494,22 @@ class PdfService {
         : (formation.modules.isNotEmpty ? formation.modules : [formation.titre]);
     final modulesString = modulesList.join(', ');
 
-    // Determine period
+    // Determine dates & French period string
     final now = DateTime.now();
     final dateFait = '${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year}';
-    final isSfp = formation.estStage || formation.titre.toUpperCase().contains('SFP') || (formation.modules.length > 5);
+    
+    final isSfp = formation.estStage ||
+        formation.titre.toUpperCase().contains('SFP') ||
+        (formation.modules.length > 5);
 
     final titlePart1 = isSfp ? 'ATTESTATION DE STAGE DE' : 'ATTESTATION DE';
     final titlePart2 = isSfp ? 'FORMATION PROFESSIONNELLE (SFP)' : 'FORMATION PROFESSIONNELLE';
 
-    final periodString = (formation.dateDebut != null && formation.dateFin != null)
-        ? '${_formatDate(formation.dateDebut!)} au ${_formatDate(formation.dateFin!)}'
-        : '26 Avril au 02 Août ${now.year}';
+    final periodString = _formatFrenchPeriod(formation.dateDebut, formation.dateFin, now.year);
+
+    final studentFullName = '${(inscription.prenom ?? '')} ${(inscription.nom ?? '')}'.trim().isNotEmpty
+        ? '${(inscription.prenom ?? '')} ${(inscription.nom ?? '')}'.trim()
+        : 'Sékou Kariba SAMAKÉ';
 
     pdf.addPage(
       pw.Page(
@@ -516,82 +521,77 @@ class PdfService {
 
           return pw.Stack(
             children: [
-              // 1. Exact Background (Template Image or Vector Stepped Frame)
-              if (templateImage != null)
-                pw.Positioned.fill(
-                  child: pw.Image(templateImage, fit: pw.BoxFit.fill),
-                )
-              else
-                pw.Positioned.fill(
-                  child: pw.CustomPaint(
-                    size: PdfPoint(pageWidth, pageHeight),
-                    painter: (PdfGraphics canvas, PdfPoint size) {
-                      final w = size.x;
-                      final h = size.y;
+              // 1. Exact Background (Vector Stepped Blue Border Frame matching model)
+              pw.Positioned.fill(
+                child: pw.CustomPaint(
+                  size: PdfPoint(pageWidth, pageHeight),
+                  painter: (PdfGraphics canvas, PdfPoint size) {
+                    final w = size.x;
+                    final h = size.y;
 
-                      // Outer Gradient Border (Deep Navy Blue)
-                      canvas
-                        ..setColor(PdfColor.fromHex('#1E3A8A'))
-                        ..drawRect(0, 0, w, h)
-                        ..fillPath();
+                    // Outer Deep Slate/Navy Border
+                    canvas
+                      ..setColor(PdfColor.fromHex('#284B77'))
+                      ..drawRect(0, 0, w, h)
+                      ..fillPath();
 
-                      // Soft Medium Blue Layer
-                      canvas
-                        ..setColor(PdfColor.fromHex('#2563EB'))
-                        ..drawRect(8, 8, w - 16, h - 16)
-                        ..fillPath();
+                    // Medium Blue Shading Layer
+                    canvas
+                      ..setColor(PdfColor.fromHex('#3B6998'))
+                      ..drawRect(6, 6, w - 12, h - 12)
+                      ..fillPath();
 
-                      // Light Cyan / Blue Transition
-                      canvas
-                        ..setColor(PdfColor.fromHex('#60A5FA'))
-                        ..drawRect(16, 16, w - 32, h - 32)
-                        ..fillPath();
+                    // Soft Cyan/Sky Accent Layer
+                    canvas
+                      ..setColor(PdfColor.fromHex('#7B9EC2'))
+                      ..drawRect(12, 12, w - 24, h - 24)
+                      ..fillPath();
 
-                      // Inner White Plaque with Stepped Chamfered Cuts
-                      final cut = 24.0;
-                      final m = 22.0;
-                      canvas
-                        ..setColor(PdfColors.white)
-                        ..moveTo(m + cut, h - m)
-                        ..lineTo(w - m - cut, h - m)
-                        ..lineTo(w - m, h - m - cut)
-                        ..lineTo(w - m, m + cut)
-                        ..lineTo(w - m - cut, m)
-                        ..lineTo(m + cut, m)
-                        ..lineTo(m, m + cut)
-                        ..lineTo(m, h - m - cut)
-                        ..closePath()
-                        ..fillPath();
+                    // Inner White Canvas with Chamfered / Stepped Corners
+                    final cut = 28.0;
+                    final m = 20.0;
+                    canvas
+                      ..setColor(PdfColors.white)
+                      ..moveTo(m + cut, h - m)
+                      ..lineTo(w - m - cut, h - m)
+                      ..lineTo(w - m, h - m - cut)
+                      ..lineTo(w - m, m + cut)
+                      ..lineTo(w - m - cut, m)
+                      ..lineTo(m + cut, m)
+                      ..lineTo(m, m + cut)
+                      ..lineTo(m, h - m - cut)
+                      ..closePath()
+                      ..fillPath();
 
-                      // Chamfer Outline Border
-                      canvas
-                        ..setColor(PdfColor.fromHex('#3B82F6'))
-                        ..setLineWidth(1.5)
-                        ..moveTo(m + cut, h - m)
-                        ..lineTo(w - m - cut, h - m)
-                        ..lineTo(w - m, h - m - cut)
-                        ..lineTo(w - m, m + cut)
-                        ..lineTo(w - m - cut, m)
-                        ..lineTo(m + cut, m)
-                        ..lineTo(m, m + cut)
-                        ..lineTo(m, h - m - cut)
-                        ..closePath()
-                        ..strokePath();
-                    },
-                  ),
+                    // Fine Blue Contour Line
+                    canvas
+                      ..setColor(PdfColor.fromHex('#3B78C2'))
+                      ..setLineWidth(1.8)
+                      ..moveTo(m + cut, h - m)
+                      ..lineTo(w - m - cut, h - m)
+                      ..lineTo(w - m, h - m - cut)
+                      ..lineTo(w - m, m + cut)
+                      ..lineTo(w - m - cut, m)
+                      ..lineTo(m + cut, m)
+                      ..lineTo(m, m + cut)
+                      ..lineTo(m, h - m - cut)
+                      ..closePath()
+                      ..strokePath();
+                  },
                 ),
+              ),
 
               // 2. Left Gold Medal Rosette with Red Ribbons
               pw.Positioned(
                 top: 145,
-                left: 42,
+                left: 45,
                 child: pw.Container(
                   width: 85,
-                  height: 120,
+                  height: 125,
                   child: pw.Stack(
                     alignment: pw.Alignment.topCenter,
                     children: [
-                      // Red Ribbon Tails with Swallowtail Notch
+                      // Red Ribbon Tails with Angle & Swallowtail
                       pw.Positioned(
                         bottom: 0,
                         child: pw.Row(
@@ -599,8 +599,8 @@ class PdfService {
                             pw.Transform.rotate(
                               angle: 0.24,
                               child: pw.Container(
-                                width: 18,
-                                height: 48,
+                                width: 19,
+                                height: 50,
                                 decoration: pw.BoxDecoration(
                                   color: crimsonRed,
                                   borderRadius: pw.BorderRadius.circular(2),
@@ -611,8 +611,8 @@ class PdfService {
                             pw.Transform.rotate(
                               angle: -0.24,
                               child: pw.Container(
-                                width: 18,
-                                height: 48,
+                                width: 19,
+                                height: 50,
                                 decoration: pw.BoxDecoration(
                                   color: crimsonRed,
                                   borderRadius: pw.BorderRadius.circular(2),
@@ -624,8 +624,8 @@ class PdfService {
                       ),
                       // Outer Golden Medallion Ring
                       pw.Container(
-                        width: 72,
-                        height: 72,
+                        width: 74,
+                        height: 74,
                         decoration: pw.BoxDecoration(
                           shape: pw.BoxShape.circle,
                           color: goldColor,
@@ -644,7 +644,7 @@ class PdfService {
                               child: pw.Text(
                                 '★',
                                 style: pw.TextStyle(
-                                  fontSize: 30,
+                                  fontSize: 32,
                                   color: PdfColor.fromHex('#D97706'),
                                   fontWeight: pw.FontWeight.bold,
                                 ),
@@ -658,19 +658,19 @@ class PdfService {
                 ),
               ),
 
-              // 3. Main Certificate Document Body
+              // 3. Main Certificate Document Body (Exact text and styling from model)
               pw.Padding(
                 padding: const pw.EdgeInsets.symmetric(horizontal: 50, vertical: 22),
                 child: pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.center,
                   children: [
-                    // Top Header : Logo M@LI-NTIC on left + Main Title in Center
+                    // Top Header : Logo M@LI-NTIC + Brand Title
                     pw.Row(
                       mainAxisAlignment: pw.MainAxisAlignment.center,
                       crossAxisAlignment: pw.CrossAxisAlignment.center,
                       children: [
                         if (logoImage != null) ...[
-                          pw.Image(logoImage, width: 90, height: 60),
+                          pw.Image(logoImage, width: 85, height: 58),
                           pw.SizedBox(width: 16),
                         ],
                         pw.Column(
@@ -679,8 +679,8 @@ class PdfService {
                             pw.Text(
                               'M@LI-NTIC',
                               style: pw.TextStyle(
+                                font: fontTimesBold,
                                 fontSize: 34,
-                                fontWeight: pw.FontWeight.bold,
                                 color: darkBlue,
                                 letterSpacing: 2.5,
                               ),
@@ -688,8 +688,8 @@ class PdfService {
                             pw.Text(
                               'L\'univers des Technologies',
                               style: pw.TextStyle(
+                                font: fontTimesItalic,
                                 fontSize: 13.5,
-                                fontStyle: pw.FontStyle.italic,
                                 color: crimsonRed,
                                 fontWeight: pw.FontWeight.bold,
                               ),
@@ -710,12 +710,12 @@ class PdfService {
 
                     pw.SizedBox(height: 14),
 
-                    // Main Title
+                    // Main Title (Dark Red Bold Serif)
                     pw.Text(
                       titlePart1,
                       style: pw.TextStyle(
-                        fontSize: 20,
-                        fontWeight: pw.FontWeight.bold,
+                        font: fontTimesBold,
+                        fontSize: 20.5,
                         color: crimsonRed,
                         letterSpacing: 1.2,
                       ),
@@ -724,8 +724,8 @@ class PdfService {
                     pw.Text(
                       titlePart2,
                       style: pw.TextStyle(
-                        fontSize: 20,
-                        fontWeight: pw.FontWeight.bold,
+                        font: fontTimesBold,
+                        fontSize: 20.5,
                         color: crimsonRed,
                         letterSpacing: 1.2,
                       ),
@@ -733,27 +733,26 @@ class PdfService {
 
                     pw.SizedBox(height: 14),
 
-                    // Director Statement
+                    // Attestation Declaration Statement
                     pw.Text(
                       'Je soussigné, Souleymane TRAORÉ, Directeur Général, atteste que :',
-                      style: const pw.TextStyle(
-                        fontSize: 13.5,
+                      style: pw.TextStyle(
+                        font: fontTimes,
+                        fontSize: 14,
                         color: PdfColors.black,
                       ),
                     ),
 
                     pw.SizedBox(height: 8),
 
-                    // Student Name (Prominent with solid black underline)
+                    // Recipient Student Name (Large Serif, underlined with clean black rule)
                     pw.Column(
                       children: [
                         pw.Text(
-                          '${(inscription.prenom ?? '')} ${(inscription.nom ?? '')}'.trim().isNotEmpty
-                              ? '${(inscription.prenom ?? '')} ${(inscription.nom ?? '')}'.trim()
-                              : 'Apprenant M@LI-NTIC',
+                          studentFullName,
                           style: pw.TextStyle(
-                            fontSize: 23,
-                            fontWeight: pw.FontWeight.bold,
+                            font: fontTimesBold,
+                            fontSize: 24,
                             color: PdfColors.black,
                           ),
                         ),
@@ -768,12 +767,13 @@ class PdfService {
 
                     pw.SizedBox(height: 10),
 
-                    // Formation Description Line
+                    // Body Training Text
                     pw.Text(
                       'A effectué un Stage de Formation Professionnelle avec assiduité à travers les modules suivants:',
                       textAlign: pw.TextAlign.center,
-                      style: const pw.TextStyle(
-                        fontSize: 12,
+                      style: pw.TextStyle(
+                        font: fontTimes,
+                        fontSize: 12.5,
                         color: PdfColors.black,
                       ),
                     ),
@@ -787,8 +787,8 @@ class PdfService {
                         modulesString,
                         textAlign: pw.TextAlign.center,
                         style: pw.TextStyle(
-                          fontSize: 12,
-                          fontWeight: pw.FontWeight.bold,
+                          font: fontTimesBold,
+                          fontSize: 12.5,
                           color: crimsonRed,
                           lineSpacing: 3,
                         ),
@@ -797,18 +797,25 @@ class PdfService {
 
                     pw.SizedBox(height: 10),
 
-                    // Stage Period
+                    // Stage Period (Black prefix + Dark Blue bold dates)
                     pw.RichText(
                       text: pw.TextSpan(
-                        style: const pw.TextStyle(fontSize: 12.5, color: PdfColors.black),
+                        style: pw.TextStyle(
+                          font: fontTimes,
+                          fontSize: 13,
+                          color: PdfColors.black,
+                        ),
                         children: [
                           pw.TextSpan(
                             text: 'Périodes du Stage : ',
-                            style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                            style: pw.TextStyle(font: fontTimesBold),
                           ),
                           pw.TextSpan(
                             text: periodString,
-                            style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: darkBlue),
+                            style: pw.TextStyle(
+                              font: fontTimesBold,
+                              color: darkBlue,
+                            ),
                           ),
                         ],
                       ),
@@ -821,21 +828,22 @@ class PdfService {
                       'La présente attestation est délivrée en exemple unique, pour servir et valoir ce que de droit.',
                       textAlign: pw.TextAlign.center,
                       style: pw.TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: pw.FontWeight.bold,
+                        font: fontTimesBold,
+                        fontSize: 12,
                         color: PdfColors.black,
                       ),
                     ),
 
                     pw.Spacer(),
 
-                    // Centered Date & Signature Section (Exact match with original model)
+                    // Centered Date & Signature Section (Exact match with model)
                     pw.Column(
                       crossAxisAlignment: pw.CrossAxisAlignment.center,
                       children: [
                         pw.Text(
                           'Fait à Bamako, le $dateFait',
-                          style: const pw.TextStyle(
+                          style: pw.TextStyle(
+                            font: fontTimes,
                             fontSize: 12,
                             color: PdfColors.black,
                           ),
@@ -850,9 +858,8 @@ class PdfService {
                         pw.Text(
                           'Directeur Général',
                           style: pw.TextStyle(
+                            font: fontTimesBoldItalic,
                             fontSize: 13,
-                            fontWeight: pw.FontWeight.bold,
-                            fontStyle: pw.FontStyle.italic,
                             color: PdfColors.black,
                           ),
                         ),
@@ -860,9 +867,8 @@ class PdfService {
                         pw.Text(
                           'Souleymane TRAORÉ',
                           style: pw.TextStyle(
-                            fontSize: 14,
-                            fontWeight: pw.FontWeight.bold,
-                            fontStyle: pw.FontStyle.italic,
+                            font: fontTimesBoldItalic,
+                            fontSize: 14.5,
                             color: darkBlue,
                           ),
                         ),
@@ -1192,4 +1198,18 @@ class PdfService {
         return 'ÉCHOUÉ';
     }
   }
+
+  String _formatFrenchPeriod(DateTime? start, DateTime? end, int fallbackYear) {
+    const months = [
+      'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+      'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
+    ];
+    if (start != null && end != null) {
+      final startStr = '${start.day.toString().padLeft(2, '0')} ${months[start.month - 1]}';
+      final endStr = '${end.day.toString().padLeft(2, '0')} ${months[end.month - 1]} ${end.year}';
+      return '$startStr au $endStr';
+    }
+    return '26 Avril au 02 Août $fallbackYear';
+  }
 }
+

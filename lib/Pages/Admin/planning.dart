@@ -828,7 +828,7 @@ class _AdminPlanningState extends State<AdminPlanning> with TickerProviderStateM
               : ListView.separated(
                   shrinkWrap: true,
                   itemCount: students.length,
-                  separatorBuilder: (_, __) => const Divider(height: 1),
+                  separatorBuilder: (ctx, i) => const Divider(height: 1),
                   itemBuilder: (ctx, i) {
                     final s = students[i];
                     return ListTile(

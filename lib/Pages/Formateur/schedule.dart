@@ -632,7 +632,7 @@ class _FormateurScheduleState extends State<FormateurSchedule>
               : ListView.separated(
                   shrinkWrap: true,
                   itemCount: students.length,
-                  separatorBuilder: (_, __) => const Divider(height: 1),
+                  separatorBuilder: (context, idx) => const Divider(height: 1),
                   itemBuilder: (context, idx) {
                     final st = students[idx];
                     return ListTile(
