@@ -113,6 +113,8 @@ class AuthProvider {
         );
         await _db.refreshFromServer();
         return serverUser;
+      } else if (response.statusCode == 502 || response.statusCode == 503 || response.statusCode == 504 || response.statusCode == 404) {
+        throw Exception('Le serveur backend Docker est éteint ou inaccessible. Veuillez démarrer Docker sur votre PC.');
       } else {
         try {
           final errorData = jsonDecode(response.body) as Map<String, dynamic>;
@@ -124,6 +126,9 @@ class AuthProvider {
           if (e is Exception && !e.toString().contains('FormatException')) {
             rethrow;
           }
+        }
+        if (response.statusCode >= 500) {
+          throw Exception('Le serveur backend Docker est actuellement éteint ou injoignable.');
         }
         throw Exception('Identifiants incorrects.');
       }
