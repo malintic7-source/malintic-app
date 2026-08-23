@@ -60,13 +60,10 @@ class LocalDataService {
 
   void _initLocalApiSync() {
     if (!_hasLocalApi) return;
-    // #9 — Intervalle réduit à 30 secondes (au lieu de 15s) pour éviter la
-    // surcharge réseau sur les serveurs avec peu de clients simultanés.
+    _syncFromLocalApi();
     _apiPollingTimer = Timer.periodic(
-      const Duration(seconds: 30),
-      (_) {
-        if (_serverSessionActive) _syncFromLocalApi();
-      },
+      const Duration(seconds: 10),
+      (_) => _syncFromLocalApi(),
     );
   }
 
