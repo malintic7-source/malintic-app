@@ -3,7 +3,7 @@ services:
     name: malintic-api
     env: node
     plan: free
-    buildCommand: cd server && npm install --omit=dev
+    buildCommand: cd server && npm install
     startCommand: cd server && node server.js
     envVars:
       - key: NODE_ENV

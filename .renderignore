@@ -1,0 +1,11 @@
+Dockerfile
+Dockerfile.fast
+build/
+lib/
+web/
+test/
+images/
+.firebase/
+.dart_tool/
+.idea/
+.vscode/
