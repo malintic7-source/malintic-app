@@ -708,6 +708,9 @@ app.delete('/api/:collection/:id', (req, res) => {
   }
   const state = readState();
   state[collection] = state[collection].filter((item) => String(item.id) !== id);
+  if (collection === 'users') {
+    state.inscriptions = (state.inscriptions || []).filter((ins) => String(ins.etudiantId) !== id && String(ins.id) !== id);
+  }
   writeState(state);
   res.status(204).end();
 });

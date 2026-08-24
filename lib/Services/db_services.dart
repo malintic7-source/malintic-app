@@ -85,6 +85,9 @@ class LocalDataService {
     } catch (_) {}
   }
 
+  Set<String> getDeletedDocs(String collection) => _getDeletedDocs(collection);
+  void recordDeletedDoc(String collection, String docId) => _recordDeletedDoc(collection, docId);
+
   void _unrecordDeletedDoc(String collection, String docId) {
     try {
       final set = _getDeletedDocs(collection);
@@ -93,6 +96,7 @@ class LocalDataService {
       }
     } catch (_) {}
   }
+  void unrecordDeletedDoc(String collection, String docId) => _unrecordDeletedDoc(collection, docId);
 
   void _enqueuePendingSync(String collection, String docId, String method, Map<String, dynamic>? data) {
     try {
@@ -253,9 +257,21 @@ class LocalDataService {
         }
       }
       if (inscriptions.isNotEmpty) {
-        final serverInscriptionIds = inscriptions.map((i) => i.id).toSet();
-        _inscriptions.removeWhere((i) => !serverInscriptionIds.contains(i.id));
-        for (final inscription in inscriptions) {
+        final deletedInscIds = _getDeletedDocs('inscriptions');
+        final deletedUserIds = _getDeletedDocs('users');
+        final validInscriptions = inscriptions.where((i) =>
+          !deletedInscIds.contains(i.id) &&
+          !deletedUserIds.contains(i.etudiantId) &&
+          !deletedUserIds.contains(i.id)
+        ).toList();
+        final serverInscriptionIds = validInscriptions.map((i) => i.id).toSet();
+        _inscriptions.removeWhere((i) =>
+          deletedInscIds.contains(i.id) ||
+          deletedUserIds.contains(i.etudiantId) ||
+          deletedUserIds.contains(i.id) ||
+          !serverInscriptionIds.contains(i.id)
+        );
+        for (final inscription in validInscriptions) {
           final existingIndex = _inscriptions.indexWhere((i) => i.id == inscription.id);
           if (existingIndex >= 0) {
             _inscriptions[existingIndex] = inscription;
@@ -265,6 +281,12 @@ class LocalDataService {
         }
         _saveInscriptionsToStorage();
         _inscriptionsController.add(List.unmodifiable(_inscriptions));
+
+        for (final deletedId in deletedInscIds) {
+          if (inscriptions.any((i) => i.id == deletedId)) {
+            _deleteRemoteDoc('inscriptions', deletedId);
+          }
+        }
       }
       if (payments.isNotEmpty) {
         final serverPaymentIds = payments.map((p) => p.id).toSet();
@@ -638,15 +660,11 @@ class LocalDataService {
       final savedFormationsRaw = _localStorage.getItem('app_saved_formations');
       if (savedFormationsRaw != null && savedFormationsRaw.isNotEmpty) {
         final List<dynamic> list = jsonDecode(savedFormationsRaw);
+        _formations.clear();
         for (final item in list) {
           if (item is Map<String, dynamic>) {
             final formation = Formation.fromMap(item, item['id'] ?? '');
-            final index = _formations.indexWhere((f) => f.id == formation.id);
-            if (index != -1) {
-              _formations[index] = formation;
-            } else {
-              _formations.add(formation);
-            }
+            _formations.add(formation);
           }
         }
       }
@@ -654,10 +672,10 @@ class LocalDataService {
       final savedInscRaw = _localStorage.getItem('app_saved_inscriptions');
       if (savedInscRaw != null && savedInscRaw.isNotEmpty) {
         final List<dynamic> list = jsonDecode(savedInscRaw);
+        _inscriptions.clear();
         for (final item in list) {
           if (item is Map<String, dynamic>) {
             final insc = Inscription.fromMap(item, item['id'] ?? '');
-            _inscriptions.removeWhere((i) => i.id == insc.id);
             _inscriptions.add(insc);
           }
         }
@@ -666,10 +684,10 @@ class LocalDataService {
       final savedPayRaw = _localStorage.getItem('app_saved_payments');
       if (savedPayRaw != null && savedPayRaw.isNotEmpty) {
         final List<dynamic> payList = jsonDecode(savedPayRaw);
+        _payments.clear();
         for (final item in payList) {
           if (item is Map<String, dynamic>) {
             final pay = Payment.fromMap(item, item['id'] ?? '');
-            _payments.removeWhere((p) => p.id == pay.id);
             _payments.add(pay);
           }
         }
@@ -678,10 +696,10 @@ class LocalDataService {
       final savedSeancesRaw = _localStorage.getItem('app_saved_seances');
       if (savedSeancesRaw != null && savedSeancesRaw.isNotEmpty) {
         final List<dynamic> seanceList = jsonDecode(savedSeancesRaw);
+        _seances.clear();
         for (final item in seanceList) {
           if (item is Map<String, dynamic>) {
             final seance = Seance.fromMap(item, item['id'] ?? '');
-            _seances.removeWhere((s) => s.id == seance.id);
             _seances.add(seance);
           }
         }
@@ -1244,6 +1262,7 @@ class LocalDataService {
 
   Future<void> deleteUser(String userId) async {
     final old = getUserById(userId);
+    final oldEmail = old?.email.trim().toLowerCase() ?? '';
     _recordDeletedDoc('users', userId);
     _users.removeWhere((u) => u.id == userId);
     _saveUsersToStorage();
@@ -1255,6 +1274,17 @@ class LocalDataService {
     try {
       await _deleteRemoteDoc('users', userId);
     } catch (_) {}
+
+    // Cascade deletion of all inscriptions linked to this user
+    final linkedInscriptions = _inscriptions.where((i) =>
+        i.etudiantId == userId ||
+        i.id == userId ||
+        (oldEmail.isNotEmpty && (i.email?.trim().toLowerCase() == oldEmail))
+    ).toList();
+    for (final ins in linkedInscriptions) {
+      await deleteInscription(ins.id);
+    }
+
     logAction(
       userNom: 'Administration',
       userRole: 'admin',

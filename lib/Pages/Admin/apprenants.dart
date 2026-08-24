@@ -1029,15 +1029,21 @@ class _AdminApprenantsState extends State<AdminApprenants>
   void _applyFilter() {
     final query = searchController.text.trim().toLowerCase();
     final inscriptions = _db.getInscriptions();
+    final deletedUserIds = _db.getDeletedDocs('users');
+    final deletedInscIds = _db.getDeletedDocs('inscriptions');
 
-    // 1. Explicit apprenant users from user accounts
+    // 1. Explicit apprenant users from user accounts (exclude deleted)
     final apprenantUsers = _allUsers
-        .where((u) => u.role == UserRole.apprenant)
+        .where((u) => u.role == UserRole.apprenant && !deletedUserIds.contains(u.id))
         .toList();
 
-    // 2. Only validated applications may enter the apprenant circuit.
+    // 2. Only validated applications may enter the apprenant circuit (exclude deleted).
     final List<User> inscriptionApprenants = inscriptions
-        .where((ins) => ins.status == InscriptionStatus.acceptee)
+        .where((ins) =>
+            ins.status == InscriptionStatus.acceptee &&
+            !deletedInscIds.contains(ins.id) &&
+            !deletedUserIds.contains(ins.etudiantId) &&
+            !deletedUserIds.contains(ins.id))
         .map((ins) {
           return User(
             id: ins.id,
@@ -1693,6 +1699,12 @@ class _AdminApprenantsState extends State<AdminApprenants>
     if (confirm == true) {
       await _db.deleteUser(id);
       await _db.deleteInscription(id);
+      final studentInscriptions = _db.getInscriptions().where((ins) =>
+          ins.etudiantId == id || ins.id == id
+      ).toList();
+      for (final ins in studentInscriptions) {
+        await _db.deleteInscription(ins.id);
+      }
       _applyFilter();
       if (!mounted) return;
       messenger.showSnackBar(
