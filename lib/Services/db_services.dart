@@ -13,7 +13,7 @@ import 'package:gestion_formations/Services/local_storage.dart';
 
 class LocalDataService {
   static final LocalDataService _instance = LocalDataService._internal();
-  static const _cacheSchemaVersion = '2';
+  static const _cacheSchemaVersion = '5';
   static const _cacheSchemaKey = 'malintic_cache_schema';
   factory LocalDataService() => _instance;
 
@@ -131,13 +131,19 @@ class LocalDataService {
 
         try {
           if (method == 'DELETE') {
-            await http.delete(_apiUri('$collection/${Uri.encodeComponent(docId)}')).timeout(const Duration(seconds: 3));
+            await http.delete(
+              _apiUri('$collection/${Uri.encodeComponent(docId)}'),
+              headers: const {'ngrok-skip-browser-warning': 'true'},
+            ).timeout(const Duration(seconds: 10));
           } else if (data != null) {
             await http.put(
               _apiUri('$collection/${Uri.encodeComponent(docId)}'),
-              headers: const {'Content-Type': 'application/json'},
+              headers: const {
+                'Content-Type': 'application/json',
+                'ngrok-skip-browser-warning': 'true',
+              },
               body: jsonEncode(data),
-            ).timeout(const Duration(seconds: 3));
+            ).timeout(const Duration(seconds: 10));
           }
         } catch (_) {
           remaining.add(item);
@@ -165,7 +171,7 @@ class LocalDataService {
               'Accept': 'application/json',
             },
           )
-          .timeout(const Duration(seconds: 3));
+          .timeout(const Duration(seconds: 15));
       if (response.statusCode != 200) return;
       final state = jsonDecode(response.body) as Map<String, dynamic>;
       final users = (state['users'] as List<dynamic>? ?? [])
@@ -382,10 +388,13 @@ class LocalDataService {
       final response = await http
           .put(
             _apiUri('$collection/${Uri.encodeComponent(docId)}'),
-            headers: const {'Content-Type': 'application/json'},
+            headers: const {
+              'Content-Type': 'application/json',
+              'ngrok-skip-browser-warning': 'true',
+            },
             body: jsonEncode(data),
           )
-          .timeout(const Duration(seconds: 2));
+          .timeout(const Duration(seconds: 10));
       if (response.statusCode >= 200 && response.statusCode < 300) {
         return;
       }
@@ -398,8 +407,11 @@ class LocalDataService {
     if (!_hasLocalApi) return;
     try {
       final response = await http
-          .delete(_apiUri('$collection/${Uri.encodeComponent(docId)}'))
-          .timeout(const Duration(seconds: 3));
+          .delete(
+            _apiUri('$collection/${Uri.encodeComponent(docId)}'),
+            headers: const {'ngrok-skip-browser-warning': 'true'},
+          )
+          .timeout(const Duration(seconds: 10));
       if (response.statusCode >= 200 && response.statusCode < 300) {
         return;
       }
