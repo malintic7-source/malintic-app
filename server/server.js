@@ -6,11 +6,18 @@ const crypto = require('crypto');
 const app = express();
 app.disable('x-powered-by');
 app.use(express.json({ limit: '15mb' }));
-app.use((_, res, next) => {
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, ngrok-skip-browser-warning');
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('Cache-Control', 'no-store');
+  if (req.method === 'OPTIONS') {
+    res.status(204).end();
+    return;
+  }
   next();
 });
 
@@ -232,7 +239,7 @@ function readState() {
         _stateCache = seedData;
         _stateCacheDirty = false;
         return seedData;
-      } catch (_) {}
+      } catch (_) { }
     }
     const state = initialState();
     fs.writeFileSync(dataFile, JSON.stringify(state, null, 2));
@@ -257,7 +264,7 @@ function readState() {
         _stateCache = restored;
         _stateCacheDirty = false;
         return restored;
-      } catch (_) {}
+      } catch (_) { }
     }
     throw new Error(`Base locale illisible : ${error.message}`);
   }
