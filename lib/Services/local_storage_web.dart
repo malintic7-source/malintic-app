@@ -2,16 +2,51 @@
 import 'dart:html' as html;
 
 class LocalStorage {
-  String? getItem(String key) => html.window.localStorage[key];
+  static final Map<String, String> _memoryFallback = {};
+  static final Map<String, String> _sessionMemoryFallback = {};
 
-  void setItem(String key, String value) => html.window.localStorage[key] = value;
+  String? getItem(String key) {
+    try {
+      return html.window.localStorage[key] ?? _memoryFallback[key];
+    } catch (_) {
+      return _memoryFallback[key];
+    }
+  }
 
-  void removeItem(String key) => html.window.localStorage.remove(key);
+  void setItem(String key, String value) {
+    _memoryFallback[key] = value;
+    try {
+      html.window.localStorage[key] = value;
+    } catch (_) {}
+  }
+
+  void removeItem(String key) {
+    _memoryFallback.remove(key);
+    try {
+      html.window.localStorage.remove(key);
+    } catch (_) {}
+  }
 
   // SessionStorage (effacé à la fermeture d'onglet, conservé au rafraîchissement F5)
-  String? getSessionItem(String key) => html.window.sessionStorage[key];
+  String? getSessionItem(String key) {
+    try {
+      return html.window.sessionStorage[key] ?? _sessionMemoryFallback[key];
+    } catch (_) {
+      return _sessionMemoryFallback[key];
+    }
+  }
 
-  void setSessionItem(String key, String value) => html.window.sessionStorage[key] = value;
+  void setSessionItem(String key, String value) {
+    _sessionMemoryFallback[key] = value;
+    try {
+      html.window.sessionStorage[key] = value;
+    } catch (_) {}
+  }
 
-  void removeSessionItem(String key) => html.window.sessionStorage.remove(key);
+  void removeSessionItem(String key) {
+    _sessionMemoryFallback.remove(key);
+    try {
+      html.window.sessionStorage.remove(key);
+    } catch (_) {}
+  }
 }

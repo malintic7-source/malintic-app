@@ -3,10 +3,10 @@
     "short_name": "M@LINTIC-APP",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#6366F1",
-    "theme_color": "#6366F1",
+    "background_color": "#FFFFFF",
+    "theme_color": "#0066CC",
     "description": "M@LINTIC-APP - Plateforme multi-services (Formations, Prestations, E-Commerce, Incubateur)",
-    "orientation": "portrait-primary",
+    "orientation": "any",
     "prefer_related_applications": false,
     "icons": [
         {

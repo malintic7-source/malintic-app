@@ -8,10 +8,14 @@ external void _deactivateTabSession();
 
 class TabSessionLifecycle {
   static void activate() {
-    _activateTabSession();
+    try {
+      _activateTabSession();
+    } catch (_) {}
   }
 
   static void deactivate() {
-    _deactivateTabSession();
+    try {
+      _deactivateTabSession();
+    } catch (_) {}
   }
 }
