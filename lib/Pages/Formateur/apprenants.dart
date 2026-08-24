@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:animate_do/animate_do.dart';
 import 'dart:async';
@@ -8,6 +7,9 @@ import 'package:gestion_formations/Models/user.dart';
 import 'package:gestion_formations/Services/db_services.dart';
 import 'package:gestion_formations/Services/pdf_service.dart';
 import 'package:gestion_formations/config/theme.dart';
+import 'package:gestion_formations/utils/user_export.dart';
+import 'package:gestion_formations/utils/ui_feedback.dart';
+import 'package:gestion_formations/utils/formatters.dart';
 
 class FormateurApprenants extends StatefulWidget {
   final User user;
@@ -55,12 +57,7 @@ class _FormateurApprenantsState extends State<FormateurApprenants> with TickerPr
 
   Future<void> _exportAttendancePdf() async {
     if (_filteredDocs.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Aucun apprenant dans la liste.'),
-          backgroundColor: AppTheme.warning,
-        ),
-      );
+      context.showSnack('Aucun apprenant dans la liste.', background: AppTheme.warning);
       return;
     }
 
@@ -82,18 +79,11 @@ class _FormateurApprenantsState extends State<FormateurApprenants> with TickerPr
         filename: 'emargement_${DateTime.now().millisecondsSinceEpoch}.pdf',
       );
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Feuille d\'émargement générée avec succès !'),
-            backgroundColor: AppTheme.success,
-          ),
-        );
+        context.showSuccessSnack('Feuille d\'émargement générée avec succès !');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur: $e'), backgroundColor: AppTheme.error),
-        );
+        context.showErrorSnack('Erreur: $e');
       }
     } finally {
       if (mounted) setState(() => _isExporting = false);
@@ -429,28 +419,21 @@ class _FormateurApprenantsState extends State<FormateurApprenants> with TickerPr
 
   Future<void> _exportSelectedCsv() async {
     final users = _db.getUsers().where((u) => _selected.contains(u.id)).toList();
-    final buffer = StringBuffer();
-    buffer.writeln('id,prenom,nom,email,phone,estActif');
-    for (final u in users) {
-      buffer.writeln('${u.id},${u.prenom},${u.nom},${u.email},${u.phone},${u.estActif}');
-    }
-    final csv = buffer.toString();
-    await Clipboard.setData(ClipboardData(text: csv));
+    await copyUsersCsvToClipboard(users);
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('CSV copié dans le presse-papier')));
+    context.showSnack('CSV copié dans le presse-papier');
   }
 
   Future<void> _mailtoSelected() async {
-    final emails = _db.getUsers().where((u) => _selected.contains(u.id)).map((u) => u.email).where((e) => e.isNotEmpty).join(',');
-    if (emails.isEmpty) {
+    final users = _db.getUsers().where((u) => _selected.contains(u.id)).toList();
+    if (!users.any((u) => u.email.isNotEmpty)) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Aucun email disponible')));
+      context.showSnack('Aucun email disponible');
       return;
     }
-    final uri = Uri.parse('mailto:$emails');
-    if (!await launchUrl(uri)) {
+    if (!await launchMailtoForUsers(users)) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Impossible d\'ouvrir le client mail')));
+      context.showSnack('Impossible d\'ouvrir le client mail');
     }
   }
 
@@ -460,7 +443,7 @@ class _FormateurApprenantsState extends State<FormateurApprenants> with TickerPr
     }
     _selected.clear();
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(activate ? 'Apprenants débloqués' : 'Apprenants bloqués')));
+    context.showSnack(activate ? 'Apprenants débloqués' : 'Apprenants bloqués');
   }
 
   void _loadFormateurModules() {
@@ -630,7 +613,7 @@ class _FormateurApprenantsState extends State<FormateurApprenants> with TickerPr
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          '$totalDoneHours / $totalAssignedHours heures (${(progress * 100).toStringAsFixed(0)}%) • ${commonFormations.length} formation${commonFormations.length > 1 ? 's' : ''}',
+                          '$totalDoneHours / $totalAssignedHours heures (${AppFormat.percent(progress)}) • ${commonFormations.length} formation${commonFormations.length > 1 ? 's' : ''}',
                           style: GoogleFonts.poppins(
                             fontSize: 11,
                             color: Colors.black54,
@@ -784,8 +767,6 @@ class _FormateurApprenantsState extends State<FormateurApprenants> with TickerPr
     await _db.setUserActive(userId, !isActif);
     _applyFilterFormateur();
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(!isActif ? 'Apprenant débloqué' : 'Apprenant bloqué')),
-    );
+    context.showSnack(!isActif ? 'Apprenant débloqué' : 'Apprenant bloqué');
   }
 }

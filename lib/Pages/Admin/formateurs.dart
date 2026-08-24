@@ -7,6 +7,7 @@ import 'package:gestion_formations/Services/auth_provider.dart';
 import 'package:gestion_formations/Services/db_services.dart';
 import 'package:gestion_formations/Services/imagekit_service.dart';
 import 'package:gestion_formations/config/theme.dart';
+import 'package:gestion_formations/utils/formatters.dart';
 
 class AdminFormateurs extends StatefulWidget {
   const AdminFormateurs({super.key});
@@ -559,7 +560,7 @@ class _AdminFormateursState extends State<AdminFormateurs> with TickerProviderSt
 
                     // Hours & Progression
                     Text(
-                      '$totalDoneHours / $totalAssignedHours heures (${(progress * 100).toStringAsFixed(0)}%) • ${assignedFormations.length} formation${assignedFormations.length > 1 ? 's' : ''} · ${assignedModules.length} module${assignedModules.length > 1 ? 's' : ''}',
+                      '$totalDoneHours / $totalAssignedHours heures (${AppFormat.percent(progress)}) • ${assignedFormations.length} formation${assignedFormations.length > 1 ? 's' : ''} · ${assignedModules.length} module${assignedModules.length > 1 ? 's' : ''}',
                       style: GoogleFonts.poppins(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
@@ -1460,7 +1461,7 @@ class _AdminFormateursState extends State<AdminFormateurs> with TickerProviderSt
                                           borderRadius: BorderRadius.circular(6),
                                         ),
                                         child: Text(
-                                          '${(formationProgress * 100).toStringAsFixed(0)}%',
+                                          AppFormat.percent(formationProgress),
                                           style: GoogleFonts.poppins(
                                             fontSize: 11,
                                             fontWeight: FontWeight.w600,

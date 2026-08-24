@@ -3,6 +3,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:gestion_formations/Models/formation.dart';
 import 'package:gestion_formations/Services/db_services.dart';
 import 'package:gestion_formations/config/theme.dart';
+import 'package:gestion_formations/utils/formatters.dart';
+import 'package:gestion_formations/utils/ui_feedback.dart';
 
 class InscriptionPage extends StatefulWidget {
   final String? formationId;
@@ -481,7 +483,7 @@ class _InscriptionPageState extends State<InscriptionPage> {
                       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
                       title: Text(m, style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600)),
                       subtitle: _formation!.modulePrices.containsKey(m)
-                          ? Text('${_formation!.modulePrices[m]!.toStringAsFixed(0)} FCFA', style: GoogleFonts.poppins(fontSize: 12, color: AppTheme.accent, fontWeight: FontWeight.w700))
+                          ? Text(AppFormat.fcfa(_formation!.modulePrices[m]!), style: GoogleFonts.poppins(fontSize: 12, color: AppTheme.accent, fontWeight: FontWeight.w700))
                           : null,
                       value: _selectedModules.contains(m),
                       activeColor: AppTheme.primary,
@@ -514,7 +516,7 @@ class _InscriptionPageState extends State<InscriptionPage> {
                   children: [
                     Text('Total estimé', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textSecondary)),
                     Text(
-                      '${_selectedModulesPrice.toStringAsFixed(0)} FCFA',
+                      AppFormat.fcfa(_selectedModulesPrice),
                       style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w800, color: AppTheme.logoRed),
                     ),
                   ],
@@ -563,7 +565,7 @@ class _InscriptionPageState extends State<InscriptionPage> {
                 title: Text(f.titre, style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 15)),
                 subtitle: Text(f.description, maxLines: 2, overflow: TextOverflow.ellipsis, style: GoogleFonts.poppins(fontSize: 12, color: AppTheme.textSecondary)),
                 trailing: Text(
-                  '${(f.type == FormationType.enligne ? f.prixEnLigne ?? f.prix : f.prix).toStringAsFixed(0)} FCFA',
+                  AppFormat.fcfa(f.type == FormationType.enligne ? f.prixEnLigne ?? f.prix : f.prix),
                   style: GoogleFonts.poppins(fontWeight: FontWeight.w800, color: AppTheme.primary, fontSize: 14),
                 ),
                 onTap: () {
@@ -807,7 +809,7 @@ class _InscriptionPageState extends State<InscriptionPage> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text('Tarif indicatif', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
-                  Text('${amount.toStringAsFixed(0)} FCFA', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w800, color: AppTheme.primary)),
+                  Text(AppFormat.fcfa(amount), style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w800, color: AppTheme.primary)),
                 ],
               ),
             ],
@@ -937,7 +939,7 @@ class _InscriptionPageState extends State<InscriptionPage> {
 
   Future<void> _submitInscription() async {
     if (_formation == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Veuillez sélectionner une formation.')));
+      context.showSnack('Veuillez sélectionner une formation.');
       return;
     }
 
@@ -947,21 +949,21 @@ class _InscriptionPageState extends State<InscriptionPage> {
     final phone = _telephoneController.text.trim();
 
     if (prenom.isEmpty || nom.isEmpty || email.isEmpty || phone.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Veuillez compléter toutes les informations personnelles.')));
+      context.showSnack('Veuillez compléter toutes les informations personnelles.');
       return;
     }
     final emailRegExp = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+');
     if (!emailRegExp.hasMatch(email)) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Veuillez fournir une adresse email valide.')));
+      context.showSnack('Veuillez fournir une adresse email valide.');
       return;
     }
     if (!_hasValidSfpSelection) {
       final required = _formation!.maxModulesParEtudiant ?? 3;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Veuillez sélectionner exactement $required modules pour le stage SFP.')));
+      context.showSnack('Veuillez sélectionner exactement $required modules pour le stage SFP.');
       return;
     }
     if (_formation != null && _formation!.modulePrices.isNotEmpty && _selectedModules.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Veuillez sélectionner au moins un module pour cette formation.')));
+      context.showSnack('Veuillez sélectionner au moins un module pour cette formation.');
       return;
     }
 
@@ -987,7 +989,7 @@ class _InscriptionPageState extends State<InscriptionPage> {
       });
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur lors de l\'inscription : $e')));
+      context.showSnack('Erreur lors de l\'inscription : $e');
     } finally {
       if (mounted) {
         setState(() {

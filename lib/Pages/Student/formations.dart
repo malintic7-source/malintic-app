@@ -7,6 +7,8 @@ import 'package:gestion_formations/Models/inscription.dart';
 import 'package:gestion_formations/Services/db_services.dart';
 import 'package:gestion_formations/Services/pdf_service.dart';
 import 'package:gestion_formations/config/theme.dart';
+import 'package:gestion_formations/utils/formatters.dart';
+import 'package:gestion_formations/utils/ui_feedback.dart';
 import 'package:gestion_formations/Widgets/share_formation_dialog.dart';
 
 class StudentFormations extends StatefulWidget {
@@ -521,18 +523,11 @@ class _StudentFormationsState extends State<StudentFormations> with TickerProvid
                     );
 
                     if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Attestation téléchargée avec succès !', style: GoogleFonts.poppins()),
-                          backgroundColor: Colors.green,
-                        ),
-                      );
+                      context.showSuccessSnack('Attestation téléchargée avec succès !');
                     }
                   } catch (e) {
                     if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Erreur: $e'), backgroundColor: AppTheme.error),
-                      );
+                      context.showErrorSnack('Erreur: $e');
                     }
                   }
                 },
@@ -556,7 +551,7 @@ class _StudentFormationsState extends State<StudentFormations> with TickerProvid
             const SizedBox(width: 10),
             Expanded(
               child: Text(
-                'Formation terminée. Solde restant : ${balance.toStringAsFixed(0)} FCFA pour débloquer votre attestation.',
+                'Formation terminée. Solde restant : ${AppFormat.fcfa(balance)} pour débloquer votre attestation.',
                 style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFF9A3412)),
               ),
             ),

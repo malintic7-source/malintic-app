@@ -11,6 +11,9 @@ import 'package:gestion_formations/Services/db_services.dart';
 import 'package:gestion_formations/Services/invoice_service.dart';
 import 'package:gestion_formations/Services/pdf_service.dart';
 import 'package:gestion_formations/Widgets/pro_data_table.dart';
+import 'package:gestion_formations/utils/status_styles.dart';
+import 'package:gestion_formations/utils/formatters.dart';
+import 'package:gestion_formations/utils/ui_feedback.dart';
 
 class AdminPaiements extends StatefulWidget {
   const AdminPaiements({super.key});
@@ -163,13 +166,7 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
                 icon: const Icon(Icons.refresh_rounded, color: Colors.white, size: 20),
                 onPressed: () {
                   setState(() {});
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('🔄 Données des paiements actualisées !'),
-                      backgroundColor: AppTheme.primary,
-                      duration: Duration(seconds: 2),
-                    ),
-                  );
+                  context.showSnack('🔄 Données des paiements actualisées !', background: AppTheme.primary, duration: const Duration(seconds: 2));
                 },
               ),
             ),
@@ -200,9 +197,9 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
               spacing: 12,
               runSpacing: 12,
               children: [
-                _buildStatCard('Encaissé Total', '${totalReceived.toStringAsFixed(0)} FCFA', Icons.account_balance_wallet_rounded, AppTheme.success, cardWidth),
-                _buildStatCard('Reste à Recouvrer', '${totalBalance.toStringAsFixed(0)} FCFA', Icons.pending_actions_rounded, const Color(0xFFD4AF37), cardWidth),
-                _buildStatCard('Total Dû Formations', '${totalDue.toStringAsFixed(0)} FCFA', Icons.receipt_rounded, AppTheme.primary, cardWidth),
+                _buildStatCard('Encaissé Total', AppFormat.fcfa(totalReceived), Icons.account_balance_wallet_rounded, AppTheme.success, cardWidth),
+                _buildStatCard('Reste à Recouvrer', AppFormat.fcfa(totalBalance), Icons.pending_actions_rounded, const Color(0xFFD4AF37), cardWidth),
+                _buildStatCard('Total Dû Formations', AppFormat.fcfa(totalDue), Icons.receipt_rounded, AppTheme.primary, cardWidth),
                 _buildStatCard('Total Transactions', '${payments.length} versements', Icons.swap_horiz_rounded, Colors.purple, cardWidth),
               ],
             );
@@ -493,11 +490,11 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              'Payé: ${paidAmount.toStringAsFixed(0)} FCFA / ${totalDue.toStringAsFixed(0)} FCFA',
+                              'Payé: ${AppFormat.fcfa(paidAmount)} / ${AppFormat.fcfa(totalDue)}',
                               style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black87),
                             ),
                             Text(
-                              balance == 0 ? 'Solde réglé' : 'Reste: ${balance.toStringAsFixed(0)} FCFA',
+                              balance == 0 ? 'Solde réglé' : 'Reste: ${AppFormat.fcfa(balance)}',
                               style: GoogleFonts.poppins(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w800,
@@ -648,8 +645,8 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
               final p = filteredPayments[index];
               final student = _db.getUserById(p.etudiantId);
               final studentName = student?.nomComplet ?? 'Stagiaire #${p.etudiantId.length > 6 ? p.etudiantId.substring(0, 6) : p.etudiantId}';
-              final statusColor = _getStatusColorFromPayment(p.status);
-              final statusLabel = _getStatusLabelFromPayment(p.status);
+              final statusColor = p.status.color;
+              final statusLabel = p.status.label;
 
               return Container(
                 padding: const EdgeInsets.all(14),
@@ -711,7 +708,7 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
                           ),
                         ),
                         Text(
-                          '${p.montant.toStringAsFixed(0)} FCFA',
+                          AppFormat.fcfa(p.montant),
                           style: GoogleFonts.poppins(
                             fontSize: 14,
                             fontWeight: FontWeight.w800,
@@ -754,8 +751,8 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
         final tableRows = filteredPayments.map((p) {
           final student = _db.getUserById(p.etudiantId);
           final studentName = student != null ? '${student.prenom} ${student.nom}' : 'Stagiaire #${p.etudiantId.substring(0, 6)}';
-          final statusColor = _getStatusColorFromPayment(p.status);
-          final statusLabel = _getStatusLabelFromPayment(p.status);
+          final statusColor = p.status.color;
+          final statusLabel = p.status.label;
 
           return ProDataRow(
             cells: [
@@ -777,7 +774,7 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
                 child: Text('Tranche ${p.trancheNumero}/${p.nombreTranches}', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600)),
               ),
               ProDataCell(
-                text: '${p.montant.toStringAsFixed(0)} FCFA',
+                text: AppFormat.fcfa(p.montant),
                 style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w700, color: AppTheme.primary),
               ),
               ProDataCell(
@@ -843,14 +840,10 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
     try {
       await _db.updatePaymentStatus(payment.id, 'effectue');
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('✅ Paiement validé.'), backgroundColor: AppTheme.success),
-      );
+      context.showSuccessSnack('✅ Paiement validé.');
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('⚠️ $error'), backgroundColor: AppTheme.error),
-      );
+      context.showErrorSnack('⚠️ $error');
     }
   }
 
@@ -952,7 +945,7 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text('Prix Brut Initial:', style: GoogleFonts.poppins(fontSize: 12, color: Colors.black54)),
-                                Text('${baseTotal.toStringAsFixed(0)} FCFA', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+                                Text(AppFormat.fcfa(baseTotal), style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
                               ],
                             ),
                             const SizedBox(height: 4),
@@ -960,7 +953,7 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text('Remise Accordée:', style: GoogleFonts.poppins(fontSize: 12, color: AppTheme.accent)),
-                                Text('- ${_remise.toStringAsFixed(0)} FCFA', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w800, color: AppTheme.accent)),
+                                Text('- ${AppFormat.fcfa(_remise)}', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w800, color: AppTheme.accent)),
                               ],
                             ),
                             const SizedBox(height: 4),
@@ -968,7 +961,7 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text('Net Dû (Après Remise):', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w700)),
-                                Text('${netTotal.toStringAsFixed(0)} FCFA', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w800, color: AppTheme.primary)),
+                                Text(AppFormat.fcfa(netTotal), style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w800, color: AppTheme.primary)),
                               ],
                             ),
                             const Divider(height: 12),
@@ -976,7 +969,7 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text('Somme Déjà Versée:', style: GoogleFonts.poppins(fontSize: 12, color: AppTheme.success)),
-                                Text('${alreadyPaid.toStringAsFixed(0)} FCFA', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w700, color: AppTheme.success)),
+                                Text(AppFormat.fcfa(alreadyPaid), style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w700, color: AppTheme.success)),
                               ],
                             ),
                             const SizedBox(height: 4),
@@ -984,7 +977,7 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text('Solde Restant à Payer:', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w700, color: AppTheme.warningDark)),
-                                Text('${balanceDue.toStringAsFixed(0)} FCFA', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w800, color: AppTheme.warningDark)),
+                                Text(AppFormat.fcfa(balanceDue), style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w800, color: AppTheme.warningDark)),
                               ],
                             ),
                           ],
@@ -1004,7 +997,7 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
                           icon: const Icon(Icons.local_offer_rounded, color: AppTheme.accent, size: 20),
                           label: Text(
                             _remise > 0
-                                ? '🏷️ Remise Appliquée: ${_remise.toStringAsFixed(0)} FCFA (Modifier)'
+                                ? '🏷️ Remise Appliquée: ${AppFormat.fcfa(_remise)} (Modifier)'
                                 : '🏷️ Accorder une Remise (Décision Manuelle)',
                             style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w700, color: AppTheme.accent),
                           ),
@@ -1162,7 +1155,7 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text('Prix Brut Initial:', style: GoogleFonts.poppins(fontSize: 12, color: Colors.black54)),
-                            Text('${basePrice.toStringAsFixed(0)} FCFA', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w700, color: AppTheme.primary)),
+                            Text(AppFormat.fcfa(basePrice), style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w700, color: AppTheme.primary)),
                           ],
                         ),
                         const SizedBox(height: 4),
@@ -1170,7 +1163,7 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text('Remise Accordée:', style: GoogleFonts.poppins(fontSize: 12, color: AppTheme.accent)),
-                            Text('- ${calculatedDiscount.toStringAsFixed(0)} FCFA', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w800, color: AppTheme.accent)),
+                            Text('- ${AppFormat.fcfa(calculatedDiscount)}', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w800, color: AppTheme.accent)),
                           ],
                         ),
                         const Divider(height: 12),
@@ -1178,7 +1171,7 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text('Nouveau Total Net à Payer:', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w700)),
-                            Text('${netPrice.toStringAsFixed(0)} FCFA', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w800, color: AppTheme.success)),
+                            Text(AppFormat.fcfa(netPrice), style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w800, color: AppTheme.success)),
                           ],
                         ),
                       ],
@@ -1251,7 +1244,7 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
                           }).toList()
                         : [5000, 10000, 15000, 25000, 50000].map((amt) {
                             return ActionChip(
-                              label: Text('${(amt / 1000).toStringAsFixed(0)}k FCFA'),
+                              label: Text(AppFormat.fcfaCompact(amt)),
                               onPressed: () {
                                 discountValController.text = amt.toString();
                                 recalculate(amt.toString());
@@ -1300,9 +1293,7 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
   Future<bool> _submitPayment() async {
     if (_selectedStudentId == null || _selectedFormationId == null) {
       if (!mounted) return false;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('⚠️ Veuillez sélectionner un stagiaire et une formation.'), backgroundColor: AppTheme.warning),
-      );
+      context.showSnack('⚠️ Veuillez sélectionner un stagiaire et une formation.', background: AppTheme.warning);
       return false;
     }
 
@@ -1314,9 +1305,7 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
 
     if (parsedAmount <= 0) {
       if (!mounted) return false;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('⚠️ Le montant du versement doit être supérieur à 0 FCFA.'), backgroundColor: AppTheme.warning),
-      );
+      context.showSnack('⚠️ Le montant du versement doit être supérieur à 0 FCFA.', background: AppTheme.warning);
       return false;
     }
 
@@ -1326,17 +1315,13 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
 
     if (inscription == null) {
       if (!mounted) return false;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('⚠️ Inscription introuvable pour ce stagiaire.'), backgroundColor: AppTheme.error),
-      );
+      context.showErrorSnack('⚠️ Inscription introuvable pour ce stagiaire.');
       return false;
     }
 
     if (parsedInstallment < 1 || parsedTotalInstallments < 1 || parsedInstallment > parsedTotalInstallments) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('⚠️ Le numéro de tranche doit être compris entre 1 et le nombre total de tranches.'), backgroundColor: AppTheme.warning),
-        );
+        context.showSnack('⚠️ Le numéro de tranche doit être compris entre 1 et le nombre total de tranches.', background: AppTheme.warning);
       }
       return false;
     }
@@ -1349,9 +1334,7 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
         .toDouble();
     if (parsedAmount > remaining) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('⚠️ Le versement dépasse le solde restant (${remaining.toStringAsFixed(0)} FCFA).'), backgroundColor: AppTheme.warning),
-        );
+        context.showSnack('⚠️ Le versement dépasse le solde restant (${AppFormat.fcfa(remaining)}).', background: AppTheme.warning);
       }
       return false;
     }
@@ -1379,9 +1362,7 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
       await _db.addPayment(payment);
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('⚠️ $error'), backgroundColor: AppTheme.error),
-        );
+        context.showErrorSnack('⚠️ $error');
       }
       return false;
     }
@@ -1389,13 +1370,11 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
       userNom: 'Mamadou Toure',
       userRole: 'Admin',
       action: 'Nouveau Versement',
-      description: 'Versement de ${parsedAmount.toStringAsFixed(0)} FCFA (Tranche $parsedInstallment/$parsedTotalInstallments) enregistré.',
+      description: 'Versement de ${AppFormat.fcfa(parsedAmount)} (Tranche $parsedInstallment/$parsedTotalInstallments) enregistré.',
     );
 
     if (!mounted) return true;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('✅ Versement enregistré avec succès !'), backgroundColor: AppTheme.success),
-    );
+    context.showSuccessSnack('✅ Versement enregistré avec succès !');
     return true;
   }
 
@@ -1500,9 +1479,7 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur génération reçu PDF: $e'), backgroundColor: AppTheme.error),
-      );
+      context.showErrorSnack('Erreur génération reçu PDF: $e');
     }
   }
 
@@ -1539,7 +1516,7 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
           'nombreTranches': payment.nombreTranches,
           'montant': payment.montant.toStringAsFixed(0),
           'remise': payment.remise.toStringAsFixed(0),
-          'statusLabel': _invoicePaymentStatusLabel(payment.status),
+          'statusLabel': payment.status.label,
         }).toList(),
       );
       await PdfService().printOrDownloadPdf(
@@ -1548,20 +1525,7 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur génération facture: $e'), backgroundColor: AppTheme.error),
-      );
-    }
-  }
-
-  String _invoicePaymentStatusLabel(PaymentStatus status) {
-    switch (status) {
-      case PaymentStatus.effectue:
-        return 'Effectué';
-      case PaymentStatus.echoue:
-        return 'Échoué';
-      case PaymentStatus.enAttente:
-        return 'En attente';
+      context.showErrorSnack('Erreur génération facture: $e');
     }
   }
 
@@ -1647,25 +1611,4 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
     );
   }
 
-  Color _getStatusColorFromPayment(PaymentStatus status) {
-    switch (status) {
-      case PaymentStatus.effectue:
-        return AppTheme.success;
-      case PaymentStatus.enAttente:
-        return const Color(0xFFD4AF37);
-      case PaymentStatus.echoue:
-        return AppTheme.error;
-    }
-  }
-
-  String _getStatusLabelFromPayment(PaymentStatus status) {
-    switch (status) {
-      case PaymentStatus.effectue:
-        return 'Payé';
-      case PaymentStatus.enAttente:
-        return 'En attente';
-      case PaymentStatus.echoue:
-        return 'Échoué';
-    }
-  }
 }

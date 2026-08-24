@@ -10,6 +10,7 @@ import 'package:gestion_formations/Models/notification.dart';
 import 'package:gestion_formations/Models/audit_log.dart';
 import 'package:gestion_formations/Models/seance.dart';
 import 'package:gestion_formations/Services/local_storage.dart';
+import 'package:gestion_formations/utils/formatters.dart';
 
 class LocalDataService {
   static final LocalDataService _instance = LocalDataService._internal();
@@ -1710,7 +1711,7 @@ class LocalDataService {
       userNom: 'Administration',
       userRole: 'admin',
       action: 'Création formation',
-      description: 'Nouvelle formation: "${syncedFormation.titre}" (${syncedFormation.modules.length} modules, ${syncedFormation.prix.toStringAsFixed(0)} FCFA)',
+      description: 'Nouvelle formation: "${syncedFormation.titre}" (${syncedFormation.modules.length} modules, ${AppFormat.fcfa(syncedFormation.prix)})',
     );
   }
 
@@ -2489,7 +2490,7 @@ class LocalDataService {
           getInscriptionPaidAmount(payment.inscriptionId) + payment.montant;
       if (proposedPaid > totalDue) {
         throw StateError(
-          'Le versement dépasse le solde restant de ${((totalDue - getInscriptionPaidAmount(payment.inscriptionId)).clamp(0, double.infinity)).toStringAsFixed(0)} FCFA.',
+          'Le versement dépasse le solde restant de ${AppFormat.fcfa((totalDue - getInscriptionPaidAmount(payment.inscriptionId)).clamp(0, double.infinity))}.',
         );
       }
     }
@@ -2516,7 +2517,7 @@ class LocalDataService {
       userNom: studName,
       userRole: stud?.role.name ?? 'apprenant',
       action: 'Paiement effectué',
-      description: 'Versement de ${payment.montant.toStringAsFixed(0)} FCFA (${payment.methode.name.toUpperCase()}) pour ${form?.titre ?? "Formation"} (Tranche ${payment.trancheNumero}/${payment.nombreTranches})',
+        description: 'Versement de ${AppFormat.fcfa(payment.montant)} (${payment.methode.name.toUpperCase()}) pour ${form?.titre ?? "Formation"} (Tranche ${payment.trancheNumero}/${payment.nombreTranches})',
     );
 
     // Notify Admins & Accounting
@@ -2524,7 +2525,7 @@ class LocalDataService {
       AppNotification(
         id: 'notif_pay_${DateTime.now().microsecondsSinceEpoch}',
         title: 'Paiement reçu',
-        description: 'Versement de ${payment.montant.toStringAsFixed(0)} FCFA reçu de $studName (${form?.titre ?? "Formation"}).',
+        description: 'Versement de ${AppFormat.fcfa(payment.montant)} reçu de $studName (${form?.titre ?? "Formation"}).',
         senderId: 'system',
         senderEmail: 'comptabilite@mali-ntic.ml',
         targetRoles: ['admin', 'comptable', 'daf', 'directeur_general'],
@@ -2543,7 +2544,7 @@ class LocalDataService {
         AppNotification(
           id: 'notif_stud_${DateTime.now().microsecondsSinceEpoch}',
           title: 'Confirmation de versement',
-          description: 'Votre paiement de ${payment.montant.toStringAsFixed(0)} FCFA pour ${form?.titre ?? "votre formation"} a été validé avec succès.',
+        description: 'Votre paiement de ${AppFormat.fcfa(payment.montant)} pour ${form?.titre ?? "votre formation"} a été validé avec succès.',
           senderId: 'comptabilite',
           senderEmail: 'comptabilite@mali-ntic.ml',
           targetRoles: ['etudiant'],

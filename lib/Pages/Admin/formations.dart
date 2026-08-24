@@ -9,6 +9,9 @@ import 'package:gestion_formations/Services/db_services.dart';
 import 'package:gestion_formations/Services/imagekit_service.dart';
 import 'package:gestion_formations/Services/pdf_service.dart';
 import 'package:gestion_formations/Widgets/share_formation_dialog.dart';
+import 'package:gestion_formations/utils/formatters.dart';
+import 'package:gestion_formations/utils/status_styles.dart';
+import 'package:gestion_formations/utils/ui_feedback.dart';
 
 class AdminFormations extends StatefulWidget {
   const AdminFormations({super.key});
@@ -52,9 +55,7 @@ class _AdminFormationsState extends State<AdminFormations>
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur génération brochure PDF: $e'), backgroundColor: AppTheme.error),
-      );
+      context.showErrorSnack('Erreur génération brochure PDF: $e');
     }
   }
 
@@ -550,7 +551,7 @@ class _AdminFormationsState extends State<AdminFormations>
                               border: Border.all(color: const Color(0xFFBBF7D0)),
                             ),
                             child: Text(
-                              'En ligne : ${formation.prixEnLigne!.toStringAsFixed(0)} F',
+                              'En ligne : ${AppFormat.fcfaShort(formation.prixEnLigne!)}',
                               style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w700, color: const Color(0xFF166534)),
                             ),
                           ),
@@ -562,7 +563,7 @@ class _AdminFormationsState extends State<AdminFormations>
                               border: Border.all(color: const Color(0xFFBFDBFE)),
                             ),
                             child: Text(
-                              'Présentiel : ${formation.prix.toStringAsFixed(0)} F',
+                              'Présentiel : ${AppFormat.fcfaShort(formation.prix)}',
                               style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w700, color: const Color(0xFF1D4ED8)),
                             ),
                           ),
@@ -575,7 +576,7 @@ class _AdminFormationsState extends State<AdminFormations>
                               border: Border.all(color: const Color(0xFFBBF7D0)),
                             ),
                             child: Text(
-                              'En ligne : ${(formation.prixEnLigne ?? formation.prix).toStringAsFixed(0)} F',
+                              'En ligne : ${AppFormat.fcfaShort(formation.prixEnLigne ?? formation.prix)}',
                               style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w700, color: const Color(0xFF166534)),
                             ),
                           ),
@@ -588,7 +589,7 @@ class _AdminFormationsState extends State<AdminFormations>
                               border: Border.all(color: const Color(0xFFBFDBFE)),
                             ),
                             child: Text(
-                              'Présentiel : ${formation.prix.toStringAsFixed(0)} F',
+                              'Présentiel : ${AppFormat.fcfaShort(formation.prix)}',
                               style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w700, color: const Color(0xFF1D4ED8)),
                             ),
                           ),
@@ -628,11 +629,11 @@ class _AdminFormationsState extends State<AdminFormations>
                             children: [
                               _buildInfoRowCompact(
                                 'Type',
-                                _formatType(formation.type),
+                                formation.type.label,
                               ),
                               _buildInfoRowCompact(
                                 'Statut',
-                                _formatStatus(formation.status),
+                                formation.status.label,
                               ),
                               _buildInfoRowCompact(
                                 'Durée',
@@ -652,12 +653,12 @@ class _AdminFormationsState extends State<AdminFormations>
                               if (formation.dateDebut != null)
                                 _buildInfoRowCompact(
                                   'Début',
-                                  _formatDate(formation.dateDebut!),
+                                  AppFormat.date(formation.dateDebut!),
                                 ),
                               if (formation.dateFin != null)
                                 _buildInfoRowCompact(
                                   'Fin',
-                                  _formatDate(formation.dateFin!),
+                                  AppFormat.date(formation.dateFin!),
                                 ),
                               if (formation.dureeHeures != null &&
                                   formation.dureeHeures!.isNotEmpty)
@@ -807,7 +808,7 @@ class _AdminFormationsState extends State<AdminFormations>
   List<Formation> _filterFormations(List<Formation> formations) {
     final query = searchController.text.trim().toLowerCase();
     return formations.where((formation) {
-      final formationStatus = _formatStatus(formation.status);
+      final formationStatus = formation.status.label;
       final matchesStatus =
           selectedStatus == 'Tous' || formationStatus == selectedStatus;
       final matchesType = selectedFormationKind == 'Tous' ||
@@ -842,67 +843,11 @@ class _AdminFormationsState extends State<AdminFormations>
     return sorted;
   }
 
-  String _formatType(FormationType type) {
-    switch (type) {
-      case FormationType.presentielle:
-        return 'Présentielle';
-      case FormationType.mixte:
-        return 'Mixte';
-      default:
-        return 'En ligne';
-    }
-  }
-
-  String _formatStatus(FormationStatus status) {
-    switch (status) {
-      case FormationStatus.enCours:
-        return 'En Cours';
-      case FormationStatus.terminee:
-        return 'Terminée';
-      default:
-        return 'Programmée';
-    }
-  }
-
   Future<void> _showFormationQrDialog(
     BuildContext context,
     Formation formation,
   ) async {
     await ShareFormationDialog.show(context, formation);
-  }
-
-  String _formatDate(DateTime date) {
-    return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
-  }
-
-  DateTime? _parseDate(String rawDate) {
-    final trimmed = rawDate.trim();
-    if (trimmed.isEmpty) return null;
-
-    final isoDate = DateTime.tryParse(trimmed);
-    if (isoDate != null) return isoDate;
-
-    final frenchMatch = RegExp(
-      r'^(\d{2})[\/\-](\d{2})[\/\-](\d{4})$',
-    ).firstMatch(trimmed);
-    if (frenchMatch != null) {
-      final day = int.parse(frenchMatch.group(1)!);
-      final month = int.parse(frenchMatch.group(2)!);
-      final year = int.parse(frenchMatch.group(3)!);
-      return DateTime(year, month, day);
-    }
-
-    final dashFormat = RegExp(
-      r'^(\d{4})[\/\-](\d{2})[\/\-](\d{2})$',
-    ).firstMatch(trimmed);
-    if (dashFormat != null) {
-      final year = int.parse(dashFormat.group(1)!);
-      final month = int.parse(dashFormat.group(2)!);
-      final day = int.parse(dashFormat.group(3)!);
-      return DateTime(year, month, day);
-    }
-
-    return null;
   }
 
   Map<String, double> _parseModulePrices(String rawPrices) {
@@ -1449,10 +1394,10 @@ class _AdminFormationsState extends State<AdminFormations>
                                 : null;
                             final dateDebut = dateDebutController.text.trim().isEmpty
                                 ? null
-                                : _parseDate(dateDebutController.text.trim());
+                                : AppFormat.parseFrenchOrIsoDate(dateDebutController.text.trim());
                             final dateFin = dateFinController.text.trim().isEmpty
                                 ? null
-                                : _parseDate(dateFinController.text.trim());
+                                : AppFormat.parseFrenchOrIsoDate(dateFinController.text.trim());
                             final horaires = _parseHoraires(
                               horairesController.text.trim(),
                             );
@@ -1620,11 +1565,11 @@ class _AdminFormationsState extends State<AdminFormations>
     );
     final dateDebutController = TextEditingController(
       text: formation.dateDebut != null
-          ? _formatDate(formation.dateDebut!)
+          ? AppFormat.date(formation.dateDebut!)
           : '',
     );
     final dateFinController = TextEditingController(
-      text: formation.dateFin != null ? _formatDate(formation.dateFin!) : '',
+      text: formation.dateFin != null ? AppFormat.date(formation.dateFin!) : '',
     );
     final capaciteController = TextEditingController(
       text: formation.capaciteMax?.toString() ?? '',
@@ -1632,8 +1577,8 @@ class _AdminFormationsState extends State<AdminFormations>
     final maxModulesController = TextEditingController(
       text: formation.maxModulesParEtudiant?.toString() ?? '',
     );
-    String typeValue = _formatType(formation.type);
-    String statusValue = _formatStatus(formation.status);
+    String typeValue = formation.type.label;
+    String statusValue = formation.status.label;
     bool isStage = formation.estStage;
     final formKey = GlobalKey<FormState>();
     String? uploadedImageUrl = formation.imageUrl;
@@ -2110,10 +2055,10 @@ class _AdminFormationsState extends State<AdminFormations>
                                 : null;
                             final dateDebut = dateDebutController.text.trim().isEmpty
                                 ? null
-                                : _parseDate(dateDebutController.text.trim());
+                                : AppFormat.parseFrenchOrIsoDate(dateDebutController.text.trim());
                             final dateFin = dateFinController.text.trim().isEmpty
                                 ? null
-                                : _parseDate(dateFinController.text.trim());
+                                : AppFormat.parseFrenchOrIsoDate(dateFinController.text.trim());
                             final horaires = _parseHoraires(
                               horairesController.text.trim(),
                             );

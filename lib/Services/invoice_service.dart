@@ -2,6 +2,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:flutter/services.dart';
 import 'package:gestion_formations/config/theme.dart';
+import 'package:gestion_formations/utils/status_styles.dart';
 
 class InvoiceService {
   static Future<Uint8List> generateInvoicePDF({
@@ -380,11 +381,11 @@ class InvoiceService {
                         child: pw.Container(
                           padding: pw.EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: pw.BoxDecoration(
-                            color: _getStatusColor(statut),
+                            color: PdfColor.fromInt(inscriptionStatusColorValue(statut)),
                             borderRadius: pw.BorderRadius.circular(4),
                           ),
                           child: pw.Text(
-                            _getStatusLabel(statut),
+                            inscriptionStatusLabel(statut),
                             style: pw.TextStyle(
                               fontSize: 9,
                               fontWeight: pw.FontWeight.bold,
@@ -466,37 +467,4 @@ class InvoiceService {
     return pdf.save();
   }
 
-  static PdfColor _getStatusColor(String status) {
-    switch (status) {
-      case 'en_attente':
-        return PdfColor.fromInt(0xFFF59E0B);
-      case 'rejete':
-        return PdfColor.fromInt(0xFFEF4444);
-      case 'incomplet':
-        return PdfColor.fromInt(0xFFFB923C);
-      case 'complet':
-        return PdfColor.fromInt(0xFF10B981);
-      case 'paiement_complet':
-        return PdfColor.fromInt(0xFF10B981);
-      default:
-        return PdfColor.fromInt(0xFF6B7280);
-    }
-  }
-
-  static String _getStatusLabel(String status) {
-    switch (status) {
-      case 'en_attente':
-        return 'En Attente';
-      case 'rejete':
-        return 'Rejeté';
-      case 'incomplet':
-        return 'Incomplet';
-      case 'complet':
-        return 'Complet';
-      case 'paiement_complet':
-        return 'Complet';
-      default:
-        return 'En Attente';
-    }
-  }
 }

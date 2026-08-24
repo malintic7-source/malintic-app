@@ -5,6 +5,7 @@ import 'package:gestion_formations/Models/user.dart';
 import 'package:gestion_formations/Services/auth_provider.dart';
 import 'package:gestion_formations/Services/db_services.dart';
 import 'package:gestion_formations/config/theme.dart';
+import 'package:gestion_formations/utils/status_styles.dart';
 
 class AdminUsers extends StatefulWidget {
   const AdminUsers({super.key});
@@ -400,7 +401,7 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
-                                  _roleLabel(user.role),
+                                  userRoleLabel(user.role),
                                   style: GoogleFonts.poppins(
                                     fontSize: 11,
                                     fontWeight: FontWeight.w600,
@@ -595,19 +596,6 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
     }).toList();
   }
 
-  String _roleLabel(UserRole role) {
-    switch (role) {
-      case UserRole.admin: return 'Administrateur';
-      case UserRole.dg: return 'Directeur Général (DG)';
-      case UserRole.daf: return 'DAF';
-      case UserRole.comptable: return 'Comptable';
-      case UserRole.assistant: return 'Assistant(e)';
-      case UserRole.it: return 'Responsable IT';
-      case UserRole.formateur: return 'Formateur';
-      case UserRole.apprenant: return 'Stagiaire / Apprenant';
-    }
-  }
-
   IconData _getRoleIcon(UserRole role) {
     switch (role) {
       case UserRole.admin:
@@ -701,7 +689,7 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
                   items: UserRole.values
                       .map((role) => DropdownMenuItem(
                             value: role,
-                            child: Text(_roleLabel(role)),
+                            child: Text(userRoleLabel(role)),
                           ))
                       .toList(),
                   onChanged: (value) {
@@ -937,7 +925,7 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
                   items: UserRole.values
                       .map((role) => DropdownMenuItem(
                             value: role,
-                            child: Text(_roleLabel(role)),
+                            child: Text(userRoleLabel(role)),
                           ))
                       .toList(),
                   onChanged: (value) {
@@ -1518,14 +1506,14 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
                   userNom: 'Administration',
                   userRole: 'admin',
                   action: 'Modification de rôle',
-                  description: 'Rôle de ${user.nomComplet} modifié : ${_roleLabel(user.role)} -> ${_roleLabel(selectedRole)}',
+                  description: 'Rôle de ${user.nomComplet} modifié : ${userRoleLabel(user.role)} -> ${userRoleLabel(selectedRole)}',
                 );
 
                 if (!context.mounted) return;
                 Navigator.pop(dialogContext);
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('Rôle de ${user.nomComplet} mis à jour : ${_roleLabel(selectedRole)}'),
+                    content: Text('Rôle de ${user.nomComplet} mis à jour : ${userRoleLabel(selectedRole)}'),
                     backgroundColor: AppTheme.success,
                   ),
                 );

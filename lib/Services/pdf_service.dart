@@ -5,6 +5,7 @@ import 'package:printing/printing.dart';
 import 'package:gestion_formations/Models/payment.dart';
 import 'package:gestion_formations/Models/inscription.dart';
 import 'package:gestion_formations/Models/formation.dart';
+import 'package:gestion_formations/utils/formatters.dart';
 
 class PdfService {
   static final PdfService _instance = PdfService._internal();
@@ -87,7 +88,7 @@ class PdfService {
                     style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: darkTextColor),
                   ),
                   pw.Text(
-                    'Date: ${_formatDate(payment.dateEffectuation ?? payment.dateCreation)}',
+                    'Date: ${AppFormat.date(payment.dateEffectuation ?? payment.dateCreation)}',
                     style: const pw.TextStyle(color: PdfColors.grey700),
                   ),
                 ],
@@ -159,7 +160,7 @@ class PdfService {
                       children: [
                         pw.Expanded(
                           child: pw.Text(
-                            'Date Inscription: ${_formatDate(inscription.dateInscription)}',
+                            'Date Inscription: ${AppFormat.date(inscription.dateInscription)}',
                             style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700),
                           ),
                         ),
@@ -220,7 +221,7 @@ class PdfService {
                       ),
                       pw.Padding(
                         padding: const pw.EdgeInsets.all(10),
-                        child: pw.Text('${payment.montant.toStringAsFixed(0)} FCFA', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11, color: primaryColor)),
+                        child: pw.Text(AppFormat.fcfa(payment.montant), style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11, color: primaryColor)),
                       ),
                     ],
                   ),
@@ -245,7 +246,7 @@ class PdfService {
                           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                           children: [
                             pw.Text('TOTAL PAYÉ:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11, color: primaryColor)),
-                            pw.Text('${payment.montant.toStringAsFixed(0)} FCFA', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11, color: primaryColor)),
+                            pw.Text(AppFormat.fcfa(payment.montant), style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11, color: primaryColor)),
                           ],
                         ),
                         pw.SizedBox(height: 4),
@@ -380,7 +381,7 @@ class PdfService {
                       children: [
                         pw.Text('PRIX DE LA FORMATION', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColors.grey600)),
                         pw.SizedBox(height: 2),
-                        pw.Text('${formation.prix.toStringAsFixed(0)} FCFA', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold, color: primaryColor)),
+                        pw.Text(AppFormat.fcfa(formation.prix), style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold, color: primaryColor)),
                       ],
                     ),
                     pw.Column(
@@ -1058,7 +1059,7 @@ class PdfService {
                       crossAxisAlignment: pw.CrossAxisAlignment.end,
                       children: [
                         pw.Text('Formateur: $formateurNom', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: darkTextColor)),
-                        pw.Text('Date: ${_formatDate(seanceDate)}', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
+                        pw.Text('Date: ${AppFormat.date(seanceDate)}', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
                       ],
                     ),
                   ],
@@ -1166,13 +1167,6 @@ class PdfService {
     await Printing.sharePdf(bytes: pdfBytes, filename: filename);
   }
 
-  String _formatDate(DateTime dt) {
-    final d = dt.day.toString().padLeft(2, '0');
-    final m = dt.month.toString().padLeft(2, '0');
-    final y = dt.year;
-    return '$d/$m/$y';
-  }
-
   String _formatPaymentMethod(PaymentMethod method) {
     switch (method) {
       case PaymentMethod.especes:
@@ -1212,4 +1206,3 @@ class PdfService {
     return '26 Avril au 02 Août $fallbackYear';
   }
 }
-

@@ -7,6 +7,9 @@ import 'package:gestion_formations/Services/db_services.dart';
 import 'package:gestion_formations/Services/invoice_service.dart';
 import 'package:gestion_formations/Services/pdf_helper.dart';
 import 'package:gestion_formations/config/theme.dart';
+import 'package:gestion_formations/utils/status_styles.dart';
+import 'package:gestion_formations/utils/formatters.dart';
+import 'package:gestion_formations/utils/ui_feedback.dart';
 
 class PaymentsPage extends StatefulWidget {
   final User user;
@@ -164,8 +167,8 @@ class _PaymentsPageState extends State<PaymentsPage> with TickerProviderStateMix
   }
 
   Widget _buildStudentPaymentCard(Payment payment) {
-    final statusColor = _getStatusColor(payment.status);
-    final statusLabel = _getStatusLabel(payment.status);
+    final statusColor = payment.status.color;
+    final statusLabel = payment.status.label;
 
     return Container(
       decoration: BoxDecoration(
@@ -188,7 +191,7 @@ class _PaymentsPageState extends State<PaymentsPage> with TickerProviderStateMix
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      '${payment.montant.toStringAsFixed(0)} FCFA',
+                      AppFormat.fcfa(payment.montant),
                       style: GoogleFonts.poppins(
                         fontSize: 18,
                         fontWeight: FontWeight.w800,
@@ -214,7 +217,7 @@ class _PaymentsPageState extends State<PaymentsPage> with TickerProviderStateMix
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  'Méthode : ${_getMethodLabel(payment.methode)}',
+                  'Méthode : ${payment.methode.label}',
                   style: GoogleFonts.poppins(
                     fontSize: 12,
                     color: AppTheme.textSecondary,
@@ -278,9 +281,9 @@ class _PaymentsPageState extends State<PaymentsPage> with TickerProviderStateMix
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              _buildDetailSection('Montant', '${payment.montant.toStringAsFixed(0)} FCFA', AppTheme.primary),
-              _buildDetailSection('Statut', _getStatusLabel(payment.status), _getStatusColor(payment.status)),
-              _buildDetailSection('Méthode', _getMethodLabel(payment.methode), AppTheme.primaryDark),
+              _buildDetailSection('Montant', AppFormat.fcfa(payment.montant), AppTheme.primary),
+              _buildDetailSection('Statut', payment.status.label, payment.status.color),
+              _buildDetailSection('Méthode', payment.methode.label, AppTheme.primaryDark),
               _buildDetailSection('Date création', '${payment.dateCreation.day}/${payment.dateCreation.month}/${payment.dateCreation.year}', AppTheme.primary),
               if (payment.dateEffectuation != null)
                 _buildDetailSection('Date effectuation', '${payment.dateEffectuation!.day}/${payment.dateEffectuation!.month}/${payment.dateEffectuation!.year}', const Color(0xFF10B981)),
@@ -317,12 +320,7 @@ class _PaymentsPageState extends State<PaymentsPage> with TickerProviderStateMix
 
   Future<void> _downloadReceipt(Payment payment) async {
     try {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('📄 Génération du reçu PDF en cours...'),
-          duration: Duration(seconds: 2),
-        ),
-      );
+      context.showSnack('📄 Génération du reçu PDF en cours...', duration: const Duration(seconds: 2));
 
       final inscription = _db.getInscriptions().where((i) => i.id == payment.inscriptionId).firstOrNull;
       final formation = inscription != null ? _db.getFormationById(inscription.formationId) : null;
@@ -345,15 +343,15 @@ class _PaymentsPageState extends State<PaymentsPage> with TickerProviderStateMix
         montantTotal: montantTotal,
         montantPaye: payment.montant,
         montantRestant: montantRestant,
-        statut: _getStatusLabel(payment.status),
+        statut: payment.status.label,
         paymentHistory: [
           {
             'trancheNumero': payment.trancheNumero,
             'nombreTranches': payment.nombreTranches,
             'montant': payment.montant,
             'date': payment.dateCreation.toIso8601String(),
-            'methode': _getMethodLabel(payment.methode),
-            'statut': _getStatusLabel(payment.status),
+            'methode': payment.methode.label,
+            'statut': payment.status.label,
           }
         ],
       );
@@ -362,20 +360,10 @@ class _PaymentsPageState extends State<PaymentsPage> with TickerProviderStateMix
       await PdfHelper.downloadPDF(pdfBytes, fileName: fileName);
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('✅ Reçu PDF téléchargé avec succès !'),
-          backgroundColor: AppTheme.success,
-        ),
-      );
+      context.showSuccessSnack('✅ Reçu PDF téléchargé avec succès !');
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('❌ Erreur de génération du PDF: $e'),
-          backgroundColor: AppTheme.error,
-        ),
-      );
+      context.showErrorSnack('❌ Erreur de génération du PDF: $e');
     }
   }
 
@@ -416,40 +404,4 @@ class _PaymentsPageState extends State<PaymentsPage> with TickerProviderStateMix
   }
 
 
-  Color _getStatusColor(PaymentStatus status) {
-    switch (status) {
-      case PaymentStatus.effectue:
-        return Color(0xFF10B981);
-      case PaymentStatus.echoue:
-        return Color(0xFFEF4444);
-      case PaymentStatus.enAttente:
-      return Color(0xFFFB923C);
-    }
-  }
-
-  String _getStatusLabel(PaymentStatus status) {
-    switch (status) {
-      case PaymentStatus.effectue:
-        return 'Effectué';
-      case PaymentStatus.echoue:
-        return 'Échoué';
-      case PaymentStatus.enAttente:
-      return 'En attente';
-    }
-  }
-
-  String _getMethodLabel(PaymentMethod method) {
-    switch (method) {
-      case PaymentMethod.virement:
-        return 'Virement';
-      case PaymentMethod.especes:
-        return 'Espèces';
-      case PaymentMethod.carte:
-        return 'Carte bancaire';
-      case PaymentMethod.orangeMoney:
-        return 'Orange Money';
-      case PaymentMethod.moovMoney:
-        return 'Moov Money';
-    }
-  }
 }

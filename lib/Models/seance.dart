@@ -1,3 +1,5 @@
+import 'package:gestion_formations/utils/date_parsing.dart';
+
 enum SeanceStatut { brouillon, publie }
 
 class Seance {
@@ -46,12 +48,6 @@ class Seance {
       return SeanceStatut.brouillon;
     }
 
-    DateTime parseDate(dynamic val) {
-      if (val is DateTime) return val;
-      if (val is String) return DateTime.tryParse(val) ?? DateTime.now();
-      return DateTime.now();
-    }
-
     return Seance(
       id: id,
       formationId: data['formationId']?.toString() ?? '',
@@ -60,14 +56,14 @@ class Seance {
       moduleTitle: data['moduleTitle']?.toString(),
       formateurId: data['formateurId']?.toString() ?? '',
       formateurNom: data['formateurNom']?.toString() ?? '',
-      date: parseDate(data['date']),
+      date: parseDynamicDate(data['date']),
       heureDebut: data['heureDebut']?.toString() ?? '09:00',
       heureFin: data['heureFin']?.toString() ?? '11:00',
       salleOuLien: data['salleOuLien']?.toString(),
       modalite: data['modalite']?.toString() ?? 'Présentiel',
       statut: parseStatut(data['statut']?.toString()),
-      dateCreation: parseDate(data['dateCreation']),
-      datePublication: data['datePublication'] != null ? parseDate(data['datePublication']) : null,
+      dateCreation: parseDynamicDate(data['dateCreation']),
+      datePublication: data['datePublication'] != null ? parseDynamicDate(data['datePublication']) : null,
     );
   }
 

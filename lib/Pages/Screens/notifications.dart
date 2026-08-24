@@ -5,6 +5,8 @@ import 'package:gestion_formations/Models/user.dart';
 import 'package:gestion_formations/Services/auth_provider.dart';
 import 'package:gestion_formations/Services/notifications_services.dart';
 import 'package:gestion_formations/config/theme.dart';
+import 'package:gestion_formations/utils/formatters.dart';
+import 'package:gestion_formations/utils/ui_feedback.dart';
 // invoice and pdf helper imports removed (unused)
 
 class NotificationsPage extends StatefulWidget {
@@ -397,7 +399,7 @@ class _NotificationsPageState extends State<NotificationsPage> with TickerProvid
                           },
                         ),
                         Text(
-                          _formatDate(notification.createdAt),
+                          AppFormat.relativeFromNow(notification.createdAt),
                           style: GoogleFonts.poppins(
                             fontSize: 10,
                             color: AppTheme.textSecondary,
@@ -455,23 +457,6 @@ class _NotificationsPageState extends State<NotificationsPage> with TickerProvid
         ),
       ),
     );
-  }
-
-  String _formatDate(DateTime date) {
-    final now = DateTime.now();
-    final difference = now.difference(date);
-
-    if (difference.inMinutes < 1) {
-      return 'À l\'instant';
-    } else if (difference.inMinutes < 60) {
-      return 'Il y a ${difference.inMinutes}m';
-    } else if (difference.inHours < 24) {
-      return 'Il y a ${difference.inHours}h';
-    } else if (difference.inDays < 7) {
-      return 'Il y a ${difference.inDays}j';
-    } else {
-      return '${date.day}/${date.month}';
-    }
   }
 
 
@@ -717,9 +702,7 @@ class _NotificationsPageState extends State<NotificationsPage> with TickerProvid
                 final title = titleController.text.trim();
                 final desc = descController.text.trim();
                 if (title.isEmpty || desc.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Veuillez renseigner le titre et le message.')),
-                  );
+                    context.showSnack('Veuillez renseigner le titre et le message.');
                   return;
                 }
 
@@ -737,12 +720,7 @@ class _NotificationsPageState extends State<NotificationsPage> with TickerProvid
                 if (!dialogCtx.mounted) return;
                 Navigator.pop(dialogCtx);
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Annonce diffusée avec succès !'),
-                      backgroundColor: AppTheme.success,
-                    ),
-                  );
+                  context.showSuccessSnack('Annonce diffusée avec succès !');
                   setState(() {});
                 }
               },
