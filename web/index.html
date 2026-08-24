@@ -18,14 +18,23 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="description" content="M@LINTIC-APP - Plateforme multi-services : Formations, Prestations, E-Commerce, Incubateur">
   <meta name="theme-color" content="#0066CC">
+
+  <!-- iOS meta tags & touch optimization -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="M@LINTIC-APP">
+  <meta name="format-detection" content="telephone=no">
+  <link rel="apple-touch-icon" href="images/Malintic.png">
 
   <!-- Open Graph Tags -->
   <meta property="og:title" content="M@LINTIC-APP">
   <meta property="og:description" content="M@LINTIC-APP - Plateforme multi-services : Formations, Prestations, E-Commerce, Incubateur">
-  <meta property="og:image" content="https://malintic.web.app/images/Malintic.png">
-  <meta property="og:url" content="https://malintic.web.app/">
+  <meta property="og:image" content="images/Malintic.png">
+  <meta property="og:url" content="https://appmntic.vercel.app/">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="M@LINTIC-APP">
 
@@ -33,19 +42,28 @@
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="M@LINTIC-APP">
   <meta name="twitter:description" content="M@LINTIC-APP - Plateforme multi-services : Formations, Prestations, E-Commerce, Incubateur">
-  <meta name="twitter:image" content="https://malintic.web.app/images/Malintic.png">
-
-  <!-- iOS meta tags & icons -->
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="M@LINTIC-APP">
-  <link rel="apple-touch-icon" href="images/Malintic.png">
+  <meta name="twitter:image" content="images/Malintic.png">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="images/Malintic.png"/>
 
   <title>M@LINTIC-APP</title>
   <link rel="manifest" href="manifest.json">
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
+      overscroll-behavior: none;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+  </style>
 </head>
 <body>
   <!-- Premium Loading Screen - M@LINTIC Style -->
@@ -195,8 +213,7 @@
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
   <script>
-    // This marker is stored per browser tab, unlike cookies which are shared
-    // by all tabs. Only a tab that logged in can invalidate a session on exit.
+    // Tab session marker
     window.malinticActivateTabSession = function() {
       sessionStorage.setItem('malintic_authenticated_tab', '1');
     };
@@ -204,15 +221,33 @@
       sessionStorage.removeItem('malintic_authenticated_tab');
     };
 
-    window.addEventListener('load', function() {
+    function hideLoadingScreen() {
       const loadingScreen = document.getElementById('loading-screen');
-      if (loadingScreen) {
-        loadingScreen.style.transition = 'opacity 0.3s ease-out';
+      if (loadingScreen && loadingScreen.style.display !== 'none') {
+        loadingScreen.style.transition = 'opacity 0.25s ease-out';
         loadingScreen.style.opacity = '0';
         setTimeout(function() {
           loadingScreen.style.display = 'none';
-        }, 300);
+        }, 250);
       }
+    }
+
+    // Auto-update Service Worker on iOS & Android to prevent stale cache
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.addEventListener('controllerchange', function() {
+        // When new service worker activates, refresh smoothly if needed
+        console.log('[M@LINTIC] Nouveau Service Worker activé.');
+      });
+      navigator.serviceWorker.getRegistrations().then(function(registrations) {
+        for (let registration of registrations) {
+          registration.update();
+        }
+      });
+    }
+
+    window.addEventListener('load', function() {
+      // Fallback timer to hide loader if entrypoint callback didn't fire
+      setTimeout(hideLoadingScreen, 1500);
     });
   </script>
   <script src="flutter_bootstrap.js" async></script>
