@@ -236,9 +236,17 @@ class LocalDataService {
       }
       if (users.isNotEmpty) {
         final deletedUserIds = _getDeletedDocs('users');
-        final validServerUsers = users.where((u) => !deletedUserIds.contains(u.id)).toList();
+        final deletedUserEmails = _getDeletedDocs('user_emails');
+        final validServerUsers = users.where((u) =>
+            !deletedUserIds.contains(u.id) &&
+            !deletedUserEmails.contains(u.email.trim().toLowerCase())
+        ).toList();
         final serverUserIds = validServerUsers.map((u) => u.id).toSet();
-        _users.removeWhere((u) => deletedUserIds.contains(u.id) || !serverUserIds.contains(u.id));
+        _users.removeWhere((u) =>
+            deletedUserIds.contains(u.id) ||
+            deletedUserEmails.contains(u.email.trim().toLowerCase()) ||
+            !serverUserIds.contains(u.id)
+        );
         for (final user in validServerUsers) {
           final existingIndex = _users.indexWhere((u) => u.id == user.id);
           if (existingIndex >= 0) {
@@ -259,18 +267,23 @@ class LocalDataService {
       if (inscriptions.isNotEmpty) {
         final deletedInscIds = _getDeletedDocs('inscriptions');
         final deletedUserIds = _getDeletedDocs('users');
-        final validInscriptions = inscriptions.where((i) =>
-          !deletedInscIds.contains(i.id) &&
-          !deletedUserIds.contains(i.etudiantId) &&
-          !deletedUserIds.contains(i.id)
-        ).toList();
+        final deletedUserEmails = _getDeletedDocs('user_emails');
+        final validInscriptions = inscriptions.where((i) {
+          final email = i.email?.trim().toLowerCase() ?? '';
+          return !deletedInscIds.contains(i.id) &&
+              !deletedUserIds.contains(i.etudiantId) &&
+              !deletedUserIds.contains(i.id) &&
+              (email.isEmpty || !deletedUserEmails.contains(email));
+        }).toList();
         final serverInscriptionIds = validInscriptions.map((i) => i.id).toSet();
-        _inscriptions.removeWhere((i) =>
-          deletedInscIds.contains(i.id) ||
-          deletedUserIds.contains(i.etudiantId) ||
-          deletedUserIds.contains(i.id) ||
-          !serverInscriptionIds.contains(i.id)
-        );
+        _inscriptions.removeWhere((i) {
+          final email = i.email?.trim().toLowerCase() ?? '';
+          return deletedInscIds.contains(i.id) ||
+              deletedUserIds.contains(i.etudiantId) ||
+              deletedUserIds.contains(i.id) ||
+              (email.isNotEmpty && deletedUserEmails.contains(email)) ||
+              !serverInscriptionIds.contains(i.id);
+        });
         for (final inscription in validInscriptions) {
           final existingIndex = _inscriptions.indexWhere((i) => i.id == inscription.id);
           if (existingIndex >= 0) {
@@ -483,12 +496,17 @@ class LocalDataService {
   }
 
   void _deduplicateAndNormalizeUsers() {
+    final deletedUserIds = _getDeletedDocs('users');
+    final deletedUserEmails = _getDeletedDocs('user_emails');
     final Map<String, User> cleanMap = {};
     for (final u in _users) {
       final normEmail = u.email.trim().toLowerCase().replaceAll(
         '@mali-ntic.ml',
         '@malintic.ml',
       );
+      if (deletedUserIds.contains(u.id) || deletedUserEmails.contains(normEmail) || deletedUserEmails.contains(u.email.trim().toLowerCase())) {
+        continue;
+      }
       final cleanName =
           '${u.prenom.trim().toLowerCase()}.${u.nom.trim().toLowerCase()}'
               .replaceAll(RegExp(r'[^a-z0-9.]'), '');
@@ -612,35 +630,15 @@ class LocalDataService {
         specialite: 'Infographie & Design Graphique',
         estActif: true,
       ),
-      User(
-        id: 'etudiant_1',
-        prenom: 'Seydou',
-        nom: 'Coulibaly',
-        email: 'seydou.coulibaly@malintic.ml',
-        phone: '+223 76 12 34 56',
-        role: UserRole.apprenant,
-      ),
-      User(
-        id: 'etudiant_2',
-        prenom: 'Fatoumata',
-        nom: 'Sidibé',
-        email: 'fatoumata.sidibe@malintic.ml',
-        phone: '+223 65 43 21 09',
-        role: UserRole.apprenant,
-      ),
-      User(
-        id: 'etudiant_3',
-        prenom: 'Ibrahim',
-        nom: 'Maïga',
-        email: 'ibrahim.maiga@malintic.ml',
-        phone: '+223 70 99 88 77',
-        role: UserRole.apprenant,
-      ),
     ];
   }
 
   void _loadFromStorage() {
     try {
+      final deletedUserIds = _getDeletedDocs('users');
+      final deletedUserEmails = _getDeletedDocs('user_emails');
+      final deletedInscIds = _getDeletedDocs('inscriptions');
+
       final savedUsersRaw = _localStorage.getItem('app_saved_users');
       _users.clear();
       if (savedUsersRaw != null && savedUsersRaw.isNotEmpty) {
@@ -648,11 +646,16 @@ class LocalDataService {
         for (final item in list) {
           if (item is Map<String, dynamic>) {
             final user = User.fromMap(item, item['id'] ?? '');
-            _users.add(user);
+            if (!deletedUserIds.contains(user.id) &&
+                !deletedUserEmails.contains(user.email.trim().toLowerCase())) {
+              _users.add(user);
+            }
           }
         }
       } else {
-        _users.addAll(_defaultBaselineUsers());
+        _users.addAll(_defaultBaselineUsers().where((u) =>
+            !deletedUserIds.contains(u.id) &&
+            !deletedUserEmails.contains(u.email.trim().toLowerCase())));
         _saveUsersToStorage();
       }
       _deduplicateAndNormalizeUsers();
@@ -676,7 +679,13 @@ class LocalDataService {
         for (final item in list) {
           if (item is Map<String, dynamic>) {
             final insc = Inscription.fromMap(item, item['id'] ?? '');
-            _inscriptions.add(insc);
+            final email = insc.email?.trim().toLowerCase() ?? '';
+            if (!deletedInscIds.contains(insc.id) &&
+                !deletedUserIds.contains(insc.etudiantId) &&
+                !deletedUserIds.contains(insc.id) &&
+                (email.isEmpty || !deletedUserEmails.contains(email))) {
+              _inscriptions.add(insc);
+            }
           }
         }
       }
@@ -1264,7 +1273,10 @@ class LocalDataService {
     final old = getUserById(userId);
     final oldEmail = old?.email.trim().toLowerCase() ?? '';
     _recordDeletedDoc('users', userId);
-    _users.removeWhere((u) => u.id == userId);
+    if (oldEmail.isNotEmpty) {
+      _recordDeletedDoc('user_emails', oldEmail);
+    }
+    _users.removeWhere((u) => u.id == userId || (oldEmail.isNotEmpty && u.email.trim().toLowerCase() == oldEmail));
     _saveUsersToStorage();
     _usersController.add(List.unmodifiable(_users));
     try {

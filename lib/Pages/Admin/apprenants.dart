@@ -772,6 +772,22 @@ class _AdminApprenantsState extends State<AdminApprenants>
                               (data['estActif'] ?? true),
                             ),
                           ),
+                          const SizedBox(width: 4),
+                          IconButton(
+                            icon: const Icon(
+                              Icons.delete_forever_rounded,
+                              color: AppTheme.error,
+                              size: 18,
+                            ),
+                            padding: const EdgeInsets.all(4),
+                            constraints: const BoxConstraints(),
+                            tooltip: 'Supprimer',
+                            onPressed: () => _confirmDeleteApprenant(
+                              context,
+                              id,
+                              '${data['prenom'] ?? ''} ${data['nom'] ?? ''}'.trim(),
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -1030,20 +1046,27 @@ class _AdminApprenantsState extends State<AdminApprenants>
     final query = searchController.text.trim().toLowerCase();
     final inscriptions = _db.getInscriptions();
     final deletedUserIds = _db.getDeletedDocs('users');
+    final deletedUserEmails = _db.getDeletedDocs('user_emails');
     final deletedInscIds = _db.getDeletedDocs('inscriptions');
 
     // 1. Explicit apprenant users from user accounts (exclude deleted)
     final apprenantUsers = _allUsers
-        .where((u) => u.role == UserRole.apprenant && !deletedUserIds.contains(u.id))
+        .where((u) =>
+            u.role == UserRole.apprenant &&
+            !deletedUserIds.contains(u.id) &&
+            !deletedUserEmails.contains(u.email.trim().toLowerCase()))
         .toList();
 
     // 2. Only validated applications may enter the apprenant circuit (exclude deleted).
     final List<User> inscriptionApprenants = inscriptions
-        .where((ins) =>
-            ins.status == InscriptionStatus.acceptee &&
-            !deletedInscIds.contains(ins.id) &&
-            !deletedUserIds.contains(ins.etudiantId) &&
-            !deletedUserIds.contains(ins.id))
+        .where((ins) {
+          final insEmail = ins.email?.trim().toLowerCase() ?? '';
+          return ins.status == InscriptionStatus.acceptee &&
+              !deletedInscIds.contains(ins.id) &&
+              !deletedUserIds.contains(ins.etudiantId) &&
+              !deletedUserIds.contains(ins.id) &&
+              (insEmail.isEmpty || !deletedUserEmails.contains(insEmail));
+        })
         .map((ins) {
           return User(
             id: ins.id,
@@ -1697,11 +1720,17 @@ class _AdminApprenantsState extends State<AdminApprenants>
     );
 
     if (confirm == true) {
+      final user = _db.getUserById(id);
+      final email = user?.email.trim().toLowerCase() ?? '';
       await _db.deleteUser(id);
       await _db.deleteInscription(id);
-      final studentInscriptions = _db.getInscriptions().where((ins) =>
-          ins.etudiantId == id || ins.id == id
-      ).toList();
+      if (email.isNotEmpty) {
+        _db.recordDeletedDoc('user_emails', email);
+      }
+      final studentInscriptions = _db.getInscriptions().where((ins) {
+        final insEmail = ins.email?.trim().toLowerCase() ?? '';
+        return ins.etudiantId == id || ins.id == id || (email.isNotEmpty && insEmail == email);
+      }).toList();
       for (final ins in studentInscriptions) {
         await _db.deleteInscription(ins.id);
       }

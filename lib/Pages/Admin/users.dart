@@ -1291,6 +1291,10 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
             style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFEF4444)),
             onPressed: () async {
               final localContext = context;
+              final email = user.email.trim().toLowerCase();
+              if (email.isNotEmpty) {
+                LocalDataService().recordDeletedDoc('user_emails', email);
+              }
               await AuthProvider().deleteUser(user.id);
               if (!localContext.mounted) return;
               Navigator.pop(localContext);
