@@ -58,7 +58,6 @@ gestion_malintic/
 │   │   ├── notification.dart          # Notifications ciblées par rôle / utilisateur
 │   │   ├── payment.dart               # Paiements, tranches, remises, moyens de paiement
 │   │   ├── seance.dart                # Séances de cours, dates, heures, salles/liens, statuts
-│   │   ├── student.dart               # Modèle apprenant/étudiant
 │   │   └── user.dart                  # Utilisateurs et énumération UserRole
 │   ├── Services/
 │   │   ├── auth_provider.dart         # Gestion des sessions, rôles, login/logout
@@ -97,11 +96,10 @@ gestion_malintic/
 │   │   │   └── formulaire.dart        # Formulaire public d'inscription multi-étapes
 │   │   ├── Login/
 │   │   │   ├── sign_in.dart           # Formulaire de connexion
-│   │   │   └── welcom_page.dart       # Écran d'accueil / portail de connexion
+│   │   │   └── welcome_page.dart      # Écran d'accueil / portail de connexion
 │   │   ├── Common/
 │   │   │   └── profile.dart           # Profil utilisateur et changement de mot de passe
 │   │   ├── Screens/
-│   │   │   ├── home_page.dart         # Page d'accueil publique / vitrine
 │   │   │   ├── notifications.dart     # Centre de notifications
 │   │   │   └── payments.dart          # Historique des règlements
 │   │   └── home_screen.dart           # Routeur principal dynamique selon le rôle
