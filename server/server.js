@@ -461,7 +461,7 @@ app.post('/api/auth/login', (req, res) => {
     if (itemEmail === input) return true;
     if (emailPrefix === input) return true;
     if (itemMatricule && itemMatricule === input) return true;
-    if (cleanInputPhone.length >= 8 && itemPhone.length >= 8 && itemPhone === cleanInputPhone) return true;
+    if (cleanInputPhone.length >= 8 && itemPhone.length >= 8 && itemPhone.endsWith(cleanInputPhone)) return true;
     if (`${input}@mntic.ml` === itemEmail || `${input}@malintic.ml` === itemEmail) return true;
     return false;
   });
