@@ -1,7 +1,7 @@
 FROM node:22-alpine
 WORKDIR /app
-COPY server/package.json server/package.json
-RUN cd server && npm install
-COPY server/ server/
+COPY server/package.json ./
+RUN npm install
+COPY server/ ./
 EXPOSE 5001
-CMD ["node", "server/server.js"]
+CMD ["node", "server.js"]
