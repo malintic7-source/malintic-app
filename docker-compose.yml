@@ -1,9 +1,7 @@
-name: malintic_app
 services:
   app:
     build:
       context: .
-      # Serve the prebuilt Flutter bundle from build/web with Nginx
       dockerfile: Dockerfile.fast
     container_name: malintic_app
     ports:
@@ -53,36 +51,36 @@ services:
     networks:
       - malintic_network
 
-  ngrok:
-    image: ngrok/ngrok:latest
-    container_name: malintic_ngrok
-    restart: always
-    init: true
-    depends_on:
-      app:
-        condition: service_healthy
-    ports:
-      - "4040:4040"
-    environment:
-      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN:?Ajoutez NGROK_AUTHTOKEN dans le fichier .env}
-      NGROK_DOMAIN: ${NGROK_DOMAIN:-boil-prude-curry.ngrok-free.dev}
-    command: http --domain=${NGROK_DOMAIN:-boil-prude-curry.ngrok-free.dev} http://malintic_app:80
-    networks:
-      - malintic_network
+  # ngrok:
+  #   image: ngrok/ngrok:latest
+  #   container_name: malintic_ngrok
+  #   restart: always
+  #   init: true
+  #   depends_on:
+  #     app:
+  #       condition: service_healthy
+  #   ports:
+  #     - "4040:4040"
+  #   environment:
+  #     NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN:?Ajoutez NGROK_AUTHTOKEN dans le fichier .env}
+  #     NGROK_DOMAIN: ${NGROK_DOMAIN:-boil-prude-curry.ngrok-free.dev}
+  #   command: http --domain=${NGROK_DOMAIN:-boil-prude-curry.ngrok-free.dev} http://malintic_app:80
+  #   networks:
+  #     - malintic_network
 
-  cloudflared:
-    image: cloudflare/cloudflared:latest
-    container_name: malintic_tunnel
-    restart: always
-    init: true
-    depends_on:
-      app:
-        condition: service_healthy
-    environment:
-      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN}
-    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
-    networks:
-      - malintic_network
+  # cloudflared:
+  #   image: cloudflare/cloudflared:latest
+  #   container_name: malintic_tunnel
+  #   restart: always
+  #   init: true
+  #   depends_on:
+  #     app:
+  #       condition: service_healthy
+  #   environment:
+  #     TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN}
+  #   command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+  #   networks:
+  #     - malintic_network
 
 volumes:
   malintic_data:
