@@ -3,8 +3,8 @@ services:
     name: malintic-api
     env: node
     plan: free
-    buildCommand: npm install --omit=dev
-    startCommand: node server.js
+    buildCommand: cd server && npm install --omit=dev
+    startCommand: cd server && node server.js
     envVars:
       - key: NODE_ENV
         value: production
@@ -12,6 +12,12 @@ services:
         value: 5001
       - key: DATA_DIR
         value: /data
+      - key: BOOTSTRAP_ADMIN_EMAIL
+        value: admin@example.com
+        sync: false
+      - key: BOOTSTRAP_ADMIN_PASSWORD
+        value: ChangeMe123!
+        sync: false
     disk:
       name: data
       mountPath: /data
