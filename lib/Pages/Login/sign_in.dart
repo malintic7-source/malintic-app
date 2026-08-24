@@ -292,6 +292,9 @@ class _SignInPageState extends State<SignInPage> {
   Widget _buildEmailField() {
     return TextField(
       controller: _emailController,
+      autocorrect: false,
+      enableSuggestions: false,
+      textCapitalization: TextCapitalization.none,
       style: GoogleFonts.poppins(
         fontSize: 14,
         fontWeight: FontWeight.w500,
@@ -312,6 +315,9 @@ class _SignInPageState extends State<SignInPage> {
   Widget _buildPasswordField() {
     return TextField(
       controller: _passwordController,
+      autocorrect: false,
+      enableSuggestions: false,
+      textCapitalization: TextCapitalization.none,
       style: GoogleFonts.poppins(
         fontSize: 14,
         fontWeight: FontWeight.w500,
@@ -380,7 +386,7 @@ class _SignInPageState extends State<SignInPage> {
   }
 
   Future<void> _handleLogin() async {
-    final email = _emailController.text.trim();
+    final email = _emailController.text.trim().replaceAll(RegExp(r'\s+'), '');
     final password = _passwordController.text.trim();
 
     if (email.isEmpty || password.isEmpty) {
@@ -395,7 +401,7 @@ class _SignInPageState extends State<SignInPage> {
 
     setState(() => _isLoading = true);
 
-        try {
+    try {
       final user = await AuthProvider().loginWithEmail(email, password);
 
       if (!mounted) return;
@@ -417,9 +423,10 @@ class _SignInPageState extends State<SignInPage> {
       }
     } catch (e) {
       if (!mounted) return;
+      final msg = e.toString().replaceAll('Exception: ', '').trim();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Erreur: $e'),
+          content: Text(msg.isNotEmpty ? msg : 'Identifiants invalides.'),
           backgroundColor: AppTheme.error,
         ),
       );
