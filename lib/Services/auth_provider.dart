@@ -453,7 +453,7 @@ class AuthProvider {
       prenom: prenom.trim(),
       phone: phone.trim(),
       role: role,
-      password: effectivePassword, // transmis une seule fois à l'API puis ignoré
+      password: effectivePassword,
       sexe: sexe,
       photoUrl: photoUrl,
       specialite: specialite,
@@ -462,6 +462,8 @@ class AuthProvider {
       dateCreation: DateTime.now(),
     );
 
+    _localStorage.setItem('user_pw_$userId', effectivePassword);
+    _localStorage.setItem('user_pw_changed_$userId', (!doitChangerMotDePasse).toString());
     await _db.addUser(newUser);
     return newUser;
   }
@@ -484,7 +486,7 @@ class AuthProvider {
           'newPassword': cleanPassword,
           'mustChangePassword': mustChangePassword,
         }),
-      );
+      ).timeout(const Duration(seconds: 2));
 
       if (response.statusCode != 200 && response.statusCode != 204) {
         String errMsg = 'Erreur lors de la mise à jour du mot de passe.';
@@ -492,13 +494,19 @@ class AuthProvider {
           final body = jsonDecode(response.body) as Map<String, dynamic>;
           errMsg = body['error']?.toString() ?? errMsg;
         } catch (_) {}
-        throw Exception(errMsg);
+        if (response.statusCode == 400 || response.statusCode == 401) {
+          throw Exception(errMsg);
+        }
       }
     } catch (e) {
-      if (e is Exception) rethrow;
+      if (e is Exception &&
+          (e.toString().contains('mot de passe') || e.toString().contains('caractères'))) {
+        rethrow;
+      }
+      // Mode hors-ligne : Docker éteint, application locale immédiate
     }
 
-    // Also update local copy in memory/storage
+    // Mise à jour locale en mémoire et stockage persistant
     final user = _db.getUserById(userId);
     if (user != null) {
       final updated = user.copyWith(
