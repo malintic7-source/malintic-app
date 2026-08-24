@@ -2,7 +2,7 @@ services:
   app:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.flutter
     container_name: malintic_app
     ports:
       - "80:80"
