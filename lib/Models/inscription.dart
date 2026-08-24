@@ -20,6 +20,7 @@ class Inscription {
   final List<String>? modules;
   final String? typeFormation;
   final String? sexe;
+  final String source;
 
   String get etudiantId => apprenantId;
 
@@ -42,6 +43,7 @@ class Inscription {
     this.modules,
     this.typeFormation,
     this.sexe,
+    this.source = 'web',
   }) : apprenantId = apprenantId ?? etudiantId ?? '';
 
   factory Inscription.fromMap(Map<String, dynamic> data, String id) {
@@ -84,6 +86,7 @@ class Inscription {
       modules: data['modules'] is List ? List<String>.from(data['modules']) : null,
       typeFormation: data['typeFormation']?.toString(),
       sexe: data['sexe']?.toString(),
+      source: data['source']?.toString() ?? 'web',
     );
   }
 
@@ -115,6 +118,7 @@ class Inscription {
       'modules': modules,
       'typeFormation': typeFormation,
       'sexe': sexe,
+      'source': source,
     };
   }
 
