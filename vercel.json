@@ -40,7 +40,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://malintic-api.onrender.com/api/:path*"
+      "destination": "https://malintic-app.onrender.com/api/:path*"
     },
     {
       "source": "/formation.html",
