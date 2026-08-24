@@ -33,10 +33,6 @@
   ],
   "rewrites": [
     {
-      "source": "/api/(.*)",
-      "destination": "/api/index.js"
-    },
-    {
       "source": "/formation.html",
       "destination": "/formation.html"
     },
