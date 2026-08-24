@@ -66,6 +66,34 @@ class LocalDataService {
     );
   }
 
+  Set<String> _getDeletedDocs(String collection) {
+    try {
+      final raw = _localStorage.getItem('app_deleted_ids_$collection');
+      if (raw != null && raw.isNotEmpty) {
+        final list = jsonDecode(raw) as List<dynamic>;
+        return list.map((e) => e.toString()).toSet();
+      }
+    } catch (_) {}
+    return <String>{};
+  }
+
+  void _recordDeletedDoc(String collection, String docId) {
+    try {
+      final set = _getDeletedDocs(collection);
+      set.add(docId);
+      _localStorage.setItem('app_deleted_ids_$collection', jsonEncode(set.toList()));
+    } catch (_) {}
+  }
+
+  void _unrecordDeletedDoc(String collection, String docId) {
+    try {
+      final set = _getDeletedDocs(collection);
+      if (set.remove(docId)) {
+        _localStorage.setItem('app_deleted_ids_$collection', jsonEncode(set.toList()));
+      }
+    } catch (_) {}
+  }
+
   void _enqueuePendingSync(String collection, String docId, String method, Map<String, dynamic>? data) {
     try {
       final raw = _localStorage.getItem('app_pending_sync_queue');
@@ -203,9 +231,11 @@ class LocalDataService {
         _formationsController.add(List.unmodifiable(_formations));
       }
       if (users.isNotEmpty) {
-        final serverUserIds = users.map((u) => u.id).toSet();
-        _users.removeWhere((u) => !serverUserIds.contains(u.id));
-        for (final user in users) {
+        final deletedUserIds = _getDeletedDocs('users');
+        final validServerUsers = users.where((u) => !deletedUserIds.contains(u.id)).toList();
+        final serverUserIds = validServerUsers.map((u) => u.id).toSet();
+        _users.removeWhere((u) => deletedUserIds.contains(u.id) || !serverUserIds.contains(u.id));
+        for (final user in validServerUsers) {
           final existingIndex = _users.indexWhere((u) => u.id == user.id);
           if (existingIndex >= 0) {
             _users[existingIndex] = user;
@@ -215,6 +245,12 @@ class LocalDataService {
         }
         _saveUsersToStorage();
         _usersController.add(List.unmodifiable(_users));
+
+        for (final deletedId in deletedUserIds) {
+          if (users.any((u) => u.id == deletedId)) {
+            _deleteRemoteDoc('users', deletedId);
+          }
+        }
       }
       if (inscriptions.isNotEmpty) {
         final serverInscriptionIds = inscriptions.map((i) => i.id).toSet();
@@ -323,13 +359,17 @@ class LocalDataService {
   }
 
   Future<void> _deleteRemoteDoc(String collection, String docId) async {
+    _recordDeletedDoc(collection, docId);
+    if (!_hasLocalApi) return;
     try {
-      await http
+      final response = await http
           .delete(_apiUri('$collection/${Uri.encodeComponent(docId)}'))
-          .timeout(const Duration(seconds: 2));
-    } catch (_) {
-      _enqueuePendingSync(collection, docId, 'DELETE', null);
-    }
+          .timeout(const Duration(seconds: 3));
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return;
+      }
+    } catch (_) {}
+    _enqueuePendingSync(collection, docId, 'DELETE', null);
   }
 
   Map<String, dynamic> exportFullBackup() {
@@ -579,30 +619,19 @@ class LocalDataService {
 
   void _loadFromStorage() {
     try {
-      for (final baseUser in _defaultBaselineUsers()) {
-        if (!_users.any((u) => u.id == baseUser.id || u.email.trim().toLowerCase() == baseUser.email.trim().toLowerCase())) {
-          _users.add(baseUser);
-        }
-      }
       final savedUsersRaw = _localStorage.getItem('app_saved_users');
+      _users.clear();
       if (savedUsersRaw != null && savedUsersRaw.isNotEmpty) {
         final List<dynamic> list = jsonDecode(savedUsersRaw);
         for (final item in list) {
           if (item is Map<String, dynamic>) {
             final user = User.fromMap(item, item['id'] ?? '');
-            final index = _users.indexWhere(
-              (u) =>
-                  u.id == user.id ||
-                  u.email.trim().toLowerCase() ==
-                      user.email.trim().toLowerCase(),
-            );
-            if (index != -1) {
-              _users[index] = user;
-            } else {
-              _users.add(user);
-            }
+            _users.add(user);
           }
         }
+      } else {
+        _users.addAll(_defaultBaselineUsers());
+        _saveUsersToStorage();
       }
       _deduplicateAndNormalizeUsers();
 
@@ -1156,6 +1185,7 @@ class LocalDataService {
   }
 
   Future<User> addUser(User user) async {
+    _unrecordDeletedDoc('users', user.id);
     final isNew = !_users.any((u) => u.id == user.id);
     _users.removeWhere((u) => u.id == user.id);
     _users.add(user);
@@ -1214,9 +1244,14 @@ class LocalDataService {
 
   Future<void> deleteUser(String userId) async {
     final old = getUserById(userId);
+    _recordDeletedDoc('users', userId);
     _users.removeWhere((u) => u.id == userId);
-    _usersController.add(List.unmodifiable(_users));
     _saveUsersToStorage();
+    _usersController.add(List.unmodifiable(_users));
+    try {
+      _localStorage.removeItem('user_pw_$userId');
+      _localStorage.removeItem('user_pw_changed_$userId');
+    } catch (_) {}
     try {
       await _deleteRemoteDoc('users', userId);
     } catch (_) {}

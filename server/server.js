@@ -24,9 +24,34 @@ app.use((req, res, next) => {
 const dataDir = process.env.DATA_DIR || '/data';
 const dataFile = path.join(dataDir, 'database.json');
 const backupFile = path.join(dataDir, 'database.backup.json');
+const sessionsFile = path.join(dataDir, 'sessions.json');
 const collections = ['users', 'formations', 'inscriptions', 'payments', 'notifications', 'audit_logs', 'seances'];
 const sessions = new Map();
 const sessionMaxAgeMs = 8 * 60 * 60 * 1000; // 8 heures
+
+function loadSessions() {
+  try {
+    if (fs.existsSync(sessionsFile)) {
+      const data = JSON.parse(fs.readFileSync(sessionsFile, 'utf8'));
+      const now = Date.now();
+      for (const [token, session] of Object.entries(data)) {
+        if (session && (now - session.createdAt) < sessionMaxAgeMs) {
+          sessions.set(token, session);
+        }
+      }
+    }
+  } catch (_) {}
+}
+
+function saveSessions() {
+  try {
+    fs.mkdirSync(dataDir, { recursive: true });
+    const obj = Object.fromEntries(sessions.entries());
+    fs.writeFileSync(sessionsFile, JSON.stringify(obj, null, 2));
+  } catch (_) {}
+}
+
+loadSessions();
 
 // ─── #5 Cache mémoire pour éviter la relecture disque à chaque requête ────────
 let _stateCache = null;
@@ -397,6 +422,7 @@ app.post('/api/auth/login', (req, res) => {
 
   const token = crypto.randomBytes(32).toString('hex');
   sessions.set(token, { userId: user.id, role: user.role, createdAt: Date.now() });
+  saveSessions();
   // #6 — Max-Age pour la survie aux redémarrages (8 heures)
   res.setHeader('Set-Cookie', `malintic_session=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=28800`);
   res.json(publicUser(user));
@@ -404,7 +430,10 @@ app.post('/api/auth/login', (req, res) => {
 
 app.post('/api/auth/logout', requireSession, (req, res) => {
   const token = (req.headers.cookie || '').match(/malintic_session=([^;]+)/)?.[1];
-  if (token) sessions.delete(token);
+  if (token) {
+    sessions.delete(token);
+    saveSessions();
+  }
 
   const state = readState();
   const user = state.users.find((item) => item.id === req.session.userId);
