@@ -1207,7 +1207,11 @@
             try {
                 const resp = await fetch(`/api/inscriptions/${encodeURIComponent(inscId)}`, {
                     method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'ngrok-skip-browser-warning': 'true',
+                        'Accept': 'application/json'
+                    },
                     body: JSON.stringify({
                         ...inscriptionData,
                         etudiantId: inscriptionData.etudiantId || `user_web_${Date.now()}`,
@@ -1331,7 +1335,12 @@
             const controller = new AbortController();
             const timer = setTimeout(() => controller.abort(), timeoutMs);
             try {
-                return await fetch(url, { ...options, signal: controller.signal, cache: 'no-store' });
+                const customHeaders = {
+                    'ngrok-skip-browser-warning': 'true',
+                    'Accept': 'application/json',
+                    ...(options.headers || {})
+                };
+                return await fetch(url, { ...options, headers: customHeaders, signal: controller.signal, cache: 'no-store' });
             } finally {
                 clearTimeout(timer);
             }

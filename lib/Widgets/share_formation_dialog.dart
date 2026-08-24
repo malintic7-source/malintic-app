@@ -32,9 +32,9 @@ class ShareFormationDialog extends StatefulWidget {
 
 class _ShareFormationDialogState extends State<ShareFormationDialog> {
   final GlobalKey _qrKey = GlobalKey();
-  int _selectedMode = 0; // 0 = Public (Internet), 1 = Local (Wi-Fi / LAN)
-  String _publicBase = 'https://boil-prude-curry.ngrok-free.dev';
-  String _localBase = 'http://localhost';
+  int _selectedMode = 0; // 0 = Public (Internet / WAN), 1 = Local (Wi-Fi / LAN)
+  String _publicBase = 'https://appmntic.vercel.app';
+  String _localBase = 'http://192.168.1.10:8080';
   final TextEditingController _customIpController = TextEditingController();
 
   @override
@@ -57,7 +57,7 @@ class _ShareFormationDialogState extends State<ShareFormationDialog> {
       final currentPort = Uri.base.port;
 
       if (currentOrigin.startsWith('http')) {
-        if (currentHost.contains('ngrok') || currentHost.contains('cloudflare') || (!currentHost.contains('localhost') && !currentHost.startsWith('127.') && !currentHost.startsWith('192.168.') && !currentHost.startsWith('10.') && !currentHost.endsWith('.local'))) {
+        if (currentHost.contains('vercel.app') || currentHost.contains('ngrok') || currentHost.contains('cloudflare') || (!currentHost.contains('localhost') && !currentHost.startsWith('127.') && !currentHost.startsWith('192.168.') && !currentHost.startsWith('10.') && !currentHost.endsWith('.local'))) {
           _publicBase = currentOrigin;
         } else {
           _localBase = currentOrigin;
@@ -65,23 +65,25 @@ class _ShareFormationDialogState extends State<ShareFormationDialog> {
       }
 
       // 2. Interroger l'API pour récupérer les configurations réseau réelles
-      final response = await http.get(Uri.parse('/api/system/network-info')).timeout(
+      final response = await http.get(
+        Uri.parse('/api/system/network-info'),
+        headers: const {'ngrok-skip-browser-warning': 'true'},
+      ).timeout(
         const Duration(seconds: 3),
         onTimeout: () => http.Response('{}', 408),
       );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final apiPublicUrl = data['publicUrl'] as String?;
-        if (apiPublicUrl != null && apiPublicUrl.trim().isNotEmpty) {
-          _publicBase = apiPublicUrl.trim();
-        }
         final detectedIps = data['detectedIps'] as List<dynamic>?;
         if (detectedIps != null && detectedIps.isNotEmpty) {
-          final firstIp = detectedIps.first.toString();
-          final portSuffix = (currentPort != 80 && currentPort != 443 && currentPort != 0) ? ':$currentPort' : '';
-          _localBase = 'http://$firstIp$portSuffix';
-          _customIpController.text = firstIp;
+          final realIps = detectedIps.map((e) => e.toString()).where((ip) => !ip.startsWith('172.') && !ip.startsWith('127.')).toList();
+          if (realIps.isNotEmpty) {
+            final firstIp = realIps.first;
+            final portSuffix = (currentPort != 80 && currentPort != 443 && currentPort != 0) ? ':$currentPort' : ':8080';
+            _localBase = 'http://$firstIp$portSuffix';
+            _customIpController.text = firstIp;
+          }
         }
       }
     } catch (_) {
