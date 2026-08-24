@@ -199,7 +199,7 @@ class AuthProvider {
               'password': cleanPassword,
             }),
           )
-          .timeout(const Duration(seconds: 4));
+          .timeout(const Duration(seconds: 2));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -214,77 +214,23 @@ class AuthProvider {
         );
         await _db.refreshFromServer();
         return serverUser;
-      } else if (response.statusCode == 401 || response.statusCode == 403) {
-        try {
-          final errorData = jsonDecode(response.body) as Map<String, dynamic>;
-          final errorMsg = errorData['error']?.toString();
-          if (errorMsg != null && errorMsg.isNotEmpty) {
-            throw Exception(errorMsg);
-          }
-        } catch (e) {
-          if (e is Exception && !e.toString().contains('FormatException')) {
-            rethrow;
-          }
-        }
-        final offlineUser = _fallbackOfflineLogin(rawInput, cleanPassword);
-        if (offlineUser != null) {
-          _currentUser = offlineUser;
-          TabSessionLifecycle.activate();
-          _authController.add(_currentUser);
-          _localStorage.setSessionItem('currentUserId', offlineUser.id);
-          _localStorage.setSessionItem('currentUserJson', jsonEncode(offlineUser.toMap()));
-          return offlineUser;
-        }
-        throw Exception('Identifiants incorrects.');
-      } else {
-        final offlineUser = _fallbackOfflineLogin(rawInput, cleanPassword);
-        if (offlineUser != null) {
-          _currentUser = offlineUser;
-          TabSessionLifecycle.activate();
-          _authController.add(_currentUser);
-          _localStorage.setSessionItem('currentUserId', offlineUser.id);
-          _localStorage.setSessionItem('currentUserJson', jsonEncode(offlineUser.toMap()));
-          return offlineUser;
-        }
-        throw Exception('Identifiants incorrects.');
       }
-    } on Exception catch (e) {
-      if (e.toString().contains('Identifiants incorrects') ||
-          e.toString().contains('désactivé') ||
-          e.toString().contains('Aucun compte')) {
-        final offlineUser = _fallbackOfflineLogin(rawInput, cleanPassword);
-        if (offlineUser != null) {
-          _currentUser = offlineUser;
-          TabSessionLifecycle.activate();
-          _authController.add(_currentUser);
-          _localStorage.setSessionItem('currentUserId', offlineUser.id);
-          _localStorage.setSessionItem('currentUserJson', jsonEncode(offlineUser.toMap()));
-          return offlineUser;
-        }
-        rethrow;
-      }
-      final offlineUser = _fallbackOfflineLogin(rawInput, cleanPassword);
-      if (offlineUser != null) {
-        _currentUser = offlineUser;
-        TabSessionLifecycle.activate();
-        _authController.add(_currentUser);
-        _localStorage.setSessionItem('currentUserId', offlineUser.id);
-        _localStorage.setSessionItem('currentUserJson', jsonEncode(offlineUser.toMap()));
-        return offlineUser;
-      }
-      throw Exception('Identifiants incorrects.');
     } catch (_) {
-      final offlineUser = _fallbackOfflineLogin(rawInput, cleanPassword);
-      if (offlineUser != null) {
-        _currentUser = offlineUser;
-        TabSessionLifecycle.activate();
-        _authController.add(_currentUser);
-        _localStorage.setSessionItem('currentUserId', offlineUser.id);
-        _localStorage.setSessionItem('currentUserJson', jsonEncode(offlineUser.toMap()));
-        return offlineUser;
-      }
-      throw Exception('Identifiants incorrects.');
+      // Le backend Docker/ngrok est éteint : passage transparent en mode hors-ligne
     }
+
+    // Mode Zéro-Interruption : Vérification locale directe (Docker éteint)
+    final offlineUser = _fallbackOfflineLogin(rawInput, cleanPassword);
+    if (offlineUser != null) {
+      _currentUser = offlineUser;
+      TabSessionLifecycle.activate();
+      _authController.add(_currentUser);
+      _localStorage.setSessionItem('currentUserId', offlineUser.id);
+      _localStorage.setSessionItem('currentUserJson', jsonEncode(offlineUser.toMap()));
+      return offlineUser;
+    }
+
+    throw Exception('Identifiants incorrects.');
   }
 
   Future<void> logout() async {
