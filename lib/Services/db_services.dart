@@ -203,42 +203,84 @@ class LocalDataService {
         _formationsController.add(List.unmodifiable(_formations));
       }
       if (users.isNotEmpty) {
-        _users
-          ..clear()
-          ..addAll(users);
+        final serverUserIds = users.map((u) => u.id).toSet();
+        _users.removeWhere((u) => !serverUserIds.contains(u.id));
+        for (final user in users) {
+          final existingIndex = _users.indexWhere((u) => u.id == user.id);
+          if (existingIndex >= 0) {
+            _users[existingIndex] = user;
+          } else {
+            _users.add(user);
+          }
+        }
         _saveUsersToStorage();
         _usersController.add(List.unmodifiable(_users));
       }
       if (inscriptions.isNotEmpty) {
-        _inscriptions
-          ..clear()
-          ..addAll(inscriptions);
+        final serverInscriptionIds = inscriptions.map((i) => i.id).toSet();
+        _inscriptions.removeWhere((i) => !serverInscriptionIds.contains(i.id));
+        for (final inscription in inscriptions) {
+          final existingIndex = _inscriptions.indexWhere((i) => i.id == inscription.id);
+          if (existingIndex >= 0) {
+            _inscriptions[existingIndex] = inscription;
+          } else {
+            _inscriptions.add(inscription);
+          }
+        }
         _saveInscriptionsToStorage();
         _inscriptionsController.add(List.unmodifiable(_inscriptions));
       }
       if (payments.isNotEmpty) {
-        _payments
-          ..clear()
-          ..addAll(payments);
+        final serverPaymentIds = payments.map((p) => p.id).toSet();
+        _payments.removeWhere((p) => !serverPaymentIds.contains(p.id));
+        for (final payment in payments) {
+          final existingIndex = _payments.indexWhere((p) => p.id == payment.id);
+          if (existingIndex >= 0) {
+            _payments[existingIndex] = payment;
+          } else {
+            _payments.add(payment);
+          }
+        }
         _savePaymentsToStorage();
         _paymentsController.add(List.unmodifiable(_payments));
       }
       if (notifications.isNotEmpty) {
-        _notifications
-          ..clear()
-          ..addAll(notifications);
+        final serverNotificationIds = notifications.map((n) => n.id).toSet();
+        _notifications.removeWhere((n) => !serverNotificationIds.contains(n.id));
+        for (final notification in notifications) {
+          final existingIndex = _notifications.indexWhere((n) => n.id == notification.id);
+          if (existingIndex >= 0) {
+            _notifications[existingIndex] = notification;
+          } else {
+            _notifications.add(notification);
+          }
+        }
         _notificationsController.add(List.unmodifiable(_notifications));
       }
       if (logs.isNotEmpty) {
-        _auditLogs
-          ..clear()
-          ..addAll(logs);
+        final serverLogIds = logs.map((l) => l.id).toSet();
+        _auditLogs.removeWhere((l) => !serverLogIds.contains(l.id));
+        for (final log in logs) {
+          final existingIndex = _auditLogs.indexWhere((l) => l.id == log.id);
+          if (existingIndex >= 0) {
+            _auditLogs[existingIndex] = log;
+          } else {
+            _auditLogs.add(log);
+          }
+        }
         _auditLogsController.add(List.unmodifiable(_auditLogs));
       }
       if (seances.isNotEmpty) {
-        _seances
-          ..clear()
-          ..addAll(seances);
+        final serverSeanceIds = seances.map((s) => s.id).toSet();
+        _seances.removeWhere((s) => !serverSeanceIds.contains(s.id));
+        for (final seance in seances) {
+          final existingIndex = _seances.indexWhere((s) => s.id == seance.id);
+          if (existingIndex >= 0) {
+            _seances[existingIndex] = seance;
+          } else {
+            _seances.add(seance);
+          }
+        }
         _saveSeancesToStorage();
         _seancesController.add(List.unmodifiable(_seances));
       }
