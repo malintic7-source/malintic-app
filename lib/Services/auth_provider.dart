@@ -102,24 +102,26 @@ class AuthProvider {
           userEmail == '$rawInput@malintic.ml';
 
       if (isMatch) {
-        final savedOfflinePw = _localStorage.getItem('user_pw_${user.id}')?.trim();
-        final hasOfflineCustomPw = savedOfflinePw != null && savedOfflinePw.isNotEmpty;
-        final hasModelCustomPw = user.password.isNotEmpty && user.password != '00000000';
+        if (!user.estActif) {
+          throw Exception('Ce compte est désactivé. Veuillez contacter un administrateur.');
+        }
 
-        if (hasOfflineCustomPw) {
-          // Un mot de passe a été personnalisé sur cet appareil
-          if (cleanPassword == '00000000') return null; // 00000000 expiré
-          if (cleanPassword == savedOfflinePw) return user;
-          return null;
-        } else if (hasModelCustomPw) {
-          // Un mot de passe est enregistré dans le modèle
+        final savedOfflinePw = _localStorage.getItem('user_pw_${user.id}')?.trim();
+        final effectivePw = (savedOfflinePw != null && savedOfflinePw.isNotEmpty)
+            ? savedOfflinePw
+            : (user.password.isNotEmpty
+                ? user.password
+                : (user.id == 'admin_mamadou' ? 'Doudou5432@' : null));
+
+        if (effectivePw != null && effectivePw.isNotEmpty && effectivePw != '00000000') {
+          // Ce compte a un mot de passe personnalisé : 00000000 est STRICTEMENT EXPIRÉ ET REJETÉ
           if (cleanPassword == '00000000') return null;
-          if (cleanPassword == user.password) return user;
+          if (cleanPassword == effectivePw) return user.copyWith(doitChangerMotDePasse: false);
           return null;
         } else {
-          // Première connexion sur cet appareil / mot de passe par défaut
-          if (cleanPassword == '00000000' || cleanPassword == 'Doudou5432@' || (user.password.isNotEmpty && cleanPassword == user.password)) {
-            return user.copyWith(doitChangerMotDePasse: cleanPassword == '00000000');
+          // Première connexion uniquement : 00000000 est temporairement accepté
+          if (cleanPassword == '00000000') {
+            return user.copyWith(doitChangerMotDePasse: true);
           }
           return null;
         }
@@ -163,16 +165,19 @@ class AuthProvider {
 
     if (fallbackAdmin != null && adminId != null) {
       final savedPw = _localStorage.getItem('user_pw_$adminId')?.trim();
-      final hasSavedPw = savedPw != null && savedPw.isNotEmpty;
+      final effectiveAdminPw = (savedPw != null && savedPw.isNotEmpty)
+          ? savedPw
+          : (adminId == 'admin_mamadou' ? 'Doudou5432@' : null);
 
-      if (hasSavedPw) {
-        if (cleanPassword == '00000000') return null; // Expiré
-        if (cleanPassword == savedPw) return fallbackAdmin;
+      if (effectiveAdminPw != null && effectiveAdminPw.isNotEmpty && effectiveAdminPw != '00000000') {
+        // Après validation de changement de mot de passe, 00000000 est STRICTEMENT EXPIRÉ ET REJETÉ
+        if (cleanPassword == '00000000') return null;
+        if (cleanPassword == effectiveAdminPw) return fallbackAdmin.copyWith(doitChangerMotDePasse: false);
         return null;
       } else {
-        // Première connexion pour cet administrateur sur ce navigateur
-        if (cleanPassword == '00000000' || cleanPassword == 'Doudou5432@') {
-          return fallbackAdmin.copyWith(doitChangerMotDePasse: cleanPassword == '00000000');
+        // Première connexion uniquement
+        if (cleanPassword == '00000000') {
+          return fallbackAdmin.copyWith(doitChangerMotDePasse: true);
         }
         return null;
       }
@@ -367,6 +372,9 @@ class AuthProvider {
           'ngrok-skip-browser-warning': 'true',
         },
         body: jsonEncode({
+          'userId': _currentUser!.id,
+          'email': _currentUser!.email,
+          'identifier': _currentUser!.email,
           if (currentPassword != null && currentPassword.isNotEmpty)
             'currentPassword': currentPassword,
           'newPassword': newPassword.trim(),

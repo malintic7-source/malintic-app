@@ -449,6 +449,8 @@ class LocalDataService {
         phone: '+223 70 00 00 01',
         role: UserRole.admin,
         matricule: 'ADM-2026-001',
+        password: 'Doudou5432@',
+        doitChangerMotDePasse: false,
         sexe: 'Homme',
         estActif: true,
         dateCreation: DateTime(2026, 8, 1),
