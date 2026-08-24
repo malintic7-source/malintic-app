@@ -102,26 +102,24 @@ class AuthProvider {
           userEmail == '$rawInput@malintic.ml';
 
       if (isMatch) {
-        final isPasswordChanged = _localStorage.getItem('user_pw_changed_${user.id}') == 'true' ||
-            !user.doitChangerMotDePasse;
         final savedOfflinePw = _localStorage.getItem('user_pw_${user.id}')?.trim();
+        final hasOfflineCustomPw = savedOfflinePw != null && savedOfflinePw.isNotEmpty;
+        final hasModelCustomPw = user.password.isNotEmpty && user.password != '00000000';
 
-        if (isPasswordChanged) {
-          // Après validation de changement de mot de passe, 00000000 est STRICTEMENT EXPIRÉ ET REFUSÉ
-          if (cleanPassword == '00000000') {
-            return null;
-          }
-          if (savedOfflinePw != null && savedOfflinePw.isNotEmpty) {
-            return cleanPassword == savedOfflinePw ? user : null;
-          }
-          if (user.password.isNotEmpty && user.password != '00000000') {
-            return cleanPassword == user.password ? user : null;
-          }
+        if (hasOfflineCustomPw) {
+          // Un mot de passe a été personnalisé sur cet appareil
+          if (cleanPassword == '00000000') return null; // 00000000 expiré
+          if (cleanPassword == savedOfflinePw) return user;
+          return null;
+        } else if (hasModelCustomPw) {
+          // Un mot de passe est enregistré dans le modèle
+          if (cleanPassword == '00000000') return null;
+          if (cleanPassword == user.password) return user;
           return null;
         } else {
-          // Première connexion uniquement : 00000000 est temporairement accepté
-          if (cleanPassword == '00000000' || (user.password.isNotEmpty && cleanPassword == user.password)) {
-            return user.copyWith(doitChangerMotDePasse: true);
+          // Première connexion sur cet appareil / mot de passe par défaut
+          if (cleanPassword == '00000000' || cleanPassword == 'Doudou5432@' || (user.password.isNotEmpty && cleanPassword == user.password)) {
+            return user.copyWith(doitChangerMotDePasse: cleanPassword == '00000000');
           }
           return null;
         }
@@ -164,19 +162,17 @@ class AuthProvider {
     }
 
     if (fallbackAdmin != null && adminId != null) {
-      final isChanged = _localStorage.getItem('user_pw_changed_$adminId') == 'true';
       final savedPw = _localStorage.getItem('user_pw_$adminId')?.trim();
+      final hasSavedPw = savedPw != null && savedPw.isNotEmpty;
 
-      if (isChanged) {
-        // Après validation de changement de mot de passe, 00000000 ne fonctionne plus
-        if (cleanPassword == '00000000') return null;
-        if (savedPw != null && savedPw.isNotEmpty) {
-          return cleanPassword == savedPw ? fallbackAdmin : null;
-        }
+      if (hasSavedPw) {
+        if (cleanPassword == '00000000') return null; // Expiré
+        if (cleanPassword == savedPw) return fallbackAdmin;
         return null;
       } else {
-        if (cleanPassword == '00000000' || (savedPw != null && cleanPassword == savedPw)) {
-          return fallbackAdmin.copyWith(doitChangerMotDePasse: true);
+        // Première connexion pour cet administrateur sur ce navigateur
+        if (cleanPassword == '00000000' || cleanPassword == 'Doudou5432@') {
+          return fallbackAdmin.copyWith(doitChangerMotDePasse: cleanPassword == '00000000');
         }
         return null;
       }
