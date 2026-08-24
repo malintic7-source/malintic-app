@@ -88,7 +88,7 @@ Future<void> _importFromApi() async {
     final response = await http.get(
       Uri.parse('$origin/api/inscriptions'),
       headers: {'Accept': 'application/json'},
-    );
+    ).timeout(const Duration(seconds: 2));
     if (response.statusCode != 200) return;
     final text = response.body;
     if (text.isEmpty) return;

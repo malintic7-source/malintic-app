@@ -81,7 +81,7 @@ class LocalDataService {
               'Accept': 'application/json',
             },
           )
-          .timeout(const Duration(seconds: 20));
+          .timeout(const Duration(seconds: 3));
       if (response.statusCode != 200) return;
       final state = jsonDecode(response.body) as Map<String, dynamic>;
       final users = (state['users'] as List<dynamic>? ?? [])
@@ -191,7 +191,6 @@ class LocalDataService {
         _seancesController.add(List.unmodifiable(_seances));
       }
     } catch (e) {
-      // #4 — Logger les erreurs de synchronisation plutôt que de les ignorer silencieusement.
       debugPrint('[Malintic] Erreur sync API: $e');
     } finally {
       _syncInProgress = false;
@@ -199,8 +198,6 @@ class LocalDataService {
   }
 
   Future<void> mergeLocalDataWithServer() async {
-    // Kept for backwards compatibility. The server is authoritative: a stale
-    // browser cache must never add documents back into the shared database.
     await _syncFromLocalApi();
   }
 
@@ -223,14 +220,9 @@ class LocalDataService {
             headers: const {'Content-Type': 'application/json'},
             body: jsonEncode(data),
           )
-          .timeout(const Duration(seconds: 20));
-      if (response.statusCode == 403) return; // Web session auth - not blocking
-      if (response.statusCode < 200 || response.statusCode >= 300) {
-        throw StateError(
-          'Écriture refusée par le serveur (${response.statusCode}).',
-        );
-      }
-    } catch (error) {
+          .timeout(const Duration(seconds: 2));
+      if (response.statusCode == 403) return;
+    } catch (_) {
       // Sync errors are non-blocking. Local data is always persisted first.
       return;
     }
@@ -240,8 +232,96 @@ class LocalDataService {
     try {
       await http
           .delete(_apiUri('$collection/${Uri.encodeComponent(docId)}'))
-          .timeout(const Duration(seconds: 8));
+          .timeout(const Duration(seconds: 2));
     } catch (_) {}
+  }
+
+  Map<String, dynamic> exportFullBackup() {
+    return {
+      'version': '2.0',
+      'exportedAt': DateTime.now().toIso8601String(),
+      'users': _users.map((u) => u.toMap()).toList(),
+      'formations': _formations.map((f) => f.toMap()).toList(),
+      'inscriptions': _inscriptions.map((i) => i.toMap()).toList(),
+      'payments': _payments.map((p) => p.toMap()).toList(),
+      'seances': _seances.map((s) => s.toMap()).toList(),
+      'notifications': _notifications.map((n) => n.toMap()).toList(),
+      'audit_logs': _auditLogs.map((a) => a.toMap()).toList(),
+    };
+  }
+
+  Future<bool> importFullBackup(Map<String, dynamic> data) async {
+    try {
+      if (data['users'] is List) {
+        final users = (data['users'] as List)
+            .whereType<Map>()
+            .map((item) => User.fromMap(Map<String, dynamic>.from(item), item['id']?.toString() ?? ''))
+            .toList();
+        if (users.isNotEmpty) {
+          _users
+            ..clear()
+            ..addAll(users);
+          _saveUsersToStorage();
+          _usersController.add(List.unmodifiable(_users));
+        }
+      }
+      if (data['formations'] is List) {
+        final formations = (data['formations'] as List)
+            .whereType<Map>()
+            .map((item) => Formation.fromMap(Map<String, dynamic>.from(item), item['id']?.toString() ?? ''))
+            .toList();
+        if (formations.isNotEmpty) {
+          _formations
+            ..clear()
+            ..addAll(formations);
+          _saveFormationsToStorage();
+          _formationsController.add(List.unmodifiable(_formations));
+        }
+      }
+      if (data['inscriptions'] is List) {
+        final inscriptions = (data['inscriptions'] as List)
+            .whereType<Map>()
+            .map((item) => Inscription.fromMap(Map<String, dynamic>.from(item), item['id']?.toString() ?? ''))
+            .toList();
+        if (inscriptions.isNotEmpty) {
+          _inscriptions
+            ..clear()
+            ..addAll(inscriptions);
+          _saveInscriptionsToStorage();
+          _inscriptionsController.add(List.unmodifiable(_inscriptions));
+        }
+      }
+      if (data['payments'] is List) {
+        final payments = (data['payments'] as List)
+            .whereType<Map>()
+            .map((item) => Payment.fromMap(Map<String, dynamic>.from(item), item['id']?.toString() ?? ''))
+            .toList();
+        if (payments.isNotEmpty) {
+          _payments
+            ..clear()
+            ..addAll(payments);
+          _savePaymentsToStorage();
+          _paymentsController.add(List.unmodifiable(_payments));
+        }
+      }
+      if (data['seances'] is List) {
+        final seances = (data['seances'] as List)
+            .whereType<Map>()
+            .map((item) => Seance.fromMap(Map<String, dynamic>.from(item), item['id']?.toString() ?? ''))
+            .toList();
+        if (seances.isNotEmpty) {
+          _seances
+            ..clear()
+            ..addAll(seances);
+          _saveSeancesToStorage();
+          _seancesController.add(List.unmodifiable(_seances));
+        }
+      }
+      return true;
+    } catch (e) {
+      debugPrint('[Malintic] Erreur import backup: $e');
+      return false;
+    }
   }
 
   void _deduplicateAndNormalizeUsers() {
