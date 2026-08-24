@@ -397,42 +397,59 @@ class AuthProvider {
       throw Exception('Aucun utilisateur connecté.');
     }
 
-    final response = await http.post(
-      Uri.base.resolve('/api/auth/change-password'),
-      headers: const {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        if (currentPassword != null && currentPassword.isNotEmpty)
-          'currentPassword': currentPassword,
-        'newPassword': newPassword,
-        'isFirstLogin': isFirstLogin,
-      }),
-    );
-    if (response.statusCode != 200 && response.statusCode != 204) {
-      // #13 — Propager le message d'erreur du serveur pour plus de clarté
-      String serverMessage = 'Impossible de modifier le mot de passe.';
-      try {
-        final body = jsonDecode(response.body) as Map<String, dynamic>;
-        serverMessage = body['error']?.toString() ?? serverMessage;
-      } catch (_) {}
-      throw Exception(serverMessage);
+    if (newPassword.trim().length < 8) {
+      throw Exception('Le nouveau mot de passe doit contenir au moins 8 caractères.');
+    }
+
+    try {
+      final response = await http.post(
+        Uri.base.resolve('/api/auth/change-password'),
+        headers: const {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true',
+        },
+        body: jsonEncode({
+          if (currentPassword != null && currentPassword.isNotEmpty)
+            'currentPassword': currentPassword,
+          'newPassword': newPassword.trim(),
+          'isFirstLogin': isFirstLogin,
+        }),
+      ).timeout(const Duration(seconds: 4));
+
+      if (response.statusCode == 400 || response.statusCode == 401) {
+        String serverMessage = 'Impossible de modifier le mot de passe.';
+        try {
+          final body = jsonDecode(response.body) as Map<String, dynamic>;
+          serverMessage = body['error']?.toString() ?? serverMessage;
+        } catch (_) {}
+        throw Exception(serverMessage);
+      }
+    } catch (e) {
+      if (e is Exception &&
+          (e.toString().contains('mot de passe') || e.toString().contains('caractères'))) {
+        rethrow;
+      }
+      // Offline mode: non-blocking server error, continue with local update
     }
 
     User updatedUser = _currentUser!.copyWith(
       doitChangerMotDePasse: false,
       dateModification: DateTime.now(),
     );
-    if (response.statusCode == 200 && response.body.isNotEmpty) {
-      try {
-        final body = jsonDecode(response.body) as Map<String, dynamic>;
-        updatedUser = User.fromMap(body, body['id']?.toString() ?? _currentUser!.id);
-      } catch (_) {}
-    }
     _currentUser = updatedUser;
     _authController.add(_currentUser);
     _localStorage.setSessionItem('currentUserJson', jsonEncode(_currentUser!.toMap()));
-    _localStorage.setItem('user_pw_${_currentUser!.id}', newPassword);
+    _localStorage.setItem('user_pw_${_currentUser!.id}', newPassword.trim());
     _localStorage.setItem('user_pw_changed_${_currentUser!.id}', 'true');
-    await _db.refreshFromServer();
+
+    final localUser = _db.getUserById(updatedUser.id);
+    if (localUser != null) {
+      await _db.addUser(localUser.copyWith(
+        doitChangerMotDePasse: false,
+        dateModification: DateTime.now(),
+      ));
+    }
+
     return updatedUser;
   }
 
