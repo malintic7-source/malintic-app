@@ -1,5 +1,6 @@
-Dockerfile
-Dockerfile.fast
+Dockerfile*
+docker-compose.yml
+nginx.conf
 build/
 lib/
 web/
@@ -9,3 +10,4 @@ images/
 .dart_tool/
 .idea/
 .vscode/
+
