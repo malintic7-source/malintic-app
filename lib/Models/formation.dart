@@ -1,3 +1,5 @@
+import 'package:gestion_formations/utils/app_logger.dart';
+
 // Removed Firestore import for Docker migration
 
 enum FormationType { enligne, presentielle, mixte }
@@ -141,7 +143,13 @@ class Formation {
       if (val != null && val.runtimeType.toString().contains('Timestamp')) {
         try {
           return (val as dynamic).toDate();
-        } catch (_) {}
+        } catch (e, s) {
+          logHandledError(
+            'Date de formation illisible, valeur de repli utilisée',
+            e,
+            s,
+          );
+        }
       }
       if (val is String) return DateTime.tryParse(val);
       return null;

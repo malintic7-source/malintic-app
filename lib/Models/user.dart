@@ -1,3 +1,5 @@
+import 'package:gestion_formations/utils/app_logger.dart';
+
 enum UserRole { admin, dg, daf, comptable, assistant, it, formateur, apprenant }
 
 class User {
@@ -92,7 +94,13 @@ class User {
       if (val != null && val.runtimeType.toString().contains('Timestamp')) {
         try {
           return (val as dynamic).toDate();
-        } catch (_) {}
+        } catch (e, s) {
+          logHandledError(
+            'Date utilisateur illisible, valeur de repli utilisée',
+            e,
+            s,
+          );
+        }
       }
       if (val is String) return DateTime.tryParse(val) ?? DateTime.now();
       return DateTime.now();

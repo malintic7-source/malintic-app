@@ -10,6 +10,7 @@ import 'package:gestion_formations/Models/notification.dart';
 import 'package:gestion_formations/Models/audit_log.dart';
 import 'package:gestion_formations/Models/seance.dart';
 import 'package:gestion_formations/Services/local_storage.dart';
+import 'package:gestion_formations/utils/app_logger.dart';
 
 class LocalDataService {
   static final LocalDataService _instance = LocalDataService._internal();
@@ -73,7 +74,9 @@ class LocalDataService {
         final list = jsonDecode(raw) as List<dynamic>;
         return list.map((e) => e.toString()).toSet();
       }
-    } catch (_) {}
+    } catch (e, s) {
+      logHandledError('Liste des suppressions illisible ($collection)', e, s);
+    }
     return <String>{};
   }
 
@@ -81,8 +84,17 @@ class LocalDataService {
     try {
       final set = _getDeletedDocs(collection);
       set.add(docId);
-      _localStorage.setItem('app_deleted_ids_$collection', jsonEncode(set.toList()));
-    } catch (_) {}
+      _localStorage.setItem(
+        'app_deleted_ids_$collection',
+        jsonEncode(set.toList()),
+      );
+    } catch (e, s) {
+      logHandledError(
+        'Suppression de $collection/$docId non mémorisée localement',
+        e,
+        s,
+      );
+    }
   }
 
   Set<String> getDeletedDocs(String collection) => _getDeletedDocs(collection);
@@ -94,7 +106,13 @@ class LocalDataService {
       if (set.remove(docId)) {
         _localStorage.setItem('app_deleted_ids_$collection', jsonEncode(set.toList()));
       }
-    } catch (_) {}
+    } catch (e, s) {
+      logHandledError(
+        'Réactivation de $collection/$docId non mémorisée localement',
+        e,
+        s,
+      );
+    }
   }
   void unrecordDeletedDoc(String collection, String docId) => _unrecordDeletedDoc(collection, docId);
 
@@ -103,7 +121,15 @@ class LocalDataService {
       final raw = _localStorage.getItem('app_pending_sync_queue');
       List<dynamic> queue = [];
       if (raw != null && raw.isNotEmpty) {
-        try { queue = jsonDecode(raw) as List<dynamic>; } catch (_) {}
+        try {
+          queue = jsonDecode(raw) as List<dynamic>;
+        } catch (e, s) {
+          logHandledError(
+            'File de synchronisation corrompue, réinitialisée',
+            e,
+            s,
+          );
+        }
       }
       queue.add({
         'collection': collection,
@@ -113,7 +139,13 @@ class LocalDataService {
         'timestamp': DateTime.now().toIso8601String(),
       });
       _localStorage.setItem('app_pending_sync_queue', jsonEncode(queue));
-    } catch (_) {}
+    } catch (e, s) {
+      logHandledError(
+        'Mise en file de $method $collection/$docId impossible',
+        e,
+        s,
+      );
+    }
   }
 
   Future<void> _flushPendingSyncQueue() async {
@@ -145,7 +177,12 @@ class LocalDataService {
               body: jsonEncode(data),
             ).timeout(const Duration(seconds: 10));
           }
-        } catch (_) {
+        } catch (e, s) {
+          logHandledError(
+            'Rejeu différé de $method $collection/$docId échoué',
+            e,
+            s,
+          );
           remaining.add(item);
         }
       }
@@ -154,7 +191,9 @@ class LocalDataService {
       } else {
         _localStorage.setItem('app_pending_sync_queue', jsonEncode(remaining));
       }
-    } catch (_) {}
+    } catch (e, s) {
+      logHandledError('Rejeu de la file de synchronisation impossible', e, s);
+    }
   }
 
   Future<void> _syncFromLocalApi() async {
@@ -172,7 +211,13 @@ class LocalDataService {
             },
           )
           .timeout(const Duration(seconds: 15));
-      if (response.statusCode != 200) return;
+      if (response.statusCode != 200) {
+        logHandledError(
+          'Sync API refusée',
+          'GET /api/state → HTTP ${response.statusCode}',
+        );
+        return;
+      }
       final state = jsonDecode(response.body) as Map<String, dynamic>;
       final users = (state['users'] as List<dynamic>? ?? [])
           .whereType<Map>()
@@ -361,8 +406,8 @@ class LocalDataService {
         _saveSeancesToStorage();
         _seancesController.add(List.unmodifiable(_seances));
       }
-    } catch (e) {
-      debugPrint('[Malintic] Erreur sync API: $e');
+    } catch (e, s) {
+      logHandledError('Erreur sync API', e, s);
     } finally {
       _syncInProgress = false;
     }
@@ -398,7 +443,17 @@ class LocalDataService {
       if (response.statusCode >= 200 && response.statusCode < 300) {
         return;
       }
-    } catch (_) {}
+      logHandledError(
+        'Écriture serveur refusée, mise en file',
+        'PUT /api/$collection/$docId → HTTP ${response.statusCode} ${response.body}',
+      );
+    } catch (e, s) {
+      logHandledError(
+        'Écriture serveur injoignable, mise en file (PUT $collection/$docId)',
+        e,
+        s,
+      );
+    }
     _enqueuePendingSync(collection, docId, 'PUT', data);
   }
 
@@ -415,7 +470,17 @@ class LocalDataService {
       if (response.statusCode >= 200 && response.statusCode < 300) {
         return;
       }
-    } catch (_) {}
+      logHandledError(
+        'Suppression serveur refusée, mise en file',
+        'DELETE /api/$collection/$docId → HTTP ${response.statusCode} ${response.body}',
+      );
+    } catch (e, s) {
+      logHandledError(
+        'Suppression serveur injoignable, mise en file ($collection/$docId)',
+        e,
+        s,
+      );
+    }
     _enqueuePendingSync(collection, docId, 'DELETE', null);
   }
 
@@ -1216,11 +1281,10 @@ class LocalDataService {
   );
 
   User? getUserById(String id) {
-    try {
-      return _users.firstWhere((u) => u.id == id);
-    } catch (_) {
-      return null;
+    for (final user in _users) {
+      if (user.id == id) return user;
     }
+    return null;
   }
 
   Future<User> addUser(User user) async {
@@ -1294,10 +1358,14 @@ class LocalDataService {
     try {
       _localStorage.removeItem('user_pw_$userId');
       _localStorage.removeItem('user_pw_changed_$userId');
-    } catch (_) {}
-    try {
-      await _deleteRemoteDoc('users', userId);
-    } catch (_) {}
+    } catch (e, s) {
+      logHandledError(
+        'Nettoyage du mot de passe local de $userId impossible',
+        e,
+        s,
+      );
+    }
+    await _deleteRemoteDoc('users', userId);
 
     // Cascade deletion of all inscriptions linked to this user
     final linkedInscriptions = _inscriptions.where((i) =>
@@ -1737,9 +1805,7 @@ class LocalDataService {
     _formations.removeWhere((f) => f.id == id);
     _formationsController.add(List.unmodifiable(_formations));
     _saveFormationsToStorage();
-    try {
-      await _deleteRemoteDoc('formations', id);
-    } catch (_) {}
+    await _deleteRemoteDoc('formations', id);
     logAction(
       userNom: 'Administration',
       userRole: 'admin',
@@ -1892,11 +1958,10 @@ class LocalDataService {
   List<Inscription> getInscriptions() => List.unmodifiable(_inscriptions);
 
   Inscription? getInscriptionById(String id) {
-    try {
-      return _inscriptions.firstWhere((i) => i.id == id);
-    } catch (_) {
-      return null;
+    for (final inscription in _inscriptions) {
+      if (inscription.id == id) return inscription;
     }
+    return null;
   }
 
   Future<Inscription> createInscription({
@@ -2036,11 +2101,10 @@ class LocalDataService {
   }
 
   Formation? getFormationById(String id) {
-    try {
-      return _formations.firstWhere((f) => f.id == id);
-    } catch (_) {
-      return null;
+    for (final formation in _formations) {
+      if (formation.id == id) return formation;
     }
+    return null;
   }
 
   Future<Formation?> fetchPublicFormationById(String id) async {
@@ -2062,7 +2126,9 @@ class LocalDataService {
           fromApi = Formation.fromMap(map, id);
         }
       }
-    } catch (_) {}
+    } catch (e, s) {
+      logHandledError('Lecture de la formation $id impossible', e, s);
+    }
 
     if (fromApi == null) {
       try {
@@ -2083,7 +2149,13 @@ class LocalDataService {
             }
           }
         }
-      } catch (_) {}
+      } catch (e, s) {
+        logHandledError(
+          'Lecture du catalogue public des formations impossible',
+          e,
+          s,
+        );
+      }
     }
 
     if (fromApi == null) return null;
@@ -2437,9 +2509,7 @@ class LocalDataService {
     _inscriptions.removeWhere((i) => i.id == id);
     _inscriptionsController.add(List.unmodifiable(_inscriptions));
     _saveInscriptionsToStorage();
-    try {
-      await _deleteRemoteDoc('inscriptions', id);
-    } catch (_) {}
+    await _deleteRemoteDoc('inscriptions', id);
   }
 
   // --- PAYMENTS ---
@@ -2562,9 +2632,7 @@ class LocalDataService {
     _payments.removeWhere((p) => p.id == id);
     _paymentsController.add(List.unmodifiable(_payments));
     _savePaymentsToStorage();
-    try {
-      await _deleteRemoteDoc('payments', id);
-    } catch (_) {}
+    await _deleteRemoteDoc('payments', id);
   }
 
   List<Payment> getPaymentsForInscription(String inscriptionId) {
@@ -2858,9 +2926,7 @@ class LocalDataService {
   Future<void> deleteNotification(String notificationId) async {
     _notifications.removeWhere((n) => n.id == notificationId);
     _notificationsController.add(List.unmodifiable(_notifications));
-    try {
-      await _deleteRemoteDoc('notifications', notificationId);
-    } catch (_) {}
+    await _deleteRemoteDoc('notifications', notificationId);
   }
 
   Future<void> _sendTrainerStudentAction(
@@ -3149,8 +3215,6 @@ class LocalDataService {
     _seances.removeWhere((s) => s.id == id);
     _saveSeancesToStorage();
     _seancesController.add(List.unmodifiable(_seances));
-    try {
-      await _deleteRemoteDoc('seances', id);
-    } catch (_) {}
+    await _deleteRemoteDoc('seances', id);
   }
 }

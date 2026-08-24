@@ -89,7 +89,10 @@ Future<void> _importFromApi() async {
       Uri.parse('$origin/api/inscriptions'),
       headers: {'Accept': 'application/json'},
     ).timeout(const Duration(seconds: 2));
-    if (response.statusCode != 200) return;
+    if (response.statusCode != 200) {
+      debugPrint('[Malintic] Import API inscriptions refusé: HTTP ${response.statusCode}');
+      return;
+    }
     final text = response.body;
     if (text.isEmpty) return;
 

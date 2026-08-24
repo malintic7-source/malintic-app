@@ -6,6 +6,20 @@ import 'package:gestion_formations/Models/user.dart';
 import 'package:gestion_formations/Services/db_services.dart';
 import 'package:gestion_formations/Services/local_storage.dart';
 import 'package:gestion_formations/Services/tab_session_lifecycle.dart';
+import 'package:gestion_formations/utils/app_logger.dart';
+
+/// Error carrying a message meant to be displayed to the user.
+///
+/// Authentication failures are typed so that a refused request is never
+/// mistaken for the backend being unreachable.
+class AuthException implements Exception {
+  const AuthException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
+}
 
 class AuthProvider {
   static final AuthProvider _instance = AuthProvider._internal();
@@ -27,7 +41,9 @@ class AuthProvider {
         _currentUser = user;
         TabSessionLifecycle.activate();
         _authController.add(user);
-      } catch (_) {}
+      } catch (e, s) {
+        logHandledError('Session en cache illisible', e, s);
+      }
     }
 
     // 2. Validate session with the backend asynchronously
@@ -57,7 +73,17 @@ class AuthProvider {
         _authController.add(null);
         return null;
       }
-    } catch (_) {}
+      logHandledError(
+        'Validation de session ignorée',
+        'GET /api/auth/session → HTTP ${response.statusCode}',
+      );
+    } catch (e, s) {
+      logHandledError(
+        'Validation de session impossible, session locale conservée',
+        e,
+        s,
+      );
+    }
 
     return _currentUser;
   }
@@ -106,7 +132,9 @@ class AuthProvider {
 
       if (isMatch) {
         if (!user.estActif) {
-          throw Exception('Ce compte est désactivé. Veuillez contacter un administrateur.');
+          throw const AuthException(
+            'Ce compte est désactivé. Veuillez contacter un administrateur.',
+          );
         }
 
         final savedOfflinePw = _localStorage.getItem('user_pw_${user.id}')?.trim();
@@ -223,8 +251,31 @@ class AuthProvider {
         await _db.refreshFromServer();
         return serverUser;
       }
-    } catch (_) {
+      if (response.statusCode == 403) {
+        throw AuthException(
+          _serverErrorMessage(
+            response,
+            'Ce compte est désactivé. Veuillez contacter un administrateur.',
+          ),
+        );
+      }
+      if (response.statusCode == 429) {
+        throw AuthException(
+          _serverErrorMessage(
+            response,
+            'Trop de tentatives de connexion. Veuillez patienter avant de réessayer.',
+          ),
+        );
+      }
+      logHandledError(
+        'Connexion serveur refusée, bascule hors-ligne',
+        'POST /api/auth/login → HTTP ${response.statusCode}',
+      );
+    } on AuthException {
+      rethrow;
+    } catch (e, s) {
       // Le backend Docker/ngrok est éteint : passage transparent en mode hors-ligne
+      logHandledError('Backend injoignable, connexion hors-ligne', e, s);
     }
 
     // Mode Zéro-Interruption : Vérification locale directe (Docker éteint)
@@ -238,7 +289,7 @@ class AuthProvider {
       return offlineUser;
     }
 
-    throw Exception('Identifiants incorrects.');
+    throw const AuthException('Identifiants incorrects.');
   }
 
   Future<void> logout() async {
@@ -252,8 +303,13 @@ class AuthProvider {
     }
     try {
       await http.post(Uri.base.resolve('/api/auth/logout'));
-    } catch (_) {
+    } catch (e, s) {
       // The local state must still be cleared if the network is unavailable.
+      logHandledError(
+        'Déconnexion serveur impossible, session locale effacée',
+        e,
+        s,
+      );
     }
     TabSessionLifecycle.deactivate();
     _db.setServerSessionActive(false);
@@ -264,7 +320,25 @@ class AuthProvider {
       _localStorage.removeSessionItem('currentUserJson');
       _localStorage.removeItem('currentUserId');
       _localStorage.removeItem('currentUserJson');
-    } catch (_) {}
+    } catch (e, s) {
+      logHandledError('Nettoyage du stockage de session impossible', e, s);
+    }
+  }
+
+  /// Extracts the `error` field of an API response, falling back to [fallback].
+  String _serverErrorMessage(http.Response response, String fallback) {
+    try {
+      final body = jsonDecode(response.body) as Map<String, dynamic>;
+      final message = body['error']?.toString();
+      if (message != null && message.isNotEmpty) return message;
+    } catch (e, s) {
+      logHandledError(
+        'Réponse d’erreur serveur illisible (HTTP ${response.statusCode})',
+        e,
+        s,
+      );
+    }
+    return fallback;
   }
 
   Future<User?> updateCurrentUser({
@@ -273,7 +347,7 @@ class AuthProvider {
     required String phone,
   }) async {
     if (_currentUser == null) {
-      throw Exception('Aucun utilisateur connecté.');
+      throw const AuthException('Aucun utilisateur connecté.');
     }
 
     final updated = User(
@@ -313,7 +387,7 @@ class AuthProvider {
   Future<User> updateUser(User user) async {
     final cleanEmail = _normalizeEmail(user.email);
     if (cleanEmail.isEmpty) {
-      throw Exception('MISSING_EMAIL');
+      throw const AuthException('MISSING_EMAIL');
     }
     final duplicate = _db.getUsers().any(
       (existing) =>
@@ -321,7 +395,7 @@ class AuthProvider {
           existing.email.trim().toLowerCase() == cleanEmail,
     );
     if (duplicate) {
-      throw Exception('EMAIL_ALREADY_EXISTS');
+      throw const AuthException('EMAIL_ALREADY_EXISTS');
     }
     final normalizedUser = User(
       id: user.id,
@@ -360,11 +434,13 @@ class AuthProvider {
     bool isFirstLogin = false,
   }) async {
     if (_currentUser == null) {
-      throw Exception('Aucun utilisateur connecté.');
+      throw const AuthException('Aucun utilisateur connecté.');
     }
 
     if (newPassword.trim().length < 8) {
-      throw Exception('Le nouveau mot de passe doit contenir au moins 8 caractères.');
+      throw const AuthException(
+        'Le nouveau mot de passe doit contenir au moins 8 caractères.',
+      );
     }
 
     try {
@@ -385,20 +461,23 @@ class AuthProvider {
         }),
       ).timeout(const Duration(seconds: 4));
 
-      if (response.statusCode == 400 || response.statusCode == 401) {
-        String serverMessage = 'Impossible de modifier le mot de passe.';
-        try {
-          final body = jsonDecode(response.body) as Map<String, dynamic>;
-          serverMessage = body['error']?.toString() ?? serverMessage;
-        } catch (_) {}
-        throw Exception(serverMessage);
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw AuthException(
+          _serverErrorMessage(
+            response,
+            'Impossible de modifier le mot de passe.',
+          ),
+        );
       }
-    } catch (e) {
-      if (e is Exception &&
-          (e.toString().contains('mot de passe') || e.toString().contains('caractères'))) {
-        rethrow;
-      }
-      // Offline mode: non-blocking server error, continue with local update
+    } on AuthException {
+      rethrow;
+    } catch (e, s) {
+      // Offline mode: the server is unreachable, continue with the local update
+      logHandledError(
+        'Backend injoignable, mot de passe modifié localement',
+        e,
+        s,
+      );
     }
 
     User updatedUser = _currentUser!.copyWith(
@@ -443,12 +522,14 @@ class AuthProvider {
   }) async {
     final cleanEmail = _normalizeEmail(email);
     if (cleanEmail.isEmpty) {
-      throw Exception('Veuillez fournir une adresse e-mail valide.');
+      throw const AuthException('Veuillez fournir une adresse e-mail valide.');
     }
     if (_db.getUsers().any(
       (user) => user.email.trim().toLowerCase() == cleanEmail,
     )) {
-      throw Exception('Un utilisateur avec cette adresse e-mail existe déjà.');
+      throw const AuthException(
+        'Un utilisateur avec cette adresse e-mail existe déjà.',
+      );
     }
     // #2 — Mot de passe temporaire aléatoire si non fourni
     final effectivePassword = (password != null && password.isNotEmpty)
@@ -486,7 +567,9 @@ class AuthProvider {
   }) async {
     final cleanPassword = newPassword.trim();
     if (cleanPassword.length < 6) {
-      throw Exception('Le mot de passe doit contenir au moins 6 caractères.');
+      throw const AuthException(
+        'Le mot de passe doit contenir au moins 6 caractères.',
+      );
     }
 
     try {
@@ -500,21 +583,22 @@ class AuthProvider {
       ).timeout(const Duration(seconds: 2));
 
       if (response.statusCode != 200 && response.statusCode != 204) {
-        String errMsg = 'Erreur lors de la mise à jour du mot de passe.';
-        try {
-          final body = jsonDecode(response.body) as Map<String, dynamic>;
-          errMsg = body['error']?.toString() ?? errMsg;
-        } catch (_) {}
-        if (response.statusCode == 400 || response.statusCode == 401) {
-          throw Exception(errMsg);
-        }
+        throw AuthException(
+          _serverErrorMessage(
+            response,
+            'Erreur lors de la mise à jour du mot de passe.',
+          ),
+        );
       }
-    } catch (e) {
-      if (e is Exception &&
-          (e.toString().contains('mot de passe') || e.toString().contains('caractères'))) {
-        rethrow;
-      }
+    } on AuthException {
+      rethrow;
+    } catch (e, s) {
       // Mode hors-ligne : Docker éteint, application locale immédiate
+      logHandledError(
+        'Backend injoignable, mot de passe appliqué localement',
+        e,
+        s,
+      );
     }
 
     // Mise à jour locale en mémoire et stockage persistant
