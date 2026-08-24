@@ -702,7 +702,7 @@ class _NotificationsPageState extends State<NotificationsPage> with TickerProvid
                 final title = titleController.text.trim();
                 final desc = descController.text.trim();
                 if (title.isEmpty || desc.isEmpty) {
-                    context.showSnack('Veuillez renseigner le titre et le message.');
+                  context.showSnack('Veuillez renseigner le titre et le message.');
                   return;
                 }
 

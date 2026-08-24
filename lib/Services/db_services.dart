@@ -2544,7 +2544,7 @@ class LocalDataService {
         AppNotification(
           id: 'notif_stud_${DateTime.now().microsecondsSinceEpoch}',
           title: 'Confirmation de versement',
-        description: 'Votre paiement de ${AppFormat.fcfa(payment.montant)} pour ${form?.titre ?? "votre formation"} a été validé avec succès.',
+          description: 'Votre paiement de ${AppFormat.fcfa(payment.montant)} pour ${form?.titre ?? "votre formation"} a été validé avec succès.',
           senderId: 'comptabilite',
           senderEmail: 'comptabilite@mali-ntic.ml',
           targetRoles: ['etudiant'],
