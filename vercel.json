@@ -23,7 +23,7 @@
       ]
     },
     {
-      "source": "/(assets/.*|images/.*|.*\\.wasm|.*\\.png|.*\\.jpg|.*\\.ttf|.*\\.otf|.*\\.frag)",
+      "source": "/(assets/.*|images/.*|canvaskit/.*|main\\.dart\\.js|flutter\\.js|.*\\.wasm|.*\\.png|.*\\.jpg|.*\\.jpeg|.*\\.svg|.*\\.ico|.*\\.ttf|.*\\.otf|.*\\.frag)",
       "headers": [
         {
           "key": "Cache-Control",
