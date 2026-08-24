@@ -13,11 +13,12 @@
       "estActif": true,
       "dateCreation": "2026-08-01T00:00:00.000Z",
       "assignedFormations": [],
-      "passwordHash": "scrypt$7cdcc634fb439a1a59ea574c2801ed67$e84def337aae4d1d22d30f60bca721d928aad673cf62cb5cb52b80cc24c9bd773bbafd154977a0395db7abb017f726a5ff74c79e196cdfea116a2b61ace1dae9",
       "photoUrl": null,
       "specialite": null,
       "dateModification": "2026-08-23T19:07:26.254Z",
-      "doitChangerMotDePasse": false
+      "doitChangerMotDePasse": true,
+      "password": "00000000",
+      "motDePasse": "00000000"
     },
     {
       "id": "dg_souleymane",
@@ -32,10 +33,12 @@
       "estActif": true,
       "dateCreation": "2026-08-01T00:00:00.000Z",
       "assignedFormations": [],
-      "passwordHash": "scrypt$425da43506b1b5448daa492c7bd3030a$d9182ba96a9884c79ee0cec5804d19ee4db7ec8c86cb3b5e924c839da30805613a66696ef7152caf83e9fbc448ea3990c72b3f2f0317aabb5d5d869534e9f593",
       "photoUrl": null,
       "dateModification": "2026-08-23T17:28:41.058",
-      "specialite": null
+      "specialite": null,
+      "password": "00000000",
+      "motDePasse": "00000000",
+      "doitChangerMotDePasse": true
     },
     {
       "id": "daf_amadou",
@@ -50,10 +53,12 @@
       "estActif": true,
       "dateCreation": "2026-08-01T00:00:00.000Z",
       "assignedFormations": [],
-      "passwordHash": "scrypt$12c14b074c50ddb15f851ed07108238a$87cfac8c4d534da896fbf8a338fff8e955c5fe9287659ea456ba4ff9ceec75ef395f369db0fea3c29311538b0c658890dbbf35d171359eb726915827fda8bfe7",
       "photoUrl": null,
       "dateModification": "2026-08-23T17:28:28.903",
-      "specialite": null
+      "specialite": null,
+      "password": "00000000",
+      "motDePasse": "00000000",
+      "doitChangerMotDePasse": true
     },
     {
       "id": "it_ibrahim",
@@ -68,10 +73,12 @@
       "estActif": true,
       "dateCreation": "2026-08-01T00:00:00.000Z",
       "assignedFormations": [],
-      "passwordHash": "scrypt$e95bf79892b8c45b44e81bb3c73e08d1$c4fe5350231a016920d98a6dc108895efcf4d12da24dd4285935f8f7dd52fab33637735eccd7cb31960389e158628b4ec0ac1dec76a167c1a2ca11b54bbae169",
       "photoUrl": null,
       "dateModification": "2026-08-23T17:28:34.198",
-      "specialite": null
+      "specialite": null,
+      "password": "00000000",
+      "motDePasse": "00000000",
+      "doitChangerMotDePasse": true
     },
     {
       "id": "assistant_oumou",
@@ -86,10 +93,12 @@
       "estActif": true,
       "dateCreation": "2026-08-01T00:00:00.000Z",
       "assignedFormations": [],
-      "passwordHash": "scrypt$827efe2c35a9bee14e7c6618e7615e84$f9dfd3a015dd7d517808e61b64093e93f3926dfde86736b64c014a19062cdc73c6f4deedbc9dad1eecf10029233e3905149dad3c4b7ac63bfa97687207c90090",
       "photoUrl": null,
       "dateModification": "2026-08-23T01:39:48.939",
-      "specialite": null
+      "specialite": null,
+      "password": "00000000",
+      "motDePasse": "00000000",
+      "doitChangerMotDePasse": true
     },
     {
       "id": "etudiant_1787449039940",
@@ -130,7 +139,9 @@
       "dateCreation": "2026-08-23T01:37:19.940",
       "dateModification": "2026-08-23T01:37:19.940",
       "specialite": null,
-      "passwordHash": "scrypt$bf5df741a625f7250769f8d732146550$6178b5519eea086dadcd407112dae3f9a5ccf646cb5874abdfaa40807f19bcb0ec7a0731ca0b5a9729a9e009047ed4b36f31ab82cb6a9006defa6de6c1360c32"
+      "password": "00000000",
+      "motDePasse": "00000000",
+      "doitChangerMotDePasse": true
     },
     {
       "id": "usr_1787449737315",
@@ -165,7 +176,9 @@
       "dateCreation": "2026-08-23T01:48:57.315",
       "dateModification": "2026-08-23T01:48:58.600",
       "specialite": null,
-      "passwordHash": "scrypt$75ebc6c45d31093d8eb6cf4d07b6c2de$ac6e3b0fbc34c680610446520310c543907bea130ae634583c594845e58d6e16821f80bf0f0ca226f36a066e07ba432c8725f0457b093d7a50c72a6d47da0595"
+      "password": "00000000",
+      "motDePasse": "00000000",
+      "doitChangerMotDePasse": true
     },
     {
       "id": "usr_1787505240623",
@@ -183,7 +196,8 @@
       "dateCreation": "2026-08-23T17:14:00.623",
       "dateModification": "2026-08-23T17:26:30.269",
       "specialite": null,
-      "passwordHash": "scrypt$98267bfce5d41266959b8203a61fde80$886bb7b110d3cf3493e256f761780cbf810f0314ca10c053e8c9607f087a1720fdc00b2238cc658096af0d2392e208bdf5187b5fbb295a9e495f02fca5632188"
+      "password": "00000000",
+      "motDePasse": "00000000"
     }
   ],
   "formations": [

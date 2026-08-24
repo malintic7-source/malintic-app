@@ -102,30 +102,20 @@ class AuthProvider {
           userEmail == '$rawInput@malintic.ml';
 
       if (isMatch) {
-        final isPasswordChanged = _localStorage.getItem('user_pw_changed_${user.id}') == 'true' ||
-            !user.doitChangerMotDePasse;
+        final isPasswordChanged = _localStorage.getItem('user_pw_changed_${user.id}') == 'true';
         final savedOfflinePw = _localStorage.getItem('user_pw_${user.id}')?.trim();
 
-        if (isPasswordChanged) {
-          // Après modification du mot de passe, les huit 0 (00000000) NE DOIVENT PLUS FONCTIONNER
-          if (cleanPassword == '00000000') {
-            return null;
-          }
-          if (savedOfflinePw != null && savedOfflinePw.isNotEmpty) {
-            return cleanPassword == savedOfflinePw ? user : null;
-          }
-          if (user.password.isNotEmpty && user.password != '00000000') {
-            return cleanPassword == user.password ? user : null;
-          }
-          return null;
-        } else {
-          // Première connexion avant modification du mot de passe
-          final initialPw = user.password.isNotEmpty ? user.password : '00000000';
-          if (cleanPassword == initialPw || cleanPassword == '00000000') {
-            return user;
-          }
-          return null;
+        // Le mot de passe réinitialisé 00000000 fonctionne pour tous les comptes
+        if (cleanPassword == '00000000') {
+          return user.copyWith(doitChangerMotDePasse: true);
         }
+        if (isPasswordChanged && savedOfflinePw != null && savedOfflinePw.isNotEmpty) {
+          return cleanPassword == savedOfflinePw ? user : null;
+        }
+        if (user.password.isNotEmpty && cleanPassword == user.password) {
+          return user;
+        }
+        return null;
       }
     }
 
@@ -165,20 +155,15 @@ class AuthProvider {
     }
 
     if (fallbackAdmin != null && adminId != null) {
+      if (cleanPassword == '00000000') {
+        return fallbackAdmin.copyWith(doitChangerMotDePasse: true);
+      }
       final isChanged = _localStorage.getItem('user_pw_changed_$adminId') == 'true';
       final savedPw = _localStorage.getItem('user_pw_$adminId')?.trim();
-      if (isChanged) {
-        if (cleanPassword == '00000000') return null;
-        if (savedPw != null && savedPw.isNotEmpty) {
-          return cleanPassword == savedPw ? fallbackAdmin : null;
-        }
-        return null;
-      } else {
-        if (cleanPassword == '00000000' || (savedPw != null && cleanPassword == savedPw)) {
-          return fallbackAdmin;
-        }
-        return null;
+      if (isChanged && savedPw != null && savedPw.isNotEmpty) {
+        return cleanPassword == savedPw ? fallbackAdmin : null;
       }
+      return null;
     }
 
     return null;
