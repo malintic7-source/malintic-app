@@ -38,5 +38,7 @@ web/flutter_bootstrap.js
 
 .codex-history/
 backup/
+server/database_backup*.json
+server/database.json
 tmp_*.txt
 tmp_*.json

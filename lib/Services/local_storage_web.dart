@@ -27,6 +27,17 @@ class LocalStorage {
     } catch (_) {}
   }
 
+  List<String> keys() {
+    try {
+      return {
+        ...html.window.localStorage.keys,
+        ..._memoryFallback.keys,
+      }.toList();
+    } catch (_) {
+      return _memoryFallback.keys.toList();
+    }
+  }
+
   // SessionStorage (effacé à la fermeture d'onglet, conservé au rafraîchissement F5)
   String? getSessionItem(String key) {
     try {

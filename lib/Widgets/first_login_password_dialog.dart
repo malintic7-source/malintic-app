@@ -66,7 +66,6 @@ class _FirstLoginPasswordDialogState extends State<FirstLoginPasswordDialog> {
     try {
       await AuthProvider().changePassword(
         newPassword: _newPasswordController.text.trim(),
-        isFirstLogin: true,
       );
 
       if (!mounted) return;

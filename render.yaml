@@ -11,10 +11,8 @@ services:
       - key: DATA_DIR
         value: /data
       - key: BOOTSTRAP_ADMIN_EMAIL
-        value: admin@example.com
         sync: false
       - key: BOOTSTRAP_ADMIN_PASSWORD
-        value: ChangeMe123!
         sync: false
     disk:
       name: data

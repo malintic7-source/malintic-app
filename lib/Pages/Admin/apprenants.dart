@@ -1113,7 +1113,7 @@ class _AdminApprenantsState extends State<AdminApprenants>
           phone: s.phone,
           matricule: s.matricule,
           role: s.role,
-          password: s.password.isNotEmpty ? s.password : '00000000',
+          password: s.password,
           photoUrl: s.photoUrl,
           assignedFormations: s.assignedFormations,
           estActif: s.estActif,
@@ -1130,9 +1130,7 @@ class _AdminApprenantsState extends State<AdminApprenants>
           phone: existing.phone.isNotEmpty ? existing.phone : s.phone,
           matricule: existing.matricule,
           role: existing.role,
-          password: existing.password.isNotEmpty
-              ? existing.password
-              : '00000000',
+          password: existing.password,
           photoUrl: existing.photoUrl,
           assignedFormations: existing.assignedFormations.isNotEmpty
               ? existing.assignedFormations

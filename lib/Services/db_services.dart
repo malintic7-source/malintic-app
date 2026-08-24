@@ -13,7 +13,7 @@ import 'package:gestion_formations/Services/local_storage.dart';
 
 class LocalDataService {
   static final LocalDataService _instance = LocalDataService._internal();
-  static const _cacheSchemaVersion = '5';
+  static const _cacheSchemaVersion = '6';
   static const _cacheSchemaKey = 'malintic_cache_schema';
   factory LocalDataService() => _instance;
 
@@ -48,6 +48,9 @@ class LocalDataService {
     ];
     for (final key in cachedCollections) {
       _localStorage.removeItem(key);
+    }
+    for (final key in _localStorage.keys()) {
+      if (key.startsWith('user_pw_')) _localStorage.removeItem(key);
     }
     _localStorage.setItem(_cacheSchemaKey, _cacheSchemaVersion);
   }
@@ -536,7 +539,7 @@ class LocalDataService {
           phone: u.phone,
           matricule: u.matricule,
           role: u.role,
-          password: u.password.isNotEmpty ? u.password : '00000000',
+          password: u.password,
           photoUrl: u.photoUrl,
           assignedFormations: u.assignedFormations,
           estActif: u.estActif,
@@ -558,9 +561,7 @@ class LocalDataService {
           phone: existing.phone.isNotEmpty ? existing.phone : u.phone,
           matricule: existing.matricule ?? u.matricule,
           role: existing.role,
-          password: existing.password.isNotEmpty
-              ? existing.password
-              : '00000000',
+          password: existing.password,
           photoUrl: existing.photoUrl ?? u.photoUrl,
           assignedFormations: mergedAssignments,
           estActif: existing.estActif,
@@ -583,7 +584,6 @@ class LocalDataService {
         phone: '+223 70 00 00 01',
         role: UserRole.admin,
         matricule: 'ADM-2026-001',
-        password: 'Doudou5432@',
         doitChangerMotDePasse: false,
         sexe: 'Homme',
         estActif: true,
@@ -744,7 +744,11 @@ class LocalDataService {
 
   void _saveUsersToStorage() {
     try {
-      final list = _users.map((u) => u.toMap()).toList();
+      final list = _users.map((u) {
+        final data = u.toMap();
+        data.remove('password');
+        return data;
+      }).toList();
       _localStorage.setItem('app_saved_users', jsonEncode(list));
     } catch (e) { debugPrint('[Malintic] Erreur sauvegarde users: $e'); }
   }
@@ -1291,10 +1295,6 @@ class LocalDataService {
     _users.removeWhere((u) => u.id == userId || (oldEmail.isNotEmpty && u.email.trim().toLowerCase() == oldEmail));
     _saveUsersToStorage();
     _usersController.add(List.unmodifiable(_users));
-    try {
-      _localStorage.removeItem('user_pw_$userId');
-      _localStorage.removeItem('user_pw_changed_$userId');
-    } catch (_) {}
     try {
       await _deleteRemoteDoc('users', userId);
     } catch (_) {}
