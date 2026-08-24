@@ -61,7 +61,7 @@ class LocalDataService {
     if (!_hasLocalApi) return;
     _syncFromLocalApi();
     _apiPollingTimer = Timer.periodic(
-      const Duration(seconds: 8),
+      const Duration(seconds: 5),
       (_) => _syncFromLocalApi(),
     );
   }

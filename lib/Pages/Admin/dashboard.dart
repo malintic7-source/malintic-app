@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -25,6 +26,7 @@ class AdminDashboard extends StatefulWidget {
 class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStateMixin {
   final LocalDataService _db = LocalDataService();
   late AnimationController _fadeController;
+  Timer? _refreshTimer;
 
   @override
   void initState() {
@@ -33,11 +35,15 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
       duration: const Duration(milliseconds: 600),
       vsync: this,
     )..forward();
+    _refreshTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (mounted) setState(() {});
+    });
   }
 
   @override
   void dispose() {
     _fadeController.dispose();
+    _refreshTimer?.cancel();
     super.dispose();
   }
 

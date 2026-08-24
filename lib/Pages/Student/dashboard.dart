@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:animate_do/animate_do.dart';
@@ -22,6 +23,7 @@ class StudentDashboard extends StatefulWidget {
 class _StudentDashboardState extends State<StudentDashboard> with TickerProviderStateMixin {
   final LocalDataService _db = LocalDataService();
   late AnimationController _fadeController;
+  Timer? _refreshTimer;
 
   @override
   void initState() {
@@ -30,11 +32,15 @@ class _StudentDashboardState extends State<StudentDashboard> with TickerProvider
       duration: Duration(milliseconds: 600),
       vsync: this,
     )..forward();
+    _refreshTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (mounted) setState(() {});
+    });
   }
 
   @override
   void dispose() {
     _fadeController.dispose();
+    _refreshTimer?.cancel();
     super.dispose();
   }
 
