@@ -6,10 +6,9 @@ Cette option est **100% gratuite** et s'intègre parfaitement avec votre fronten
 
 ## 📁 Fichiers créés/modifiés
 
-- ✅ `api/index.js` - Backend converti en Serverless Function
-- ✅ `api/package.json` - Dépendances minimales
-- ✅ `vercel.json` - Routage `/api/*` vers la function
-- ✅ `render.yaml` - Alternative pour Render (si besoin)
+- ✅ `build/web` - Frontend Flutter Web précompilé
+- ✅ `vercel.json` - Routage et proxy `/api/*` vers Render (`https://malintic-app.onrender.com`)
+- ✅ `render.yaml` - Backend persistant sur Render (Express Node.js)
 
 ## 🚀 Instructions de déploiement
 
