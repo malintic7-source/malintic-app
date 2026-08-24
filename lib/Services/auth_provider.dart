@@ -33,7 +33,10 @@ class AuthProvider {
     // 2. Validate session with the backend asynchronously
     try {
       final response = await http
-          .get(Uri.base.resolve('/api/auth/session'))
+          .get(
+            Uri.base.resolve('/api/auth/session'),
+            headers: const {'ngrok-skip-browser-warning': 'true'},
+          )
           .timeout(const Duration(seconds: 3));
       if (response.statusCode == 200) {
         final map = jsonDecode(response.body) as Map<String, dynamic>;
