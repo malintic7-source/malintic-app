@@ -61,18 +61,70 @@ class LocalDataService {
     if (!_hasLocalApi) return;
     _syncFromLocalApi();
     _apiPollingTimer = Timer.periodic(
-      const Duration(seconds: 10),
+      const Duration(seconds: 8),
       (_) => _syncFromLocalApi(),
     );
   }
 
+  void _enqueuePendingSync(String collection, String docId, String method, Map<String, dynamic>? data) {
+    try {
+      final raw = _localStorage.getItem('app_pending_sync_queue');
+      List<dynamic> queue = [];
+      if (raw != null && raw.isNotEmpty) {
+        try { queue = jsonDecode(raw) as List<dynamic>; } catch (_) {}
+      }
+      queue.add({
+        'collection': collection,
+        'docId': docId,
+        'method': method,
+        'data': data,
+        'timestamp': DateTime.now().toIso8601String(),
+      });
+      _localStorage.setItem('app_pending_sync_queue', jsonEncode(queue));
+    } catch (_) {}
+  }
+
+  Future<void> _flushPendingSyncQueue() async {
+    final raw = _localStorage.getItem('app_pending_sync_queue');
+    if (raw == null || raw.isEmpty) return;
+    try {
+      final List<dynamic> queue = jsonDecode(raw) as List<dynamic>;
+      final List<dynamic> remaining = [];
+      for (final item in queue) {
+        if (item is! Map) continue;
+        final collection = item['collection']?.toString() ?? '';
+        final docId = item['docId']?.toString() ?? '';
+        final method = item['method']?.toString() ?? 'PUT';
+        final data = item['data'] is Map ? Map<String, dynamic>.from(item['data']) : null;
+
+        try {
+          if (method == 'DELETE') {
+            await http.delete(_apiUri('$collection/${Uri.encodeComponent(docId)}')).timeout(const Duration(seconds: 3));
+          } else if (data != null) {
+            await http.put(
+              _apiUri('$collection/${Uri.encodeComponent(docId)}'),
+              headers: const {'Content-Type': 'application/json'},
+              body: jsonEncode(data),
+            ).timeout(const Duration(seconds: 3));
+          }
+        } catch (_) {
+          remaining.add(item);
+        }
+      }
+      if (remaining.isEmpty) {
+        _localStorage.removeItem('app_pending_sync_queue');
+      } else {
+        _localStorage.setItem('app_pending_sync_queue', jsonEncode(remaining));
+      }
+    } catch (_) {}
+  }
+
   Future<void> _syncFromLocalApi() async {
-    // Do not queue several full-state transfers at once. A state response can
-    // contain images and reaches hundreds of KB; overlapping two-second polls
-    // can delay an important validation write until its timeout expires.
     if (_syncInProgress) return;
     _syncInProgress = true;
     try {
+      await _flushPendingSyncQueue();
+
       final response = await http
           .get(
             _apiUri('state'),
@@ -221,11 +273,11 @@ class LocalDataService {
             body: jsonEncode(data),
           )
           .timeout(const Duration(seconds: 2));
-      if (response.statusCode == 403) return;
-    } catch (_) {
-      // Sync errors are non-blocking. Local data is always persisted first.
-      return;
-    }
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return;
+      }
+    } catch (_) {}
+    _enqueuePendingSync(collection, docId, 'PUT', data);
   }
 
   Future<void> _deleteRemoteDoc(String collection, String docId) async {
@@ -233,7 +285,9 @@ class LocalDataService {
       await http
           .delete(_apiUri('$collection/${Uri.encodeComponent(docId)}'))
           .timeout(const Duration(seconds: 2));
-    } catch (_) {}
+    } catch (_) {
+      _enqueuePendingSync(collection, docId, 'DELETE', null);
+    }
   }
 
   Map<String, dynamic> exportFullBackup() {
