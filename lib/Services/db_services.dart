@@ -307,8 +307,107 @@ class LocalDataService {
     _users.addAll(cleanMap.values);
   }
 
+  List<User> _defaultBaselineUsers() {
+    return [
+      User(
+        id: 'admin_mamadou',
+        nom: 'TOURE',
+        prenom: 'Mamadou',
+        email: 'mamadou@mntic.ml',
+        phone: '+223 70 00 00 01',
+        role: UserRole.admin,
+        matricule: 'ADM-2026-001',
+        sexe: 'Homme',
+        estActif: true,
+        dateCreation: DateTime(2026, 8, 1),
+      ),
+      User(
+        id: 'dg_souleymane',
+        nom: 'TRAORE',
+        prenom: 'SOULEYMANE',
+        email: 'soulbico@mntic.ml',
+        phone: '+223 76 00 00 01',
+        role: UserRole.admin,
+        sexe: 'Homme',
+        estActif: true,
+        dateCreation: DateTime(2026, 8, 1),
+      ),
+      User(
+        id: 'admin_malintic',
+        nom: 'M@LI-NTIC',
+        prenom: 'Admin',
+        email: 'admin@malintic.ml',
+        phone: '+223 70 00 00 00',
+        role: UserRole.admin,
+        matricule: 'ADM-2026-000',
+        sexe: 'Homme',
+        estActif: true,
+        dateCreation: DateTime(2026, 8, 1),
+      ),
+      User(
+        id: 'formateur_1',
+        prenom: 'Dr. Ousmane',
+        nom: 'Diarra',
+        email: 'ousmane.diarra@malintic.ml',
+        phone: '+223 77 88 99 00',
+        role: UserRole.formateur,
+        specialite: 'Expert Flutter & Architectures Mobiles',
+        estActif: true,
+      ),
+      User(
+        id: 'formateur_2',
+        prenom: 'Awa',
+        nom: 'Koné',
+        email: 'awa.kone@malintic.ml',
+        phone: '+223 66 55 44 33',
+        role: UserRole.formateur,
+        specialite: 'Lead Web React & Node.js',
+        estActif: true,
+      ),
+      User(
+        id: 'formateur_3',
+        prenom: 'Moussa',
+        nom: 'Traoré',
+        email: 'moussa.traore@malintic.ml',
+        phone: '+223 71 22 33 44',
+        role: UserRole.formateur,
+        specialite: 'Infographie & Design Graphique',
+        estActif: true,
+      ),
+      User(
+        id: 'etudiant_1',
+        prenom: 'Seydou',
+        nom: 'Coulibaly',
+        email: 'seydou.coulibaly@malintic.ml',
+        phone: '+223 76 12 34 56',
+        role: UserRole.apprenant,
+      ),
+      User(
+        id: 'etudiant_2',
+        prenom: 'Fatoumata',
+        nom: 'Sidibé',
+        email: 'fatoumata.sidibe@malintic.ml',
+        phone: '+223 65 43 21 09',
+        role: UserRole.apprenant,
+      ),
+      User(
+        id: 'etudiant_3',
+        prenom: 'Ibrahim',
+        nom: 'Maïga',
+        email: 'ibrahim.maiga@malintic.ml',
+        phone: '+223 70 99 88 77',
+        role: UserRole.apprenant,
+      ),
+    ];
+  }
+
   void _loadFromStorage() {
     try {
+      for (final baseUser in _defaultBaselineUsers()) {
+        if (!_users.any((u) => u.id == baseUser.id || u.email.trim().toLowerCase() == baseUser.email.trim().toLowerCase())) {
+          _users.add(baseUser);
+        }
+      }
       final savedUsersRaw = _localStorage.getItem('app_saved_users');
       if (savedUsersRaw != null && savedUsersRaw.isNotEmpty) {
         final List<dynamic> list = jsonDecode(savedUsersRaw);

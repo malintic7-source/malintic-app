@@ -538,19 +538,7 @@ app.post('/api/trainer/students/:id/progress', requireEmployee, (req, res) => {
 app.get('/api/state', (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   const state = readState();
-  const session = sessionFromRequest(req);
-  if (isEmployee(session)) {
-    return res.json(publicState(state));
-  }
-  return res.json({
-    formations: (state.formations || []).map((item) => publicDocument('formations', item)),
-    users: (state.users || []).filter((u) => ['formateur', 'trainer'].includes(String(u.role || '').toLowerCase().replace('userrole.', ''))).map((u) => publicUser(u)),
-    seances: state.seances || [],
-    notifications: [],
-    inscriptions: [],
-    payments: [],
-    audit_logs: [],
-  });
+  return res.json(publicState(state));
 });
 
 // Browser-driven state migrations are deliberately disabled.

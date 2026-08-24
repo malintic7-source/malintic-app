@@ -102,15 +102,38 @@ class AuthProvider {
           userEmail == '$rawInput@malintic.ml';
 
       if (isMatch) {
-        final pw = user.password.trim();
-        if (cleanPassword == pw || cleanPassword == '00000000' || cleanPassword == 'admin123' || pw.isEmpty) {
-          return user;
+        final isPasswordChanged = _localStorage.getItem('user_pw_changed_${user.id}') == 'true' ||
+            !user.doitChangerMotDePasse;
+        final savedOfflinePw = _localStorage.getItem('user_pw_${user.id}')?.trim();
+
+        if (isPasswordChanged) {
+          // Après modification du mot de passe, les huit 0 (00000000) NE DOIVENT PLUS FONCTIONNER
+          if (cleanPassword == '00000000') {
+            return null;
+          }
+          if (savedOfflinePw != null && savedOfflinePw.isNotEmpty) {
+            return cleanPassword == savedOfflinePw ? user : null;
+          }
+          if (user.password.isNotEmpty && user.password != '00000000') {
+            return cleanPassword == user.password ? user : null;
+          }
+          return null;
+        } else {
+          // Première connexion avant modification du mot de passe
+          final initialPw = user.password.isNotEmpty ? user.password : '00000000';
+          if (cleanPassword == initialPw || cleanPassword == '00000000') {
+            return user;
+          }
+          return null;
         }
       }
     }
 
+    String? adminId;
+    User? fallbackAdmin;
     if (rawInput == 'mamadou@mntic.ml' || rawInput == 'mamadou' || rawInput == 'adm-2026-001') {
-      return User(
+      adminId = 'admin_mamadou';
+      fallbackAdmin = User(
         id: 'admin_mamadou',
         nom: 'TOURE',
         prenom: 'Mamadou',
@@ -119,9 +142,9 @@ class AuthProvider {
         role: UserRole.admin,
         matricule: 'ADM-2026-001',
       );
-    }
-    if (rawInput == 'soulbico@mntic.ml' || rawInput == 'soulbico' || rawInput == 'souleymane') {
-      return User(
+    } else if (rawInput == 'soulbico@mntic.ml' || rawInput == 'soulbico' || rawInput == 'souleymane') {
+      adminId = 'dg_souleymane';
+      fallbackAdmin = User(
         id: 'dg_souleymane',
         nom: 'TRAORE',
         prenom: 'SOULEYMANE',
@@ -129,9 +152,9 @@ class AuthProvider {
         phone: '+223 76 00 00 01',
         role: UserRole.admin,
       );
-    }
-    if (rawInput == 'admin@malintic.ml' || rawInput == 'admin') {
-      return User(
+    } else if (rawInput == 'admin@malintic.ml' || rawInput == 'admin') {
+      adminId = 'admin_malintic';
+      fallbackAdmin = User(
         id: 'admin_malintic',
         nom: 'M@LI-NTIC',
         prenom: 'Admin',
@@ -140,6 +163,24 @@ class AuthProvider {
         role: UserRole.admin,
       );
     }
+
+    if (fallbackAdmin != null && adminId != null) {
+      final isChanged = _localStorage.getItem('user_pw_changed_$adminId') == 'true';
+      final savedPw = _localStorage.getItem('user_pw_$adminId')?.trim();
+      if (isChanged) {
+        if (cleanPassword == '00000000') return null;
+        if (savedPw != null && savedPw.isNotEmpty) {
+          return cleanPassword == savedPw ? fallbackAdmin : null;
+        }
+        return null;
+      } else {
+        if (cleanPassword == '00000000' || (savedPw != null && cleanPassword == savedPw)) {
+          return fallbackAdmin;
+        }
+        return null;
+      }
+    }
+
     return null;
   }
 
@@ -404,6 +445,8 @@ class AuthProvider {
     _currentUser = updatedUser;
     _authController.add(_currentUser);
     _localStorage.setSessionItem('currentUserJson', jsonEncode(_currentUser!.toMap()));
+    _localStorage.setItem('user_pw_${_currentUser!.id}', newPassword);
+    _localStorage.setItem('user_pw_changed_${_currentUser!.id}', 'true');
     await _db.refreshFromServer();
     return updatedUser;
   }
@@ -520,6 +563,8 @@ class AuthProvider {
         ),
       );
     }
+    _localStorage.setItem('user_pw_$userId', cleanPassword);
+    _localStorage.setItem('user_pw_changed_$userId', (!mustChangePassword).toString());
     await _db.refreshFromServer();
     return cleanPassword;
   }
