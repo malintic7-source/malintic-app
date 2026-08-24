@@ -31,7 +31,6 @@ class LocalDataService {
   // ignore: unused_field
   Timer? _apiPollingTimer;
   bool _syncInProgress = false;
-  bool _serverSessionActive = false;
   bool _repairingMatricules = false;
 
   void _invalidateObsoleteCache() {
@@ -205,10 +204,9 @@ class LocalDataService {
     await _syncFromLocalApi();
   }
 
-  void setServerSessionActive(bool active) => _serverSessionActive = active;
+  void setServerSessionActive(bool active) {}
 
   Future<void> refreshFromServer() {
-    _serverSessionActive = true;
     return _syncFromLocalApi();
   }
 

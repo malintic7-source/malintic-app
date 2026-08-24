@@ -89,7 +89,7 @@ class AuthProvider {
     final users = _db.getUsers();
     for (final user in users) {
       final userEmail = user.email.trim().toLowerCase();
-      final userPhone = (user.phone ?? '').replaceAll(RegExp(r'[^0-9]'), '');
+      final userPhone = user.phone.replaceAll(RegExp(r'[^0-9]'), '');
       final cleanInputPhone = rawInput.replaceAll(RegExp(r'[^0-9]'), '');
       final userMatricule = (user.matricule ?? '').trim().toLowerCase();
       final emailPrefix = userEmail.split('@').first;
