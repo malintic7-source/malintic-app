@@ -2,7 +2,7 @@ services:
   app:
     build:
       context: .
-      dockerfile: Dockerfile.flutter
+      dockerfile: Dockerfile.fast
     container_name: malintic_app
     ports:
       - "80:80"
@@ -62,9 +62,9 @@ services:
     ports:
       - "4040:4040"
     environment:
-      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN:?Ajoutez NGROK_AUTHTOKEN dans le fichier .env}
+      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN:-}
       NGROK_DOMAIN: ${NGROK_DOMAIN:-boil-prude-curry.ngrok-free.dev}
-    command: http --domain=${NGROK_DOMAIN:-boil-prude-curry.ngrok-free.dev} http://malintic_app:80
+    command: http --url=${NGROK_DOMAIN:-boil-prude-curry.ngrok-free.dev} http://malintic_app:80
     networks:
       - malintic_network
 
