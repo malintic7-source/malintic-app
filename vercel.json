@@ -3,12 +3,7 @@
   "cleanUrls": true,
   "framework": null,
   "buildCommand": null,
-  "installCommand": "npm install",
-  "functions": {
-    "api/**/*.js": {
-      "runtime": "nodejs22.x"
-    }
-  },
+  "installCommand": null,
   "headers": [
     {
       "source": "/(index.html|flutter_bootstrap.js|flutter_service_worker.js|version.json|manifest.json)",
