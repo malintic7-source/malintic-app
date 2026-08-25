@@ -255,7 +255,14 @@ class _AdminFormateursState extends State<AdminFormateurs> with TickerProviderSt
         }
 
         final allUsers = snapshot.data ?? [];
-        final formateurs = allUsers.where((u) => u.role == UserRole.formateur).toList();
+        final deletedUserIds = _db.getDeletedDocs('users');
+        final deletedUserEmails = _db.getDeletedDocs('user_emails');
+        final formateurs = allUsers.where((u) {
+          final email = u.email.trim().toLowerCase();
+          return u.role == UserRole.formateur &&
+              !deletedUserIds.contains(u.id) &&
+              (email.isEmpty || !deletedUserEmails.contains(email));
+        }).toList();
 
         final filtered = formateurs.where((user) {
           final nomComplet = user.nomComplet.toLowerCase();
