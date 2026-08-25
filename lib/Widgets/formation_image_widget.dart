@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:gestion_formations/config/theme.dart';
+import 'package:gestion_formations/utils/app_logger.dart';
 
 class FormationImageWidget extends StatelessWidget {
   final String? imageUrl;
@@ -55,7 +56,8 @@ class FormationImageWidget extends StatelessWidget {
           fit: fit,
           errorBuilder: (context, error, stackTrace) => _buildFallbackPlaceholder(),
         );
-      } catch (_) {
+      } catch (e, s) {
+        logHandledError('Image base64 illisible', e, s);
         return _buildFallbackPlaceholder();
       }
     }

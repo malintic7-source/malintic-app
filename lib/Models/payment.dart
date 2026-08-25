@@ -1,3 +1,5 @@
+import 'package:gestion_formations/utils/app_logger.dart';
+
 // Removed Firestore import (migrating off Firebase)
 
 enum PaymentStatus { enAttente, effectue, echoue }
@@ -80,7 +82,13 @@ class Payment {
       if (val != null && val.runtimeType.toString().contains('Timestamp')) {
         try {
           return (val as dynamic).toDate();
-        } catch (_) {}
+        } catch (e, s) {
+          logHandledError(
+            'Date de paiement illisible, valeur de repli utilisée',
+            e,
+            s,
+          );
+        }
       }
       if (val is String) return DateTime.tryParse(val);
       return null;

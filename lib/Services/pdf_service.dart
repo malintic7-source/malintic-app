@@ -5,6 +5,7 @@ import 'package:printing/printing.dart';
 import 'package:gestion_formations/Models/payment.dart';
 import 'package:gestion_formations/Models/inscription.dart';
 import 'package:gestion_formations/Models/formation.dart';
+import 'package:gestion_formations/utils/app_logger.dart';
 
 class PdfService {
   static final PdfService _instance = PdfService._internal();
@@ -481,10 +482,17 @@ class PdfService {
     pw.ImageProvider? logoImage;
     try {
       logoImage = await imageFromAssetBundle('images/Malintic.png');
-    } catch (_) {
+    } catch (e, s) {
+      logHandledError(
+        'Logo principal introuvable, repli sur images/logo.png',
+        e,
+        s,
+      );
       try {
         logoImage = await imageFromAssetBundle('images/logo.png');
-      } catch (_) {}
+      } catch (e, s) {
+        logHandledError('Aucun logo disponible, PDF généré sans logo', e, s);
+      }
     }
 
     // Determine module list

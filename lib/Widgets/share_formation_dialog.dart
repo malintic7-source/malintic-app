@@ -9,6 +9,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:gestion_formations/Models/formation.dart';
 import 'package:gestion_formations/config/theme.dart';
+import 'package:gestion_formations/utils/app_logger.dart';
 import 'package:gestion_formations/utils/file_saver.dart';
 
 class ShareFormationDialog extends StatefulWidget {
@@ -90,8 +91,13 @@ class _ShareFormationDialogState extends State<ShareFormationDialog> {
           }
         }
       }
-    } catch (_) {
+    } catch (e, s) {
       // Fallback gracieux sur les valeurs par défaut
+      logHandledError(
+        'Détection réseau impossible, URL locale par défaut',
+        e,
+        s,
+      );
     }
 
     if (mounted) {
@@ -178,7 +184,9 @@ class _ShareFormationDialogState extends State<ShareFormationDialog> {
               errorBuilder: (ctx, err, stack) => _buildFallbackPhoto(size, radius),
             ),
           );
-        } catch (_) {}
+        } catch (e, s) {
+          logHandledError('Photo base64 illisible', e, s);
+        }
       } else if (imageUrl.startsWith('http')) {
         return ClipRRect(
           borderRadius: BorderRadius.circular(radius),

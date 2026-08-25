@@ -92,7 +92,10 @@ Future<void> _importFromApi() async {
         'ngrok-skip-browser-warning': 'true',
       },
     ).timeout(const Duration(seconds: 3));
-    if (response.statusCode != 200) return;
+    if (response.statusCode != 200) {
+      debugPrint('[Malintic] Import API inscriptions refusé: HTTP ${response.statusCode}');
+      return;
+    }
     final text = response.body;
     if (text.isEmpty) return;
 
@@ -106,7 +109,9 @@ Future<void> _importFromApi() async {
         debugPrint('[Malintic] Erreur import API inscription item: $e');
       }
     }
-  } catch (_) {}
+  } catch (e) {
+    debugPrint('[Malintic] API inscriptions non joignable: $e');
+  }
 }
 
 class MyApp extends StatelessWidget {

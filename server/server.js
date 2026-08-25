@@ -67,7 +67,9 @@ function loadSessions() {
         }
       }
     }
-  } catch (_) {}
+  } catch (error) {
+    console.error('[Malintic] Sessions persistées illisibles, redémarrage sans session :', error);
+  }
 }
 
 function saveSessions() {
@@ -75,7 +77,9 @@ function saveSessions() {
     fs.mkdirSync(dataDir, { recursive: true });
     const obj = Object.fromEntries(sessions.entries());
     fs.writeFileSync(sessionsFile, JSON.stringify(obj, null, 2));
-  } catch (_) {}
+  } catch (error) {
+    console.error('[Malintic] Sessions non persistées sur disque :', error);
+  }
 }
 
 loadSessions();
@@ -292,7 +296,9 @@ function readState() {
         _stateCache = seedData;
         _stateCacheDirty = false;
         return seedData;
-      } catch (_) { }
+      } catch (error) {
+        console.error('[Malintic] Semence initial_database.json inutilisable, base vide créée :', error);
+      }
     }
     const state = initialState();
     fs.writeFileSync(dataFile, JSON.stringify(state, null, 2));
@@ -317,7 +323,9 @@ function readState() {
         _stateCache = restored;
         _stateCacheDirty = false;
         return restored;
-      } catch (_) { }
+      } catch (backupError) {
+        console.error('[Malintic] Sauvegarde de secours illisible :', backupError);
+      }
     }
     throw new Error(`Base locale illisible : ${error.message}`);
   }

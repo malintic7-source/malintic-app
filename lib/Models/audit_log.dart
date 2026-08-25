@@ -1,3 +1,5 @@
+import 'package:gestion_formations/utils/app_logger.dart';
+
 /// Niveaux de sévérité pour le journal d'audit.
 enum AuditSeverity { info, warning, critical }
 
@@ -46,7 +48,13 @@ class AuditLog {
       if (value != null && value.runtimeType.toString().contains('Timestamp')) {
         try {
           return (value as dynamic).toDate() as DateTime;
-        } catch (_) {}
+        } catch (e, s) {
+          logHandledError(
+            'Horodatage du journal illisible, valeur de repli utilisée',
+            e,
+            s,
+          );
+        }
       }
       if (value is String) return DateTime.tryParse(value) ?? DateTime.now();
       return DateTime.now();

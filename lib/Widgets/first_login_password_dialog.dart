@@ -7,6 +7,7 @@ import 'package:gestion_formations/Pages/Login/welcome_page.dart';
 import 'package:gestion_formations/Services/auth_provider.dart';
 import 'package:gestion_formations/Services/db_services.dart';
 import 'package:gestion_formations/config/theme.dart';
+import 'package:gestion_formations/utils/app_logger.dart';
 
 class FirstLoginPasswordDialog extends StatefulWidget {
   final User user;
@@ -78,7 +79,9 @@ class _FirstLoginPasswordDialogState extends State<FirstLoginPasswordDialog> {
               errorBuilder: (ctx, err, stack) => _buildFallbackIcon(size),
             ),
           );
-        } catch (_) {}
+        } catch (e, s) {
+          logHandledError('Logo base64 illisible', e, s);
+        }
       } else if (imageUrl.startsWith('http')) {
         return ClipRRect(
           borderRadius: BorderRadius.circular(6),

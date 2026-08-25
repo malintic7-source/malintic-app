@@ -7,6 +7,7 @@ import 'package:gestion_formations/Models/inscription.dart';
 import 'package:gestion_formations/Models/formation.dart';
 import 'package:gestion_formations/Services/db_services.dart';
 import 'package:gestion_formations/Services/pdf_service.dart';
+import 'package:gestion_formations/utils/app_logger.dart';
 
 class AdminAttestationsCartes extends StatefulWidget {
   final User? user;
@@ -448,7 +449,13 @@ class _AdminAttestationsCartesState extends State<AdminAttestationsCartes> with 
           action: 'Délivrance attestation',
           description: 'Attestation officielle délivrée à ${st['prenom']} ${st['nom']} (${st['formationTitre'] ?? "Formation"})',
         );
-      } catch (_) {}
+      } catch (e, s) {
+        logHandledError(
+          'Journalisation de la délivrance d’attestation impossible',
+          e,
+          s,
+        );
+      }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
