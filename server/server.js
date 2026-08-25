@@ -513,7 +513,7 @@ app.post('/api/auth/change-password', (req, res) => {
 
   // Si un ancien mot de passe est fourni, on le vérifie
   if (currentPassword) {
-    const matches = verifyPassword(currentPassword, user.passwordHash) || legacyPasswordMatches(currentPassword, user.password) || (user.doitChangerMotDePasse && currentPassword === '00000000');
+    const matches = verifyPassword(currentPassword, user.passwordHash) || legacyPasswordMatches(currentPassword, user.password);
     if (!matches) {
       return res.status(401).json({ error: 'Ancien mot de passe incorrect.' });
     }
@@ -556,8 +556,8 @@ app.post('/api/admin/users/:id/password', (req, res) => {
   }
 
   const { newPassword, mustChangePassword = true } = req.body || {};
-  const password = String(newPassword || '00000000').trim();
-  if (password.length < 6) {
+  const password = String(newPassword || '').trim();
+  if (!password || password.length < 6) {
     return res.status(400).json({ error: 'Le mot de passe doit contenir au moins 6 caractères.' });
   }
 
