@@ -8,6 +8,7 @@ import 'package:gestion_formations/Pages/home_screen.dart';
 import 'package:gestion_formations/Services/auth_provider.dart';
 import 'package:gestion_formations/Services/db_services.dart';
 import 'package:gestion_formations/Services/local_storage.dart';
+import 'package:gestion_formations/Widgets/first_login_password_dialog.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
@@ -176,6 +177,10 @@ class _AuthWrapperState extends State<AuthWrapper> {
       builder: (context, snapshot) {
         final activeUser = snapshot.data ?? AuthProvider().currentUser;
         if (activeUser != null) {
+          // Déclenche le dialog de première connexion si nécessaire
+          if (activeUser.doitChangerMotDePasse) {
+            return _FirstLoginGate(user: activeUser);
+          }
           return HomeScreen(user: activeUser);
         }
 
@@ -218,5 +223,37 @@ class _AuthWrapperState extends State<AuthWrapper> {
         return const WelcomePage();
       },
     );
+  }
+}
+
+/// Écran intermédiaire qui force le changement de mot de passe lors de la
+/// première connexion ou après un reset admin, avant l'accès au HomeScreen.
+class _FirstLoginGate extends StatefulWidget {
+  final User user;
+  const _FirstLoginGate({required this.user});
+
+  @override
+  State<_FirstLoginGate> createState() => _FirstLoginGateState();
+}
+
+class _FirstLoginGateState extends State<_FirstLoginGate> {
+  bool _dialogShown = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_dialogShown) {
+      _dialogShown = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        FirstLoginPasswordDialog.showIfNeeded(context, widget.user);
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Affiche le HomeScreen en fond (le dialog bloque toute interaction)
+    return HomeScreen(user: widget.user);
   }
 }
