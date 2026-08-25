@@ -8,6 +8,7 @@ import 'package:gestion_formations/Services/db_services.dart';
 import 'package:gestion_formations/Services/pdf_service.dart';
 import 'package:gestion_formations/config/theme.dart';
 import 'package:gestion_formations/Widgets/share_formation_dialog.dart';
+import 'package:gestion_formations/Pages/Student/discover_formations.dart';
 
 class StudentFormations extends StatefulWidget {
   final User user;
@@ -74,8 +75,11 @@ class _StudentFormationsState extends State<StudentFormations> with TickerProvid
   Widget _buildHeader(bool isMobile) {
     return FadeTransition(
       opacity: _fadeController,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Wrap(
+        alignment: WrapAlignment.spaceBetween,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: 12,
+        runSpacing: 12,
         children: [
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -88,7 +92,7 @@ class _StudentFormationsState extends State<StudentFormations> with TickerProvid
                   color: Colors.black87,
                 ),
               ),
-              SizedBox(height: 4),
+              const SizedBox(height: 4),
               Text(
                 'Gérez vos formations et votre progression',
                 style: GoogleFonts.poppins(
@@ -98,6 +102,34 @@ class _StudentFormationsState extends State<StudentFormations> with TickerProvid
                 ),
               ),
             ],
+          ),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => DiscoverFormationsPage(user: widget.user),
+                ),
+              );
+            },
+            icon: const Icon(Icons.explore_rounded, size: 18, color: Colors.white),
+            label: Text(
+              'Découvrir d\'autres formations',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+                color: Colors.white,
+              ),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primary,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
           ),
         ],
       ),
