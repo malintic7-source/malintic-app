@@ -612,9 +612,9 @@ class _MainLayoutState extends State<MainLayout> with TickerProviderStateMixin {
 
   Widget _buildSidebar(BuildContext context, {required bool isTablet}) {
     final width = MediaQuery.of(context).size.width;
-    final sidebarWidth = width < 900 ? 72.0 : width < 1100 ? 110.0 : 220.0;
-    final showLabel = sidebarWidth >= 110;
-    final showUserInfo = sidebarWidth >= 160;
+    final sidebarWidth = width < 900 ? 72.0 : width < 1150 ? 80.0 : 230.0;
+    final showLabel = sidebarWidth >= 180;
+    final showUserInfo = sidebarWidth >= 180;
 
     return Container(
       width: sidebarWidth,
@@ -623,11 +623,8 @@ class _MainLayoutState extends State<MainLayout> with TickerProviderStateMixin {
       ),
       child: Column(
         children: [
-          // Adjusted header height and padding to avoid overflow while keeping
-          // the logo visually higher than before.
           Container(
-            // Allow the sidebar header to compress gracefully in narrow views.
-            constraints: BoxConstraints(maxHeight: showUserInfo ? 160 : 100),
+            constraints: BoxConstraints(maxHeight: showUserInfo ? 160 : 90),
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -635,16 +632,16 @@ class _MainLayoutState extends State<MainLayout> with TickerProviderStateMixin {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Container(
-                  width: showLabel ? 110 : 70,
-                  height: showLabel ? 110 : 70,
-                  padding: const EdgeInsets.all(6),
+                  width: showLabel ? 100 : 54,
+                  height: showLabel ? 100 : 54,
+                  padding: const EdgeInsets.all(5),
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(showLabel ? 16 : 12),
                     boxShadow: AppTheme.softShadow,
                   ),
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(showLabel ? 10 : 8),
                     child: Image.asset(
                       'images/logo.png',
                       fit: BoxFit.contain,
