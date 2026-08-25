@@ -128,6 +128,21 @@ class _AdminAuditLogsState extends State<AdminAuditLogs> with TickerProviderStat
             ),
             if (!isMobile) ...[
               const SizedBox(width: 16),
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  side: const BorderSide(color: Colors.white70),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                icon: const Icon(Icons.delete_sweep_rounded, size: 18),
+                label: Text(
+                  'Vider les logs',
+                  style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w700),
+                ),
+                onPressed: _confirmClearLogs,
+              ),
+              const SizedBox(width: 10),
               ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.white,
@@ -680,6 +695,49 @@ class _AdminAuditLogsState extends State<AdminAuditLogs> with TickerProviderStat
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Erreur export CSV : $e'), backgroundColor: AppTheme.error),
       );
+    }
+  }
+
+  Future<void> _confirmClearLogs() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            const Icon(Icons.delete_sweep_rounded, color: AppTheme.error, size: 24),
+            const SizedBox(width: 10),
+            Text('Vider le journal d\'audit', style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16)),
+          ],
+        ),
+        content: Text(
+          'Voulez-vous vraiment effacer tous les logs système pour libérer de l\'espace ? Cette action est irréversible.',
+          style: GoogleFonts.poppins(fontSize: 13),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Annuler', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.error),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text('Vider les logs', style: GoogleFonts.poppins(fontWeight: FontWeight.w700, color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await _db.clearAuditLogs();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('🗑️ Journal d\'audit vidé avec succès !'),
+          backgroundColor: AppTheme.success,
+        ),
+      );
+      setState(() {});
     }
   }
 }

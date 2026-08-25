@@ -87,8 +87,11 @@ Future<void> _importFromApi() async {
 
     final response = await http.get(
       Uri.parse('$origin/api/inscriptions'),
-      headers: {'Accept': 'application/json'},
-    ).timeout(const Duration(seconds: 2));
+      headers: {
+        'Accept': 'application/json',
+        'ngrok-skip-browser-warning': 'true',
+      },
+    ).timeout(const Duration(seconds: 3));
     if (response.statusCode != 200) {
       debugPrint('[Malintic] Import API inscriptions refusé: HTTP ${response.statusCode}');
       return;

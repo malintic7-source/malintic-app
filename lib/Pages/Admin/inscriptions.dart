@@ -1004,7 +1004,19 @@ class _AdminInscriptionsState extends State<AdminInscriptions> with TickerProvid
   }
 
   Future<void> _updateStatus(String inscriptionId, String newStatus, [BuildContext? dialogCtx]) async {
+    final inscription = _db.getInscriptionById(inscriptionId);
     if (newStatus == 'valide') {
+      if (inscription != null && inscription.status == InscriptionStatus.acceptee) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('⚠️ Cette inscription est déjà validée et enregistrée parmi les apprenants.'),
+              backgroundColor: AppTheme.warning,
+            ),
+          );
+        }
+        return;
+      }
       await _showValidationDialog(inscriptionId, dialogCtx);
     } else {
       try {

@@ -34,7 +34,7 @@ class ShareFormationDialog extends StatefulWidget {
 class _ShareFormationDialogState extends State<ShareFormationDialog> {
   final GlobalKey _qrKey = GlobalKey();
   int _selectedMode = 0; // 0 = Public (Internet / WAN), 1 = Local (Wi-Fi / LAN)
-  String _publicBase = 'https://appmntic.vercel.app';
+  String _publicBase = 'https://boil-prude-curry.ngrok-free.dev';
   String _localBase = 'http://192.168.1.10:8080';
   final TextEditingController _customIpController = TextEditingController();
 
@@ -58,7 +58,7 @@ class _ShareFormationDialogState extends State<ShareFormationDialog> {
       final currentPort = Uri.base.port;
 
       if (currentOrigin.startsWith('http')) {
-        if (currentHost.contains('vercel.app') || currentHost.contains('ngrok') || currentHost.contains('cloudflare') || (!currentHost.contains('localhost') && !currentHost.startsWith('127.') && !currentHost.startsWith('192.168.') && !currentHost.startsWith('10.') && !currentHost.endsWith('.local'))) {
+        if (currentHost.contains('ngrok') || currentHost.contains('cloudflare') || (!currentHost.contains('localhost') && !currentHost.startsWith('127.') && !currentHost.startsWith('192.168.') && !currentHost.startsWith('10.') && !currentHost.endsWith('.local') && !currentHost.contains('vercel.app'))) {
           _publicBase = currentOrigin;
         } else {
           _localBase = currentOrigin;
@@ -76,6 +76,10 @@ class _ShareFormationDialogState extends State<ShareFormationDialog> {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final apiPublicUrl = data['publicUrl'] as String?;
+        if (apiPublicUrl != null && apiPublicUrl.trim().isNotEmpty) {
+          _publicBase = apiPublicUrl.trim();
+        }
         final detectedIps = data['detectedIps'] as List<dynamic>?;
         if (detectedIps != null && detectedIps.isNotEmpty) {
           final realIps = detectedIps.map((e) => e.toString()).where((ip) => !ip.startsWith('172.') && !ip.startsWith('127.')).toList();
@@ -163,6 +167,54 @@ class _ShareFormationDialogState extends State<ShareFormationDialog> {
     }
   }
 
+  Widget _buildFormationPhoto({double size = 46, double radius = 12}) {
+    final imageUrl = widget.formation.imageUrl?.trim() ?? '';
+    if (imageUrl.isNotEmpty) {
+      if (imageUrl.startsWith('data:image')) {
+        try {
+          final base64Part = imageUrl.split(',').last;
+          final bytes = base64Decode(base64Part);
+          return ClipRRect(
+            borderRadius: BorderRadius.circular(radius),
+            child: Image.memory(
+              bytes,
+              width: size,
+              height: size,
+              fit: BoxFit.cover,
+              errorBuilder: (ctx, err, stack) => _buildFallbackPhoto(size, radius),
+            ),
+          );
+        } catch (e, s) {
+          logHandledError('Photo base64 illisible', e, s);
+        }
+      } else if (imageUrl.startsWith('http')) {
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(radius),
+          child: Image.network(
+            imageUrl,
+            width: size,
+            height: size,
+            fit: BoxFit.cover,
+            errorBuilder: (ctx, err, stack) => _buildFallbackPhoto(size, radius),
+          ),
+        );
+      }
+    }
+    return _buildFallbackPhoto(size, radius);
+  }
+
+  Widget _buildFallbackPhoto(double size, double radius) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: AppTheme.primary.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(radius),
+      ),
+      child: Icon(Icons.school_rounded, color: AppTheme.primary, size: size * 0.52),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isMobile = MediaQuery.of(context).size.width < 600;
@@ -173,14 +225,7 @@ class _ShareFormationDialogState extends State<ShareFormationDialog> {
       titlePadding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
       title: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: AppTheme.primary.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Icon(Icons.qr_code_2_rounded, color: AppTheme.primary, size: 24),
-          ),
+          _buildFormationPhoto(size: 44, radius: 10),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -219,7 +264,69 @@ class _ShareFormationDialogState extends State<ShareFormationDialog> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const SizedBox(height: 12),
+              // Formation Snapshot Card with Photo
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: Row(
+                  children: [
+                    _buildFormationPhoto(size: 52, radius: 10),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.formation.titre,
+                            style: GoogleFonts.poppins(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.black87,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 2),
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.primary.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  '${widget.formation.prix} FCFA',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppTheme.primary,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                '${widget.formation.dureeSemaines} sem.',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.black54,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
               // Segmented Control (Public vs Local)
               Container(
                 padding: const EdgeInsets.all(4),
@@ -470,6 +577,50 @@ class _ShareFormationDialogState extends State<ShareFormationDialog> {
                       _localUrl,
                       style: GoogleFonts.poppins(fontSize: 11, color: AppTheme.primary, fontWeight: FontWeight.w500),
                     ),
+                    if (_selectedMode == 1) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: SizedBox(
+                              height: 32,
+                              child: TextField(
+                                controller: _customIpController,
+                                style: GoogleFonts.poppins(fontSize: 11),
+                                decoration: InputDecoration(
+                                  hintText: 'Ex: 192.168.1.10 ou 10.0.0.5',
+                                  labelText: 'IP / Port du réseau local',
+                                  labelStyle: GoogleFonts.poppins(fontSize: 10),
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                  isDense: true,
+                                ),
+                                onChanged: (val) {
+                                  final clean = val.trim();
+                                  if (clean.isNotEmpty) {
+                                    setState(() {
+                                      if (clean.startsWith('http://') || clean.startsWith('https://')) {
+                                        _localBase = clean;
+                                      } else if (clean.contains(':')) {
+                                        _localBase = 'http://$clean';
+                                      } else {
+                                        _localBase = 'http://$clean:8080';
+                                      }
+                                    });
+                                  }
+                                },
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          IconButton(
+                            icon: const Icon(Icons.refresh_rounded, size: 18, color: AppTheme.primary),
+                            tooltip: 'Redétecter le réseau',
+                            onPressed: _initUrls,
+                          ),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ),

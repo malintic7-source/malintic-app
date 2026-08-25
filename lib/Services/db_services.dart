@@ -10,6 +10,7 @@ import 'package:gestion_formations/Models/notification.dart';
 import 'package:gestion_formations/Models/audit_log.dart';
 import 'package:gestion_formations/Models/seance.dart';
 import 'package:gestion_formations/Services/local_storage.dart';
+import 'package:gestion_formations/Services/supabase_config.dart';
 import 'package:gestion_formations/utils/app_logger.dart';
 
 class LocalDataService {
@@ -33,6 +34,7 @@ class LocalDataService {
   Timer? _apiPollingTimer;
   bool _syncInProgress = false;
   bool _repairingMatricules = false;
+  String? _lastStateEtag;
 
   void _invalidateObsoleteCache() {
     // Version 2 stops browser-to-server merging. Discard the old persisted
@@ -202,21 +204,36 @@ class LocalDataService {
     try {
       await _flushPendingSyncQueue();
 
+      if (!_hasLocalApi && SupabaseConfig.isEnabled) {
+        await _syncFromSupabase();
+        return;
+      }
+
+      final headers = <String, String>{
+        'ngrok-skip-browser-warning': 'true',
+        'Accept': 'application/json',
+      };
+      if (_lastStateEtag != null && _lastStateEtag!.isNotEmpty) {
+        headers['If-None-Match'] = _lastStateEtag!;
+      }
+
       final response = await http
-          .get(
-            _apiUri('state'),
-            headers: const {
-              'ngrok-skip-browser-warning': 'true',
-              'Accept': 'application/json',
-            },
-          )
+          .get(_apiUri('state'), headers: headers)
           .timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 304) {
+        // État inchangé côté serveur, aucune désérialisation nécessaire (optimisation latence)
+        return;
+      }
       if (response.statusCode != 200) {
         logHandledError(
           'Sync API refusée',
           'GET /api/state → HTTP ${response.statusCode}',
         );
         return;
+      }
+      if (response.headers['etag'] != null) {
+        _lastStateEtag = response.headers['etag'];
       }
       final state = jsonDecode(response.body) as Map<String, dynamic>;
       final users = (state['users'] as List<dynamic>? ?? [])
@@ -413,6 +430,79 @@ class LocalDataService {
     }
   }
 
+  Future<void> _syncFromSupabase() async {
+    try {
+      final headers = {
+        'apikey': SupabaseConfig.anonKey,
+        'Authorization': 'Bearer ${SupabaseConfig.anonKey}',
+        'Accept': 'application/json',
+      };
+
+      final results = await Future.wait([
+        http.get(Uri.parse('${SupabaseConfig.url}/rest/v1/formations?select=*'), headers: headers),
+        http.get(Uri.parse('${SupabaseConfig.url}/rest/v1/users?select=*'), headers: headers),
+        http.get(Uri.parse('${SupabaseConfig.url}/rest/v1/inscriptions?select=*'), headers: headers),
+        http.get(Uri.parse('${SupabaseConfig.url}/rest/v1/payments?select=*'), headers: headers),
+        http.get(Uri.parse('${SupabaseConfig.url}/rest/v1/seances?select=*'), headers: headers),
+        http.get(Uri.parse('${SupabaseConfig.url}/rest/v1/audit_logs?select=*'), headers: headers),
+      ]).timeout(const Duration(seconds: 15));
+
+      if (results[0].statusCode == 200) {
+        final list = jsonDecode(results[0].body) as List<dynamic>;
+        final formations = list.whereType<Map>().map((m) => Formation.fromMap(Map<String, dynamic>.from(m), m['id']?.toString() ?? '')).toList();
+        if (formations.isNotEmpty) {
+          _formations..clear()..addAll(formations);
+          _saveFormationsToStorage();
+          _formationsController.add(List.unmodifiable(_formations));
+        }
+      }
+
+      if (results[1].statusCode == 200) {
+        final list = jsonDecode(results[1].body) as List<dynamic>;
+        final users = list.whereType<Map>().map((m) => User.fromMap(Map<String, dynamic>.from(m), m['id']?.toString() ?? '')).toList();
+        if (users.isNotEmpty) {
+          _users..clear()..addAll(users);
+          _saveUsersToStorage();
+          _usersController.add(List.unmodifiable(_users));
+        }
+      }
+
+      if (results[2].statusCode == 200) {
+        final list = jsonDecode(results[2].body) as List<dynamic>;
+        final inscriptions = list.whereType<Map>().map((m) => Inscription.fromMap(Map<String, dynamic>.from(m), m['id']?.toString() ?? '')).toList();
+        _inscriptions..clear()..addAll(inscriptions);
+        _saveInscriptionsToStorage();
+        _inscriptionsController.add(List.unmodifiable(_inscriptions));
+      }
+
+      if (results[3].statusCode == 200) {
+        final list = jsonDecode(results[3].body) as List<dynamic>;
+        final payments = list.whereType<Map>().map((m) => Payment.fromMap(Map<String, dynamic>.from(m), m['id']?.toString() ?? '')).toList();
+        _payments..clear()..addAll(payments);
+        _savePaymentsToStorage();
+        _paymentsController.add(List.unmodifiable(_payments));
+      }
+
+      if (results[4].statusCode == 200) {
+        final list = jsonDecode(results[4].body) as List<dynamic>;
+        final seances = list.whereType<Map>().map((m) => Seance.fromMap(Map<String, dynamic>.from(m), m['id']?.toString() ?? '')).toList();
+        _seances..clear()..addAll(seances);
+        _saveSeancesToStorage();
+        _seancesController.add(List.unmodifiable(_seances));
+      }
+
+      if (results[5].statusCode == 200) {
+        final list = jsonDecode(results[5].body) as List<dynamic>;
+        final logs = list.whereType<Map>().map((m) => AuditLog.fromMap(Map<String, dynamic>.from(m))).toList();
+        _auditLogs..clear()..addAll(logs);
+        _saveAuditLogsToStorage();
+        _auditLogsController.add(List.unmodifiable(_auditLogs));
+      }
+    } catch (e) {
+      debugPrint('[Malintic] Erreur sync Supabase: $e');
+    }
+  }
+
   Future<void> mergeLocalDataWithServer() async {
     await _syncFromLocalApi();
   }
@@ -428,60 +518,107 @@ class LocalDataService {
     String docId,
     Map<String, dynamic> data,
   ) async {
-    if (!_hasLocalApi) return;
-    try {
-      final response = await http
-          .put(
-            _apiUri('$collection/${Uri.encodeComponent(docId)}'),
-            headers: const {
-              'Content-Type': 'application/json',
-              'ngrok-skip-browser-warning': 'true',
-            },
-            body: jsonEncode(data),
-          )
-          .timeout(const Duration(seconds: 10));
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        return;
+    // 1. Sync avec l'API locale / Docker si disponible
+    bool localSuccess = false;
+    if (_hasLocalApi) {
+      try {
+        final response = await http
+            .put(
+              _apiUri('$collection/${Uri.encodeComponent(docId)}'),
+              headers: const {
+                'Content-Type': 'application/json',
+                'ngrok-skip-browser-warning': 'true',
+              },
+              body: jsonEncode(data),
+            )
+            .timeout(const Duration(seconds: 10));
+        if (response.statusCode >= 200 && response.statusCode < 300) {
+          localSuccess = true;
+        } else {
+          logHandledError(
+            'Écriture serveur refusée, mise en file',
+            'PUT /api/$collection/$docId → HTTP ${response.statusCode} ${response.body}',
+          );
+        }
+      } catch (e, s) {
+        logHandledError(
+          'Écriture serveur injoignable, mise en file (PUT $collection/$docId)',
+          e,
+          s,
+        );
       }
-      logHandledError(
-        'Écriture serveur refusée, mise en file',
-        'PUT /api/$collection/$docId → HTTP ${response.statusCode} ${response.body}',
-      );
-    } catch (e, s) {
-      logHandledError(
-        'Écriture serveur injoignable, mise en file (PUT $collection/$docId)',
-        e,
-        s,
-      );
+      if (!localSuccess) {
+        _enqueuePendingSync(collection, docId, 'PUT', data);
+      }
     }
-    _enqueuePendingSync(collection, docId, 'PUT', data);
+
+    // 2. Sync direct avec Supabase Cloud PostgreSQL
+    if (SupabaseConfig.isEnabled) {
+      try {
+        await http
+            .post(
+              Uri.parse('${SupabaseConfig.url}/rest/v1/$collection'),
+              headers: const {
+                'Content-Type': 'application/json',
+                'apikey': SupabaseConfig.anonKey,
+                'Authorization': 'Bearer ${SupabaseConfig.anonKey}',
+                'Prefer': 'resolution=merge-duplicates',
+              },
+              body: jsonEncode(data),
+            )
+            .timeout(const Duration(seconds: 10));
+      } catch (e, s) {
+        logHandledError('Écriture Supabase impossible ($collection/$docId)', e, s);
+      }
+    }
   }
 
   Future<void> _deleteRemoteDoc(String collection, String docId) async {
     _recordDeletedDoc(collection, docId);
-    if (!_hasLocalApi) return;
-    try {
-      final response = await http
-          .delete(
-            _apiUri('$collection/${Uri.encodeComponent(docId)}'),
-            headers: const {'ngrok-skip-browser-warning': 'true'},
-          )
-          .timeout(const Duration(seconds: 10));
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        return;
+    bool localSuccess = false;
+    if (_hasLocalApi) {
+      try {
+        final response = await http
+            .delete(
+              _apiUri('$collection/${Uri.encodeComponent(docId)}'),
+              headers: const {'ngrok-skip-browser-warning': 'true'},
+            )
+            .timeout(const Duration(seconds: 10));
+        if (response.statusCode >= 200 && response.statusCode < 300) {
+          localSuccess = true;
+        } else {
+          logHandledError(
+            'Suppression serveur refusée, mise en file',
+            'DELETE /api/$collection/$docId → HTTP ${response.statusCode} ${response.body}',
+          );
+        }
+      } catch (e, s) {
+        logHandledError(
+          'Suppression serveur injoignable, mise en file ($collection/$docId)',
+          e,
+          s,
+        );
       }
-      logHandledError(
-        'Suppression serveur refusée, mise en file',
-        'DELETE /api/$collection/$docId → HTTP ${response.statusCode} ${response.body}',
-      );
-    } catch (e, s) {
-      logHandledError(
-        'Suppression serveur injoignable, mise en file ($collection/$docId)',
-        e,
-        s,
-      );
+      if (!localSuccess) {
+        _enqueuePendingSync(collection, docId, 'DELETE', null);
+      }
     }
-    _enqueuePendingSync(collection, docId, 'DELETE', null);
+
+    if (SupabaseConfig.isEnabled) {
+      try {
+        await http
+            .delete(
+              Uri.parse('${SupabaseConfig.url}/rest/v1/$collection?id=eq.${Uri.encodeComponent(docId)}'),
+              headers: const {
+                'apikey': SupabaseConfig.anonKey,
+                'Authorization': 'Bearer ${SupabaseConfig.anonKey}',
+              },
+            )
+            .timeout(const Duration(seconds: 10));
+      } catch (e, s) {
+        logHandledError('Suppression Supabase impossible ($collection/$docId)', e, s);
+      }
+    }
   }
 
   Map<String, dynamic> exportFullBackup() {
@@ -2235,6 +2372,9 @@ class LocalDataService {
     }
 
     final inscription = _inscriptions[inscriptionIndex];
+    if (inscription.status == InscriptionStatus.acceptee) {
+      throw StateError('Cette inscription a déjà été validée.');
+    }
     // La liste partagée peut être actualisée pendant que la boîte de dialogue
     // de validation est ouverte. On privilégie donc son instantané de
     // formation et, pour un ancien lien public, on recrée le strict minimum.
@@ -3216,5 +3356,32 @@ class LocalDataService {
     _saveSeancesToStorage();
     _seancesController.add(List.unmodifiable(_seances));
     await _deleteRemoteDoc('seances', id);
+  }
+
+  void _saveAuditLogsToStorage() {
+    try {
+      _localStorage.setItem(
+        'app_saved_audit_logs',
+        jsonEncode(_auditLogs.map((a) => a.toMap()).toList()),
+      );
+    } catch (e, s) {
+      logHandledError('Journal d’audit non sauvegardé localement', e, s);
+    }
+  }
+
+  Future<void> clearAuditLogs() async {
+    _auditLogs.clear();
+    _auditLogsController.add(const []);
+    _localStorage.removeItem('app_saved_audit_logs');
+    if (_hasLocalApi) {
+      try {
+        await http.delete(
+          _apiUri('audit_logs/clear'),
+          headers: const {'ngrok-skip-browser-warning': 'true'},
+        ).timeout(const Duration(seconds: 5));
+      } catch (e, s) {
+        logHandledError('Purge serveur du journal d’audit impossible', e, s);
+      }
+    }
   }
 }
