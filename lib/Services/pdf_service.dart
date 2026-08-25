@@ -497,14 +497,16 @@ class PdfService {
     // Determine dates & French period string
     final now = DateTime.now();
     final dateFait = '${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year}';
-    
+
     final isSfp = formation.estStage ||
         formation.titre.toUpperCase().contains('SFP') ||
+        formation.titre.toUpperCase().contains('STAGE') ||
         (formation.modules.length > 5);
 
     final titlePart1 = isSfp ? 'ATTESTATION DE STAGE DE' : 'ATTESTATION DE';
     final titlePart2 = isSfp ? 'FORMATION PROFESSIONNELLE (SFP)' : 'FORMATION PROFESSIONNELLE';
 
+    // Prefer formation dates for the period string
     final periodString = _formatFrenchPeriod(formation.dateDebut, formation.dateFin, now.year);
 
     final studentFullName = '${(inscription.prenom ?? '')} ${(inscription.nom ?? '')}'.trim().isNotEmpty
@@ -841,16 +843,16 @@ class PdfService {
                       crossAxisAlignment: pw.CrossAxisAlignment.center,
                       children: [
                         pw.Text(
-                          'Fait à Bamako, le $dateFait',
+                          'Fait à Bamako,  le $dateFait',
                           style: pw.TextStyle(
-                            font: fontTimes,
+                            font: fontTimesBold,
                             fontSize: 12,
                             color: PdfColors.black,
                           ),
                         ),
                         pw.SizedBox(height: 2),
                         pw.Container(
-                          width: 230,
+                          width: 250,
                           height: 1.5,
                           color: PdfColors.black,
                         ),

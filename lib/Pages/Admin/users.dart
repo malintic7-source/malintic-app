@@ -582,7 +582,12 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
 
   List<User> _filterUsers(List<User> users) {
     final query = searchController.text.trim().toLowerCase();
+    final deletedUserIds = LocalDataService().getDeletedDocs('users');
+    final deletedUserEmails = LocalDataService().getDeletedDocs('user_emails');
     return users.where((user) {
+      final email = user.email.trim().toLowerCase();
+      if (deletedUserIds.contains(user.id)) return false;
+      if (email.isNotEmpty && deletedUserEmails.contains(email)) return false;
       final matchesSearch = query.isEmpty ||
           user.nom.toLowerCase().contains(query) ||
           user.prenom.toLowerCase().contains(query) ||
