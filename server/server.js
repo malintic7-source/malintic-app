@@ -623,6 +623,7 @@ app.post('/api/auth/change-password', requireSession, (req, res) => {
 });
 
 app.post('/api/admin/users/:id/password', requireAdministrator, (req, res) => {
+  const state = readState();
   const { newPassword, mustChangePassword = true } = req.body || {};
   const password = String(newPassword || '').trim();
   if (!password) {
@@ -631,7 +632,7 @@ app.post('/api/admin/users/:id/password', requireAdministrator, (req, res) => {
   if (password.length < 6) {
     return res.status(400).json({ error: 'Le mot de passe doit contenir au moins 6 caractères.' });
   }
-  const state = readState();
+
   const user = state.users.find((item) => String(item.id) === String(req.params.id));
   if (!user) return res.status(404).json({ error: 'Utilisateur introuvable.' });
 

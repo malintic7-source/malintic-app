@@ -502,8 +502,20 @@ class _AdminInscriptionsState extends State<AdminInscriptions> with TickerProvid
   }
 
   Widget _buildFilterButtons(List<Inscription> allInscriptions) {
-    final pendingCount = allInscriptions.where((i) => i.status == InscriptionStatus.enAttente).length;
-    final rejectedCount = allInscriptions.where((i) => i.status == InscriptionStatus.rejetee).length;
+    final deletedInscIds = _db.getDeletedDocs('inscriptions');
+    final deletedUserIds = _db.getDeletedDocs('users');
+    final deletedUserEmails = _db.getDeletedDocs('user_emails');
+
+    final validInscriptions = allInscriptions.where((i) {
+      final email = i.email?.trim().toLowerCase() ?? '';
+      return !deletedInscIds.contains(i.id) &&
+          !deletedUserIds.contains(i.etudiantId) &&
+          !deletedUserIds.contains(i.id) &&
+          (email.isEmpty || !deletedUserEmails.contains(email));
+    }).toList();
+
+    final pendingCount = validInscriptions.where((i) => i.status == InscriptionStatus.enAttente).length;
+    final rejectedCount = validInscriptions.where((i) => i.status == InscriptionStatus.rejetee).length;
 
     return SlideInUp(
       duration: const Duration(milliseconds: 600),
@@ -580,10 +592,18 @@ class _AdminInscriptionsState extends State<AdminInscriptions> with TickerProvid
   }
 
   Widget _buildInscriptionsBody(List<Inscription> allInscriptions) {
-    // A validated application has completed its intake phase. The learner is
-    // managed from Étudiants / Stagiaires via the user record created on
-    // validation, so it must no longer appear in this intake queue.
+    final deletedInscIds = _db.getDeletedDocs('inscriptions');
+    final deletedUserIds = _db.getDeletedDocs('users');
+    final deletedUserEmails = _db.getDeletedDocs('user_emails');
+
     final filteredInscriptions = allInscriptions.where((i) {
+      final email = i.email?.trim().toLowerCase() ?? '';
+      if (deletedInscIds.contains(i.id) ||
+          deletedUserIds.contains(i.etudiantId) ||
+          deletedUserIds.contains(i.id) ||
+          (email.isNotEmpty && deletedUserEmails.contains(email))) {
+        return false;
+      }
       if (filterStatus == 'rejete' || filterStatus == 'rejetee') {
         return i.status == InscriptionStatus.rejetee;
       }

@@ -89,7 +89,14 @@ class AuthProvider {
   }
 
   Future<User?> loginWithEmail(String email, String password) async {
-    final rawInput = email.trim().toLowerCase();
+    final rawInput = email
+        .replaceAll('`', '')
+        .replaceAll("'", '')
+        .replaceAll('"', '')
+        .replaceAll(RegExp(r'[\u200B-\u200D\uFEFF]'), '')
+        .replaceAll(RegExp(r'\s+'), '')
+        .trim()
+        .toLowerCase();
     final cleanPassword = password.trim();
 
     late final http.Response response;
@@ -368,7 +375,10 @@ class AuthProvider {
     try {
       response = await http.post(
         Uri.base.resolve('/api/admin/users/$userId/password'),
-        headers: const {'Content-Type': 'application/json'},
+        headers: const {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true',
+        },
         body: jsonEncode({
           'newPassword': cleanPassword,
           'mustChangePassword': mustChangePassword,

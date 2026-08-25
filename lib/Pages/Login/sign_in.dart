@@ -386,7 +386,13 @@ class _SignInPageState extends State<SignInPage> {
   }
 
   Future<void> _handleLogin() async {
-    final email = _emailController.text.trim().replaceAll(RegExp(r'\s+'), '');
+    final email = _emailController.text
+        .replaceAll('`', '')
+        .replaceAll("'", '')
+        .replaceAll('"', '')
+        .replaceAll(RegExp(r'[\u200B-\u200D\uFEFF]'), '')
+        .replaceAll(RegExp(r'\s+'), '')
+        .trim();
     final password = _passwordController.text.trim();
 
     if (email.isEmpty || password.isEmpty) {

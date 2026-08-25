@@ -63,10 +63,9 @@ class LocalDataService {
       Uri.base.hasAuthority;
 
   void _initLocalApiSync() {
-    if (!_hasLocalApi) return;
     _syncFromLocalApi();
     _apiPollingTimer = Timer.periodic(
-      const Duration(seconds: 5),
+      const Duration(seconds: 2),
       (_) => _syncFromLocalApi(),
     );
   }
@@ -418,8 +417,14 @@ class LocalDataService {
       if (results[1].statusCode == 200) {
         final list = jsonDecode(results[1].body) as List<dynamic>;
         final users = list.whereType<Map>().map((m) => User.fromMap(Map<String, dynamic>.from(m), m['id']?.toString() ?? '')).toList();
-        if (users.isNotEmpty) {
-          _users..clear()..addAll(users);
+        final deletedUserIds = _getDeletedDocs('users');
+        final deletedUserEmails = _getDeletedDocs('user_emails');
+        final validUsers = users.where((u) =>
+            !deletedUserIds.contains(u.id) &&
+            !deletedUserEmails.contains(u.email.trim().toLowerCase())
+        ).toList();
+        if (validUsers.isNotEmpty) {
+          _users..clear()..addAll(validUsers);
           _saveUsersToStorage();
           _usersController.add(List.unmodifiable(_users));
         }
@@ -428,7 +433,17 @@ class LocalDataService {
       if (results[2].statusCode == 200) {
         final list = jsonDecode(results[2].body) as List<dynamic>;
         final inscriptions = list.whereType<Map>().map((m) => Inscription.fromMap(Map<String, dynamic>.from(m), m['id']?.toString() ?? '')).toList();
-        _inscriptions..clear()..addAll(inscriptions);
+        final deletedInscIds = _getDeletedDocs('inscriptions');
+        final deletedUserIds = _getDeletedDocs('users');
+        final deletedUserEmails = _getDeletedDocs('user_emails');
+        final validInscriptions = inscriptions.where((i) {
+          final email = i.email?.trim().toLowerCase() ?? '';
+          return !deletedInscIds.contains(i.id) &&
+              !deletedUserIds.contains(i.etudiantId) &&
+              !deletedUserIds.contains(i.id) &&
+              (email.isEmpty || !deletedUserEmails.contains(email));
+        }).toList();
+        _inscriptions..clear()..addAll(validInscriptions);
         _saveInscriptionsToStorage();
         _inscriptionsController.add(List.unmodifiable(_inscriptions));
       }
@@ -2568,11 +2583,31 @@ class LocalDataService {
   }
 
   Future<void> deleteInscription(String id) async {
-    _inscriptions.removeWhere((i) => i.id == id);
+    final old = _inscriptions.where((i) => i.id == id).firstOrNull;
+    final email = (old?.email ?? '').trim().toLowerCase();
+    final etudiantId = old?.etudiantId.trim() ?? '';
+
+    _recordDeletedDoc('inscriptions', id);
+    if (etudiantId.isNotEmpty) {
+      _recordDeletedDoc('inscriptions', etudiantId);
+    }
+    if (email.isNotEmpty) {
+      _recordDeletedDoc('user_emails', email);
+    }
+
+    _inscriptions.removeWhere((i) {
+      final insEmail = (i.email ?? '').trim().toLowerCase();
+      return i.id == id ||
+          (etudiantId.isNotEmpty && i.etudiantId == etudiantId) ||
+          (email.isNotEmpty && insEmail == email);
+    });
     _inscriptionsController.add(List.unmodifiable(_inscriptions));
     _saveInscriptionsToStorage();
     try {
       await _deleteRemoteDoc('inscriptions', id);
+      if (etudiantId.isNotEmpty && etudiantId != id) {
+        await _deleteRemoteDoc('inscriptions', etudiantId);
+      }
     } catch (_) {}
   }
 
