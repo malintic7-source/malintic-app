@@ -190,7 +190,14 @@ class AuthProvider {
   }
 
   Future<User?> loginWithEmail(String email, String password) async {
-    final rawInput = email.trim().toLowerCase();
+    final rawInput = email
+        .replaceAll('`', '')
+        .replaceAll("'", '')
+        .replaceAll('"', '')
+        .replaceAll(RegExp(r'[\u200B-\u200D\uFEFF]'), '')
+        .replaceAll(RegExp(r'\s+'), '')
+        .trim()
+        .toLowerCase();
     final cleanPassword = password.trim();
 
     try {
@@ -207,7 +214,7 @@ class AuthProvider {
               'password': cleanPassword,
             }),
           )
-          .timeout(const Duration(seconds: 2));
+          .timeout(const Duration(seconds: 4));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -490,57 +497,41 @@ class AuthProvider {
     }
 
     try {
-      final response = await http.post(
+      await http.post(
         Uri.base.resolve('/api/admin/users/$userId/password'),
-        headers: const {'Content-Type': 'application/json'},
+        headers: const {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true',
+        },
         body: jsonEncode({
           'newPassword': cleanPassword,
           'mustChangePassword': mustChangePassword,
         }),
-      ).timeout(const Duration(seconds: 2));
+      ).timeout(const Duration(seconds: 4));
+    } catch (_) {}
 
-      if (response.statusCode != 200 && response.statusCode != 204) {
-        String errMsg = 'Erreur lors de la mise à jour du mot de passe.';
-        try {
-          final body = jsonDecode(response.body) as Map<String, dynamic>;
-          errMsg = body['error']?.toString() ?? errMsg;
-        } catch (_) {}
-        if (response.statusCode == 400 || response.statusCode == 401) {
-          throw Exception(errMsg);
-        }
-      }
-    } catch (e) {
-      if (e is Exception &&
-          (e.toString().contains('mot de passe') || e.toString().contains('caractères'))) {
-        rethrow;
-      }
-      // Mode hors-ligne : Docker éteint, application locale immédiate
-    }
-
-    // Mise à jour locale en mémoire et stockage persistant
+    // Mise à jour locale en mémoire et synchronisation
     final user = _db.getUserById(userId);
     if (user != null) {
-      final updated = user.copyWith(
+      final updated = User(
+        id: user.id,
+        email: user.email,
+        nom: user.nom,
+        prenom: user.prenom,
+        phone: user.phone,
+        matricule: user.matricule,
+        role: user.role,
+        password: cleanPassword,
+        photoUrl: user.photoUrl,
+        specialite: user.specialite,
+        sexe: user.sexe,
+        assignedFormations: user.assignedFormations,
+        estActif: user.estActif,
         doitChangerMotDePasse: mustChangePassword,
+        dateCreation: user.dateCreation,
         dateModification: DateTime.now(),
       );
-      await _db.addUser(
-        User(
-          id: updated.id,
-          email: updated.email,
-          nom: updated.nom,
-          prenom: updated.prenom,
-          phone: updated.phone,
-          role: updated.role,
-          password: cleanPassword,
-          photoUrl: updated.photoUrl,
-          assignedFormations: updated.assignedFormations,
-          estActif: updated.estActif,
-          doitChangerMotDePasse: mustChangePassword,
-          dateCreation: updated.dateCreation,
-          dateModification: DateTime.now(),
-        ),
-      );
+      await _db.addUser(updated);
     }
     _localStorage.setItem('user_pw_$userId', cleanPassword);
     _localStorage.setItem('user_pw_changed_$userId', (!mustChangePassword).toString());
