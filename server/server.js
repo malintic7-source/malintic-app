@@ -668,7 +668,9 @@ app.get('/api/:collection/:id', (req, res) => {
 app.put('/api/:collection/:id', (req, res) => {
   const { collection, id } = req.params;
   if (!isCollection(collection)) return res.status(404).json({ error: 'Collection inconnue' });
-  const isPublicRegistration = collection === 'inscriptions' && req.body?.source === 'web';
+  const session = sessionFromRequest(req);
+  const isEmployeeSession = isEmployee(session);
+  const isPublicRegistration = collection === 'inscriptions' && !isEmployeeSession;
 
   // ─── #19 Rate-limiting pour les inscriptions publiques ───────────────────
   if (isPublicRegistration) {
@@ -678,9 +680,12 @@ app.put('/api/:collection/:id', (req, res) => {
         error: 'Trop de demandes. Veuillez réessayer dans une heure.',
       });
     }
+    if (req.body?.source !== 'web') {
+      return res.status(403).json({ error: 'Accès réservé au personnel' });
+    }
   }
 
-  if (!isPublicRegistration && !isEmployee(sessionFromRequest(req))) {
+  if (!isPublicRegistration && !isEmployeeSession) {
     return res.status(403).json({ error: 'Accès réservé au personnel' });
   }
   const state = readState();

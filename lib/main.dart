@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:gestion_formations/config/theme.dart';
 import 'package:gestion_formations/Models/user.dart';
 import 'package:gestion_formations/Pages/Login/welcome_page.dart';
@@ -9,18 +8,16 @@ import 'package:gestion_formations/Services/auth_provider.dart';
 import 'package:gestion_formations/Services/db_services.dart';
 import 'package:gestion_formations/Services/local_storage.dart';
 import 'package:gestion_formations/Widgets/first_login_password_dialog.dart';
-import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(const MyApp());
 
-  // Import queues asynchronously in background after first paint
+  // Import queues localement en arrière-plan après le premier affichage si existantes
   Future.microtask(() async {
     try {
       await _importLocalInscriptionQueue();
-      await _importFromApi();
     } catch (e) {
       debugPrint('[Malintic] Import queue error: $e');
     }
@@ -76,38 +73,6 @@ Future<void> _importLocalInscriptionQueue() async {
   } catch (e) {
     debugPrint('[Malintic] Erreur import queue locale: $e');
   }
-}
-
-Future<void> _importFromApi() async {
-  try {
-    if (!kIsWeb) return;
-    final db = LocalDataService();
-    if (!Uri.base.hasAuthority) return;
-    final origin = Uri.base.origin;
-    if (origin.isEmpty || !origin.startsWith('http')) return;
-
-    final response = await http.get(
-      Uri.parse('$origin/api/inscriptions'),
-      headers: {
-        'Accept': 'application/json',
-        'ngrok-skip-browser-warning': 'true',
-      },
-    ).timeout(const Duration(seconds: 3));
-    if (response.statusCode != 200) return;
-    final text = response.body;
-    if (text.isEmpty) return;
-
-    final List<dynamic> list = jsonDecode(text);
-    for (final item in list) {
-      try {
-        if (item is Map<String, dynamic>) {
-          await _processInscriptionMap(db, item);
-        }
-      } catch (e) {
-        debugPrint('[Malintic] Erreur import API inscription item: $e');
-      }
-    }
-  } catch (_) {}
 }
 
 class MyApp extends StatelessWidget {

@@ -9,7 +9,6 @@ import 'package:gestion_formations/Models/formation.dart';
 import 'package:gestion_formations/Services/db_services.dart';
 import 'package:gestion_formations/Services/pdf_helper.dart';
 import 'dart:convert';
-import 'package:http/http.dart' as http;
 
 
 Map<String, dynamic> resolveInscriptionUserData(
@@ -256,10 +255,10 @@ class _AdminInscriptionsState extends State<AdminInscriptions> with TickerProvid
                   ),
                   child: IconButton(
                     onPressed: () async {
-                      final imported = await _importInscriptionsFromApi();
+                      await _db.refreshFromServer();
                       if (!mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Importées: $imported'), backgroundColor: AppTheme.success),
+                        const SnackBar(content: Text('✅ Liste des inscriptions actualisée !'), backgroundColor: AppTheme.success),
                       );
                     },
                     icon: const Icon(Icons.refresh, color: Colors.white),
@@ -709,15 +708,15 @@ class _AdminInscriptionsState extends State<AdminInscriptions> with TickerProvid
                             Container(
                               padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                               decoration: BoxDecoration(
-                                color: _getStatusColor(inscription['statut']).withValues(alpha: 0.1),
+                                color: _getStatusColor(inscription['status'] ?? inscription['statut']).withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
-                                _getStatusLabel(inscription['statut']),
+                                _getStatusLabel(inscription['status'] ?? inscription['statut']),
                                 style: GoogleFonts.poppins(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w700,
-                                  color: _getStatusColor(inscription['statut']),
+                                  color: _getStatusColor(inscription['status'] ?? inscription['statut']),
                                 ),
                               ),
                             ),
@@ -1387,45 +1386,6 @@ class _AdminInscriptionsState extends State<AdminInscriptions> with TickerProvid
         },
       ),
     );
-  }
-
-  Future<int> _importInscriptionsFromApi() async {
-    var importedCount = 0;
-    try {
-      final base = Uri.base.origin;
-      final uri = Uri.parse('$base/api/inscriptions');
-      final res = await http.get(uri).timeout(const Duration(seconds: 6));
-      if (res.statusCode != 200) return importedCount;
-      final List<dynamic> data = jsonDecode(res.body) as List<dynamic>;
-      for (final item in data) {
-        if (item is Map<String, dynamic>) {
-          // avoid duplicates: match by email + formationId + dateInscription
-          final existing = _db.getInscriptions().where((i) {
-            final sameEmail = (i.email ?? '').toString().trim() == (item['email'] ?? '').toString().trim();
-            final sameFormation = i.formationId == (item['formationId'] ?? '');
-            return sameEmail && sameFormation;
-          }).isNotEmpty;
-
-          if (!existing) {
-            await _db.createInscription(
-              etudiantId: item['etudiantId']?.toString() ?? 'web_${DateTime.now().millisecondsSinceEpoch}',
-              formationId: item['formationId']?.toString() ?? '',
-              prenom: item['prenom']?.toString(),
-              nom: item['nom']?.toString(),
-              email: item['email']?.toString(),
-              telephone: item['telephone']?.toString(),
-              description: item['description']?.toString(),
-              modules: item['modules'] is List ? List<String>.from(item['modules']) : null,
-              typeFormation: item['typeFormation']?.toString(),
-            );
-            importedCount++;
-          }
-        }
-      }
-    } catch (e) {
-      // fail silently; API may be unavailable
-    }
-    return importedCount;
   }
 
   Color _getStatusColor(dynamic statusInput) {
