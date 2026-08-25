@@ -451,8 +451,8 @@ app.post('/api/auth/login', (req, res) => {
   const token = crypto.randomBytes(32).toString('hex');
   sessions.set(token, { userId: user.id, role: user.role, createdAt: Date.now() });
   saveSessions();
-  // #6 — Max-Age pour la survie aux redémarrages (8 heures)
-  res.setHeader('Set-Cookie', `malintic_session=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=28800`);
+  // Cookie de session sans Max-Age (automatiquement détruit à la fermeture du navigateur)
+  res.setHeader('Set-Cookie', `malintic_session=${token}; Path=/; HttpOnly; SameSite=Lax`);
   res.json(publicUser(user));
 });
 

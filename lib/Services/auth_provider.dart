@@ -16,21 +16,39 @@ class AuthProvider {
 
   // Load persisted user if any (sessionStorage preserves F5 refresh, clears on tab close)
   Future<User?> _loadFromStorage() async {
+    // Nettoyage de sécurité de tout résidu persistant dans localStorage
+    _localStorage.removeItem('currentUserId');
+    _localStorage.removeItem('currentUserJson');
+
     final sessionUserId = _localStorage.getSessionItem('currentUserId');
     final sessionUserJson = _localStorage.getSessionItem('currentUserJson');
 
-    // 1. Instantly restore cached session if present (0ms UI paint)
-    if (sessionUserJson != null && sessionUserJson.isNotEmpty) {
+    // 1. Si aucun utilisateur n'est en sessionStorage pour cet onglet :
+    // L'onglet ou le navigateur vient d'être ouvert/réouvert suite à une fermeture.
+    // Déconnexion automatique : on ne restaure aucune session et on purge les cookies résiduels.
+    if (sessionUserJson == null || sessionUserJson.isEmpty) {
+      _currentUser = null;
+      _db.setServerSessionActive(false);
+      TabSessionLifecycle.deactivate();
+      _authController.add(null);
       try {
-        final map = jsonDecode(sessionUserJson) as Map<String, dynamic>;
-        final user = User.fromMap(map, sessionUserId ?? map['id']?.toString() ?? '');
-        _currentUser = user;
-        TabSessionLifecycle.activate();
-        _authController.add(user);
+        await http
+            .post(Uri.base.resolve('/api/auth/logout'))
+            .timeout(const Duration(seconds: 1));
       } catch (_) {}
+      return null;
     }
 
-    // 2. Validate session with the backend asynchronously
+    // 2. L'onglet actuel possède une session active (ex: rafraîchissement F5 dans le même onglet)
+    try {
+      final map = jsonDecode(sessionUserJson) as Map<String, dynamic>;
+      final user = User.fromMap(map, sessionUserId ?? map['id']?.toString() ?? '');
+      _currentUser = user;
+      TabSessionLifecycle.activate();
+      _authController.add(user);
+    } catch (_) {}
+
+    // 3. Validation asynchrone auprès du serveur
     try {
       final response = await http
           .get(
@@ -47,13 +65,12 @@ class AuthProvider {
         _authController.add(user);
         return user;
       } else if (response.statusCode == 401 || response.statusCode == 403) {
-        // Session invalid on server
+        // Session invalidée côté serveur
         _currentUser = null;
         _db.setServerSessionActive(false);
         _localStorage.removeSessionItem('currentUserId');
         _localStorage.removeSessionItem('currentUserJson');
-        _localStorage.removeItem('currentUserId');
-        _localStorage.removeItem('currentUserJson');
+        TabSessionLifecycle.deactivate();
         _authController.add(null);
         return null;
       }
