@@ -1555,8 +1555,14 @@ class LocalDataService {
         formation.id: getModulesForFormateur(formation, formateurId).toSet(),
     };
 
+    final deletedUserIds = getDeletedDocs('users');
+    final deletedUserEmails = getDeletedDocs('user_emails');
+
     return _users.where((user) {
       if (user.role != UserRole.apprenant) return false;
+      final email = user.email.trim().toLowerCase();
+      if (deletedUserIds.contains(user.id)) return false;
+      if (email.isNotEmpty && deletedUserEmails.contains(email)) return false;
       return user.assignedFormations.any((assignment) {
         final formationId = assignment['formationId']?.toString() ?? '';
         final trainerModules = modulesParFormation[formationId];

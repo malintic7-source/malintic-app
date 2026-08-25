@@ -354,7 +354,6 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
         StreamBuilder<List<Inscription>>(
           stream: _db.watchInscriptions(),
           builder: (context, snapshot) {
-
             final deletedInscIds2 = _db.getDeletedDocs('inscriptions');
             final deletedUserIds2 = _db.getDeletedDocs('users');
             final deletedEmails2 = _db.getDeletedDocs('user_emails');

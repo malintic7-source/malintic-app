@@ -59,14 +59,14 @@ class _AdminPlanningState extends State<AdminPlanning> with TickerProviderStateM
       builder: (context, snapshot) {
         final formations = snapshot.data ?? _db.getFormations();
         final users = _db.getUsers();
-        final deletedUserIds = _db.getDeletedDocs('users');
-        final deletedUserEmails = _db.getDeletedDocs('user_emails');
+        final deletedUserIdsPlan = _db.getDeletedDocs('users');
+        final deletedEmailsPlan = _db.getDeletedDocs('user_emails');
         final formateurs = users.where((u) {
           final email = u.email.trim().toLowerCase();
           return u.role == UserRole.formateur &&
               u.estActif &&
-              !deletedUserIds.contains(u.id) &&
-              (email.isEmpty || !deletedUserEmails.contains(email));
+              !deletedUserIdsPlan.contains(u.id) &&
+              (email.isEmpty || !deletedEmailsPlan.contains(email));
         }).toList();
 
         // Extract all session items with metadata
