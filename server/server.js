@@ -2,9 +2,36 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const zlib = require('zlib');
 
 const app = express();
 app.disable('x-powered-by');
+
+// Response compression for ngrok and LAN speed optimization
+app.use((req, res, next) => {
+  const acceptEncoding = req.headers['accept-encoding'] || '';
+  if (!acceptEncoding.includes('gzip')) return next();
+
+  const originalSend = res.send;
+  res.send = function (body) {
+    if (typeof body === 'string' || Buffer.isBuffer(body)) {
+      const buffer = Buffer.isBuffer(body) ? body : Buffer.from(body);
+      if (buffer.length > 512) {
+        zlib.gzip(buffer, (err, compressed) => {
+          if (err) return originalSend.call(this, body);
+          res.setHeader('Content-Encoding', 'gzip');
+          res.setHeader('Content-Length', compressed.length);
+          res.removeHeader('ETag');
+          return originalSend.call(this, compressed);
+        });
+        return;
+      }
+    }
+    return originalSend.call(this, body);
+  };
+  next();
+});
+
 app.use(express.json({ limit: '15mb' }));
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -56,6 +83,7 @@ loadSessions();
 // ─── #5 Cache mémoire pour éviter la relecture disque à chaque requête ────────
 let _stateCache = null;
 let _stateCacheDirty = true;
+let _stateVersion = Date.now().toString();
 
 // ─── #7 Rate-limiting login (5 tentatives / 15 min / IP) ─────────────────────
 const loginAttempts = new Map(); // ip → { count, resetAt }
@@ -300,9 +328,9 @@ function writeState(state) {
   fs.writeFileSync(temporary, JSON.stringify(state, null, 2));
   if (fs.existsSync(dataFile)) fs.copyFileSync(dataFile, backupFile);
   fs.renameSync(temporary, dataFile);
-  // Invalider le cache après chaque écriture
   _stateCache = state;
   _stateCacheDirty = false;
+  _stateVersion = Date.now().toString();
 }
 
 function isCollection(name) { return collections.includes(name); }
@@ -584,7 +612,12 @@ app.post('/api/trainer/students/:id/progress', requireEmployee, (req, res) => {
 });
 
 app.get('/api/state', (req, res) => {
-  res.setHeader('Cache-Control', 'no-store');
+  const ifNoneMatch = req.headers['if-none-match'];
+  res.setHeader('ETag', `"${_stateVersion}"`);
+  res.setHeader('Cache-Control', 'no-cache');
+  if (ifNoneMatch === `"${_stateVersion}"` || ifNoneMatch === _stateVersion) {
+    return res.status(304).end();
+  }
   const state = readState();
   return res.json(publicState(state));
 });
@@ -695,8 +728,21 @@ app.put('/api/:collection/:id', (req, res) => {
   res.json(publicDocument(collection, data));
 });
 
+app.delete('/api/audit_logs/clear', (req, res) => {
+  const state = readState();
+  state.audit_logs = [];
+  writeState(state);
+  res.status(200).json({ success: true, message: 'Logs vidés avec succès.' });
+});
+
 app.delete('/api/:collection/:id', (req, res) => {
   const { collection, id } = req.params;
+  if (collection === 'audit_logs' && id === 'clear') {
+    const state = readState();
+    state.audit_logs = [];
+    writeState(state);
+    return res.status(200).json({ success: true });
+  }
   if (!isCollection(collection)) return res.status(404).json({ error: 'Collection inconnue' });
   const session = sessionFromRequest(req);
   if (!isEmployee(session)) return res.status(403).json({ error: 'Accès réservé au personnel' });
