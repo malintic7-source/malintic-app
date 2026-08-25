@@ -1389,6 +1389,15 @@
             return fallbackFormations[0] || null;
         }
 
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
         function saveLocalInscription(inscriptionData) {
             try {
                 const key1 = 'local_inscriptions';
@@ -1658,9 +1667,9 @@
 
             const modulesCheckboxes = modules.map((m, idx) => `
                 <div class="module-item">
-                    <input type="checkbox" id="module_${idx}" value="${m}" class="module-checkbox">
-                    <label for="module_${idx}" class="module-label">
-                        <strong>${m}</strong>
+                    <input type="checkbox" id="module_${escapeHtml(idx)}" value="${escapeHtml(m)}" class="module-checkbox">
+                    <label for="module_${escapeHtml(idx)}" class="module-label">
+                        <strong>${escapeHtml(m)}</strong>
                     </label>
                 </div>
             `).join('');
@@ -1673,8 +1682,8 @@
                                 <img src="images/Malintic.png" alt="M@LINTIC" class="header-logo" onerror="this.onerror=null; this.src='images/logo.png';">
                             </div>
                             <div class="header-center">
-                                <div class="formation-image-card" onclick="openImageModal('${resolveImageUrl(formation.imageUrl)}')">
-                                    <img src="${resolveImageUrl(formation.imageUrl)}" alt="${formation.titre || 'Formation'}" onerror="this.onerror=null; this.src='images/Malintic.png';">
+                                <div class="formation-image-card" data-image-url="${escapeHtml(resolveImageUrl(formation.imageUrl))}" onclick="openImageModal(this.dataset.imageUrl)">
+                                    <img src="${escapeHtml(resolveImageUrl(formation.imageUrl))}" alt="${escapeHtml(formation.titre || 'Formation')}" onerror="this.onerror=null; this.src='images/Malintic.png';">
                                 </div>
                             </div>
                             <div class="header-right">
@@ -1683,7 +1692,7 @@
                                 </button>
                             </div>
                         </div>
-                        <h1>${formation.titre || 'Formation'}</h1>
+                        <h1>${escapeHtml(formation.titre || 'Formation')}</h1>
                         <div class="header-divider"></div>
                         <p>M@LINTIC - Formations Professionnelles</p>
                     </div>
@@ -1691,8 +1700,8 @@
 
                 <div class="content-grid">
                     <div class="formation-details">
-                        <h2 class="formation-title">${formation.titre}</h2>
-                        <p class="formation-description">${formation.description || 'Description non disponible'}</p>
+                        <h2 class="formation-title">${escapeHtml(formation.titre)}</h2>
+                        <p class="formation-description">${escapeHtml(formation.description || 'Description non disponible')}</p>
 
                         ${dateDebut || dateFin || dateFinInscription ? `
                         <div class="info-section">
@@ -1704,19 +1713,19 @@
                                 ${dateFinInscription ? `
                                 <div class="stat-item">
                                     <span class="stat-label">Inscriptions jusqu'au</span>
-                                    <span class="stat-value">${dateFinInscription}</span>
+                                    <span class="stat-value">${escapeHtml(dateFinInscription)}</span>
                                 </div>
                                 ` : ''}
                                 ${dateDebut ? `
                                 <div class="stat-item">
                                     <span class="stat-label">Début de formation</span>
-                                    <span class="stat-value">${dateDebut}</span>
+                                    <span class="stat-value">${escapeHtml(dateDebut)}</span>
                                 </div>
                                 ` : ''}
                                 ${dateFin ? `
                                 <div class="stat-item">
                                     <span class="stat-label">Fin de formation</span>
-                                    <span class="stat-value">${dateFin}</span>
+                                    <span class="stat-value">${escapeHtml(dateFin)}</span>
                                 </div>
                                 ` : ''}
                             </div>
@@ -1741,15 +1750,15 @@
                             <div class="stats">
                                 <div class="stat-item">
                                     <span class="stat-label">Durée</span>
-                                    <span class="stat-value">${formation.duree || 'À déterminer'}</span>
+                                    <span class="stat-value">${escapeHtml(formation.duree || 'À déterminer')}</span>
                                 </div>
                                 <div class="stat-item">
                                     <span class="stat-label">Niveau</span>
-                                    <span class="stat-value">${formation.niveau || 'Tous niveaux'}</span>
+                                    <span class="stat-value">${escapeHtml(formation.niveau || 'Tous niveaux')}</span>
                                 </div>
                                 <div class="stat-item">
                                     <span class="stat-label">Format</span>
-                                    <span class="stat-value">${formation.format || 'En ligne'}</span>
+                                    <span class="stat-value">${escapeHtml(formation.format || 'En ligne')}</span>
                                 </div>
                             </div>
                         </div>
@@ -1770,7 +1779,7 @@
                             </div>
                             ` : ''}
                             <div class="price-label">Tarif</div>
-                            <div class="price" id="displayPrice">${displayPriceValue || '0'}</div>
+                            <div class="price" id="displayPrice">${escapeHtml(displayPriceValue || '0')}</div>
                             <div class="price-currency">FCFA</div>
                             <button class="cta-button" id="enrollButton" onclick="handleEnrollClick()" disabled>
                                 <i class="fas fa-arrow-right"></i> S'inscrire
@@ -1785,7 +1794,7 @@
                             <div class="stats">
                                 <div class="stat-item">
                                     <span class="stat-label">Modules</span>
-                                    <span class="stat-value">${modules.length}</span>
+                                    <span class="stat-value">${escapeHtml(modules.length)}</span>
                                 </div>
                                 <div class="stat-item">
                                     <span class="stat-label">Statut</span>
@@ -1807,11 +1816,11 @@
 
             const formHtml = `
                 <div class="form-group">
-                    <p class="form-section-title">Inscription : ${formationTypeLabel}</p>
+                    <p class="form-section-title">Inscription : ${escapeHtml(formationTypeLabel)}</p>
                 </div>
                 <div class="form-group">
                     <label>Formation</label>
-                    <div class="share-modal-link">${formation.titre}</div>
+                    <div class="share-modal-link">${escapeHtml(formation.titre)}</div>
                 </div>
                 <div class="form-group">
                     <label for="prenom">Prénom *</label>
@@ -1967,8 +1976,8 @@
                     document.getElementById('app').innerHTML = `
                         <div class="success-message">
                             <h3><i class="fas fa-check-circle"></i> Inscription Réussie!</h3>
-                            <p style="margin-top: 12px;">Vous serez contacté sur le numéro <strong>${telephone}</strong> ou l'email <strong>${email}</strong></p>
-                            <p style="margin-top: 14px; font-size: 12px; opacity: 0.8;">Référence: ${etudiantId}</p>
+                            <p style="margin-top: 12px;">Vous serez contacté sur le numéro <strong>${escapeHtml(telephone)}</strong> ou l'email <strong>${escapeHtml(email)}</strong></p>
+                            <p style="margin-top: 14px; font-size: 12px; opacity: 0.8;">Référence: ${escapeHtml(etudiantId)}</p>
                             <div class="contact-options">
                                 <button class="contact-btn call" onclick="callAssistant()">
                                     <i class="fas fa-phone"></i> Appeler l'assistant

@@ -33,8 +33,20 @@ app.use((req, res, next) => {
 });
 
 app.use(express.json({ limit: '15mb' }));
+const allowedOrigins = new Set(
+  String(process.env.ALLOWED_ORIGINS || '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean),
+);
+const secureCookieSuffix = process.env.SECURE_COOKIES === 'true' ? '; Secure' : '';
 app.use((req, res, next) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  const origin = req.headers.origin;
+  if (origin && allowedOrigins.has(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+  }
+  res.setHeader('Vary', 'Origin');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, ngrok-skip-browser-warning');
   res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -89,6 +101,10 @@ let _stateVersion = Date.now().toString();
 const loginAttempts = new Map(); // ip → { count, resetAt }
 const LOGIN_MAX_ATTEMPTS = 5;
 const LOGIN_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
+
+const passwordChangeAttempts = new Map(); // ip → { count, resetAt }
+const PASSWORD_CHANGE_MAX_ATTEMPTS = 10;
+const PASSWORD_CHANGE_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
 
 // ─── #19 Rate-limiting inscriptions publiques (10 / heure / IP) ──────────────
 const inscriptionAttempts = new Map(); // ip → { count, resetAt }
@@ -149,6 +165,69 @@ function publicState(state) {
     name,
     state[name].map((item) => publicDocument(name, item)),
   ]));
+}
+
+function studentState(state, userId) {
+  const student = state.users.find((item) => String(item.id) === String(userId));
+  const studentRole = roleOf(student);
+  const studentUser = student ? publicUser(student) : null;
+  const directoryUsers = state.users
+    .filter((item) => !['etudiant', 'apprenant', 'student'].includes(roleOf(item)))
+    .map((item) => {
+      const safeUser = publicUser(item);
+      return {
+        id: safeUser.id,
+        nom: safeUser.nom,
+        prenom: safeUser.prenom,
+        email: safeUser.email,
+        role: safeUser.role,
+        photoUrl: safeUser.photoUrl,
+        specialite: safeUser.specialite,
+        estActif: safeUser.estActif,
+      };
+    });
+  const assignedFormationIds = new Set(
+    (student?.assignedFormations || []).map((assignment) => String(assignment.formationId)),
+  );
+  const notifications = (state.notifications || []).filter((notification) => {
+    const targetUserIds = Array.isArray(notification.targetUserIds) ? notification.targetUserIds : [];
+    if (targetUserIds.length > 0) return targetUserIds.some((id) => String(id) === String(userId));
+
+    const targetRoles = new Set(
+      (Array.isArray(notification.targetRoles) ? notification.targetRoles : [])
+        .map((role) => String(role).replace('UserRole.', '').toLowerCase().trim()),
+    );
+    const audience = new Set(
+      (Array.isArray(notification.audience) ? notification.audience : [])
+        .map((value) => String(value).toLowerCase().trim()),
+    );
+    if (targetRoles.size === 0 && audience.size === 0) return true;
+
+    const roleMatch = targetRoles.has(studentRole) ||
+      targetRoles.has('all') ||
+      targetRoles.has('tous');
+    const email = String(student?.email || '').toLowerCase().trim();
+    const audienceMatch = audience.has(email) ||
+      audience.has('all') ||
+      audience.has('tous') ||
+      (['etudiant', 'apprenant', 'student'].includes(studentRole) &&
+        (audience.has('etudiants') || audience.has('user') || audience.has('apprenant'))) ||
+      (studentRole === 'admin' && audience.has('admin')) ||
+      (studentRole === 'formateur' && audience.has('formateur'));
+    return roleMatch || audienceMatch;
+  });
+
+  return {
+    formations: state.formations,
+    users: studentUser ? [studentUser, ...directoryUsers] : directoryUsers,
+    inscriptions: (state.inscriptions || []).filter((item) =>
+      String(item.apprenantId) === String(userId) || String(item.etudiantId) === String(userId)),
+    payments: (state.payments || []).filter((item) =>
+      String(item.apprenantId) === String(userId) || String(item.etudiantId) === String(userId)),
+    audit_logs: [],
+    seances: (state.seances || []).filter((item) => assignedFormationIds.has(String(item.formationId))),
+    notifications,
+  };
 }
 
 function migrateLegacyPasswords(state) {
@@ -358,7 +437,7 @@ function validateFormationAssignments(data, users) {
 
 app.get('/api/health', (_, res) => res.json({ status: 'ok' }));
 
-app.get('/api/system/network-info', (req, res) => {
+app.get('/api/system/network-info', requireEmployee, (req, res) => {
   const os = require('os');
   const interfaces = os.networkInterfaces();
   const detectedIps = [];
@@ -410,7 +489,7 @@ app.post('/api/auth/login', (req, res) => {
     if (itemEmail === input) return true;
     if (emailPrefix === input) return true;
     if (itemMatricule && itemMatricule === input) return true;
-    if (cleanInputPhone.length >= 8 && itemPhone.includes(cleanInputPhone)) return true;
+    if (cleanInputPhone.length >= 8 && itemPhone.length >= 8 && itemPhone.endsWith(cleanInputPhone)) return true;
     if (`${input}@mntic.ml` === itemEmail || `${input}@malintic.ml` === itemEmail) return true;
     return false;
   });
@@ -452,7 +531,7 @@ app.post('/api/auth/login', (req, res) => {
   sessions.set(token, { userId: user.id, role: user.role, createdAt: Date.now() });
   saveSessions();
   // #6 — Max-Age pour la survie aux redémarrages (8 heures)
-  res.setHeader('Set-Cookie', `malintic_session=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=28800`);
+  res.setHeader('Set-Cookie', `malintic_session=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=28800${secureCookieSuffix}`);
   res.json(publicUser(user));
 });
 
@@ -479,7 +558,7 @@ app.post('/api/auth/logout', requireSession, (req, res) => {
     writeState(state);
   }
 
-  res.setHeader('Set-Cookie', 'malintic_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0');
+  res.setHeader('Set-Cookie', `malintic_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${secureCookieSuffix}`);
   res.status(204).end();
 });
 
@@ -489,36 +568,35 @@ app.get('/api/auth/session', requireSession, (req, res) => {
   res.json(publicUser(user));
 });
 
-app.post('/api/auth/change-password', (req, res) => {
-  const session = sessionFromRequest(req);
-  const userId = req.body?.userId || req.body?.id || session?.userId;
-  const email = String(req.body?.email || req.body?.identifier || '').trim().toLowerCase();
+app.post('/api/auth/change-password', requireSession, (req, res) => {
+  const ip = getClientIp(req);
+  if (checkRateLimit(passwordChangeAttempts, ip, PASSWORD_CHANGE_MAX_ATTEMPTS, PASSWORD_CHANGE_WINDOW_MS)) {
+    return res.status(429).json({
+      error: 'Trop de tentatives de changement de mot de passe. Réessayez dans 15 minutes.',
+    });
+  }
   const currentPassword = String(req.body?.currentPassword || '');
   const newPassword = String(req.body?.newPassword || '').trim();
-  const isFirstLogin = Boolean(req.body?.isFirstLogin);
 
+  const state = readState();
+  const user = state.users.find((item) => String(item.id) === String(req.session.userId));
+
+  if (!user) return res.status(404).json({ error: 'Utilisateur introuvable.' });
+  if (user.estActif === false) return res.status(403).json({ error: 'Ce compte est désactivé.' });
   if (newPassword.length < 6) {
     return res.status(400).json({ error: 'Le nouveau mot de passe doit contenir au moins 6 caractères.' });
   }
 
-  const state = readState();
-  const user = state.users.find((item) => {
-    if (userId && String(item.id) === String(userId)) return true;
-    const itemEmail = String(item.email || '').trim().toLowerCase();
-    if (email && itemEmail === email) return true;
-    return false;
-  });
-
-  if (!user) return res.status(404).json({ error: 'Utilisateur introuvable.' });
-
-  // Si un ancien mot de passe est fourni, on le vérifie
-  if (currentPassword) {
-    const matches = verifyPassword(currentPassword, user.passwordHash) || legacyPasswordMatches(currentPassword, user.password);
+  const isFirstLogin = user.doitChangerMotDePasse === true;
+  if (!isFirstLogin) {
+    if (!currentPassword) {
+      return res.status(400).json({ error: 'Veuillez saisir votre mot de passe actuel.' });
+    }
+    const matches = verifyPassword(currentPassword, user.passwordHash) ||
+      legacyPasswordMatches(currentPassword, user.password);
     if (!matches) {
       return res.status(401).json({ error: 'Ancien mot de passe incorrect.' });
     }
-  } else if (!user.doitChangerMotDePasse && !isFirstLogin) {
-    return res.status(400).json({ error: 'Veuillez saisir votre mot de passe actuel.' });
   }
 
   user.passwordHash = hashPassword(newPassword);
@@ -544,20 +622,14 @@ app.post('/api/auth/change-password', (req, res) => {
   res.json(publicUser(user));
 });
 
-app.post('/api/admin/users/:id/password', (req, res) => {
-  const session = sessionFromRequest(req);
-  const adminId = req.headers['x-admin-id'] || req.body?.adminId;
+app.post('/api/admin/users/:id/password', requireAdministrator, (req, res) => {
   const state = readState();
-  const isAdminRequest = isAdministrator(session) ||
-      (adminId && state.users.some(u => String(u.id) === String(adminId) && ['admin', 'dg', 'it'].includes(String(u.role || '').toLowerCase().replace('userrole.', ''))));
-
-  if (!isAdminRequest && session) {
-    return res.status(403).json({ error: "Accès réservé à l'administration" });
-  }
-
   const { newPassword, mustChangePassword = true } = req.body || {};
   const password = String(newPassword || '').trim();
-  if (!password || password.length < 6) {
+  if (!password) {
+    return res.status(400).json({ error: 'Le nouveau mot de passe est requis.' });
+  }
+  if (password.length < 6) {
     return res.status(400).json({ error: 'Le mot de passe doit contenir au moins 6 caractères.' });
   }
 
@@ -570,18 +642,18 @@ app.post('/api/admin/users/:id/password', (req, res) => {
   user.dateModification = new Date().toISOString();
 
   // Log in audit trail
-  const adminUser = state.users.find((u) => u.id === (session?.userId || adminId));
+  const adminUser = state.users.find((u) => u.id === req.session.userId);
   const adminNom = adminUser ? `${adminUser.prenom} ${adminUser.nom}`.trim() : 'Administration';
   const targetNom = `${user.prenom} ${user.nom}`.trim();
 
   recordAuditLog(state, {
     userNom: adminNom,
-    userRole: session?.role || 'admin',
+    userRole: req.session.role,
     action: 'Réinitialisation mot de passe admin',
     description: `Mot de passe de ${targetNom} (${user.email}) modifié par ${adminNom} (Forcer changement 1ère connexion: ${mustChangePassword ? 'Oui' : 'Non'})`,
     targetId: user.id,
     targetType: 'user',
-    userId: session?.userId || adminId,
+    userId: req.session.userId,
     userEmail: adminUser?.email,
     severity: 'warning',
   });
@@ -621,15 +693,17 @@ app.post('/api/trainer/students/:id/progress', requireEmployee, (req, res) => {
   res.status(204).end();
 });
 
-app.get('/api/state', (req, res) => {
-  const ifNoneMatch = req.headers['if-none-match'];
-  res.setHeader('ETag', `"${_stateVersion}"`);
-  res.setHeader('Cache-Control', 'no-cache');
-  if (ifNoneMatch === `"${_stateVersion}"` || ifNoneMatch === _stateVersion) {
+app.get('/api/state', requireSession, (req, res) => {
+  // The payload is scoped per caller, so the validator must be too.
+  const scope = isEmployee(req.session) ? 'employee' : `user:${req.session.userId}`;
+  const etag = `"${_stateVersion}-${scope}"`;
+  res.setHeader('ETag', etag);
+  res.setHeader('Cache-Control', 'private, no-cache');
+  if (req.headers['if-none-match'] === etag) {
     return res.status(304).end();
   }
   const state = readState();
-  return res.json(publicState(state));
+  return res.json(isEmployee(req.session) ? publicState(state) : studentState(state, req.session.userId));
 });
 
 // Browser-driven state migrations are deliberately disabled.
@@ -669,6 +743,9 @@ app.put('/api/:collection/:id', (req, res) => {
   const { collection, id } = req.params;
   if (!isCollection(collection)) return res.status(404).json({ error: 'Collection inconnue' });
   const isPublicRegistration = collection === 'inscriptions' && req.body?.source === 'web';
+  if (isPublicRegistration && !/^insc_web_\d{6,20}$/.test(id)) {
+    return res.status(400).json({ error: 'Identifiant d’inscription invalide.' });
+  }
 
   // ─── #19 Rate-limiting pour les inscriptions publiques ───────────────────
   if (isPublicRegistration) {
@@ -708,17 +785,73 @@ app.put('/api/:collection/:id', (req, res) => {
   if (!isPublicRegistration && !canWriteCollection(session, collection)) {
     return res.status(403).json({ error: 'Vous ne disposez pas des droits nécessaires pour cette action.' });
   }
-  const data = { ...(req.body || {}), id };
+  let data = { ...(req.body || {}), id };
   if (isPublicRegistration) {
-    if (!data.formationId || !state.formations.some((formation) => String(formation.id) === String(data.formationId))) {
+    const body = req.body && typeof req.body === 'object' && !Array.isArray(req.body)
+      ? req.body
+      : {};
+    const isString = (value) => typeof value === 'string';
+    const trimField = (field) => isString(body[field]) ? body[field].trim() : body[field];
+    const prenom = trimField('prenom');
+    const nom = trimField('nom');
+    const email = trimField('email');
+    if (!isString(prenom) || !prenom || prenom.length > 80 ||
+        !isString(nom) || !nom || nom.length > 80 ||
+        !isString(email) || email.length > 120 ||
+        !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+      return res.status(400).json({ error: 'Prénom, nom ou adresse e-mail invalide.' });
+    }
+    const telephone = trimField('telephone');
+    if (telephone !== undefined &&
+        (!isString(telephone) || telephone.length > 30 || (telephone.match(/\d/g) || []).length < 8)) {
+      return res.status(400).json({ error: 'Numéro de téléphone invalide.' });
+    }
+    const description = trimField('description');
+    if (description !== undefined && (!isString(description) || description.length > 1000)) {
+      return res.status(400).json({ error: 'Description invalide.' });
+    }
+    const modules = body.modules;
+    if (modules !== undefined &&
+        (!Array.isArray(modules) || modules.length > 50 ||
+          modules.some((module) => !isString(module) || module.trim().length > 200))) {
+      return res.status(400).json({ error: 'Modules invalides.' });
+    }
+    const typeFormation = trimField('typeFormation');
+    const sexe = trimField('sexe');
+    if ((typeFormation !== undefined && (!isString(typeFormation) || typeFormation.length > 50)) ||
+        (sexe !== undefined && (!isString(sexe) || sexe.length > 50))) {
+      return res.status(400).json({ error: 'Type de formation ou sexe invalide.' });
+    }
+    if (body.montant !== undefined &&
+        (typeof body.montant !== 'number' || !Number.isFinite(body.montant) || body.montant < 0)) {
+      return res.status(400).json({ error: 'Montant invalide.' });
+    }
+    const formationId = trimField('formationId');
+    if (!formationId || !state.formations.some((formation) => String(formation.id) === String(formationId))) {
       return res.status(400).json({ error: 'Formation invalide.' });
     }
-    data.status = 'InscriptionStatus.enAttente';
-    data.paiementId = null;
-    data.paiementEffectue = false;
-    data.dateAcceptation = null;
-    data.motifRejet = null;
-    data.dateInscription = new Date().toISOString();
+    data = {
+      id,
+      prenom,
+      nom,
+      email,
+      formationId,
+      ...(telephone !== undefined ? { telephone } : {}),
+      ...(description !== undefined ? { description } : {}),
+      ...(modules !== undefined ? { modules: modules.map((module) => module.trim()) } : {}),
+      ...(typeFormation !== undefined ? { typeFormation } : {}),
+      ...(sexe !== undefined ? { sexe } : {}),
+      ...(body.montant !== undefined ? { montant: body.montant } : {}),
+      apprenantId: null,
+      etudiantId: null,
+      status: 'InscriptionStatus.enAttente',
+      paiementId: null,
+      paiementEffectue: false,
+      dateAcceptation: null,
+      motifRejet: null,
+      dateInscription: new Date().toISOString(),
+      source: 'web',
+    };
   }
   if (collection === 'users' && data.password) {
     data.passwordHash = hashPassword(String(data.password));
@@ -738,7 +871,7 @@ app.put('/api/:collection/:id', (req, res) => {
   res.json(publicDocument(collection, data));
 });
 
-app.delete('/api/audit_logs/clear', (req, res) => {
+app.delete('/api/audit_logs/clear', requireAdministrator, (req, res) => {
   const state = readState();
   state.audit_logs = [];
   writeState(state);
@@ -747,22 +880,25 @@ app.delete('/api/audit_logs/clear', (req, res) => {
 
 app.delete('/api/:collection/:id', (req, res) => {
   const { collection, id } = req.params;
+  const session = sessionFromRequest(req);
   if (collection === 'audit_logs' && id === 'clear') {
+    if (!isAdministrator(session)) {
+      return res.status(403).json({ error: "La purge du journal est réservée à l'administration." });
+    }
     const state = readState();
     state.audit_logs = [];
     writeState(state);
     return res.status(200).json({ success: true });
   }
   if (!isCollection(collection)) return res.status(404).json({ error: 'Collection inconnue' });
-  const state = readState();
-  const session = sessionFromRequest(req);
-  const callerId = req.headers['x-admin-id'] || req.headers['x-user-id'];
-  const callerUser = callerId ? state.users.find(u => String(u.id) === String(callerId)) : null;
-  const effectiveRole = session ? roleOf(session) : (callerUser ? roleOf({ role: callerUser.role }) : 'admin');
-
-  if (session && !isEmployee(session) && !callerUser) {
-    return res.status(403).json({ error: 'Accès réservé au personnel' });
+  if (!isEmployee(session)) return res.status(403).json({ error: 'Accès réservé au personnel' });
+  if (collection === 'users' && !isAdministrator(session)) {
+    return res.status(403).json({ error: "La gestion des comptes est réservée à l'administration." });
   }
+  if (!canWriteCollection(session, collection)) {
+    return res.status(403).json({ error: 'Vous ne disposez pas des droits nécessaires pour cette action.' });
+  }
+  const state = readState();
   state[collection] = state[collection].filter((item) => String(item.id) !== id);
   if (collection === 'users') {
     state.inscriptions = (state.inscriptions || []).filter((ins) => String(ins.etudiantId) !== id && String(ins.id) !== id);

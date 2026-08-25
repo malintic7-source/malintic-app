@@ -5,6 +5,8 @@ class LocalStorage {
 
   void removeItem(String key) {}
 
+  List<String> keys() => const [];
+
   String? getSessionItem(String key) => null;
 
   void setSessionItem(String key, String value) {}

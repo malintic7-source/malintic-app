@@ -88,107 +88,6 @@ class AuthProvider {
     return _loadFromStorage();
   }
 
-  User? _fallbackOfflineLogin(String rawInput, String cleanPassword) {
-    final users = _db.getUsers();
-    for (final user in users) {
-      final userEmail = user.email.trim().toLowerCase();
-      final userPhone = user.phone.replaceAll(RegExp(r'[^0-9]'), '');
-      final cleanInputPhone = rawInput.replaceAll(RegExp(r'[^0-9]'), '');
-      final userMatricule = (user.matricule ?? '').trim().toLowerCase();
-      final emailPrefix = userEmail.split('@').first;
-
-      final isMatch = userEmail == rawInput ||
-          emailPrefix == rawInput ||
-          (userMatricule.isNotEmpty && userMatricule == rawInput) ||
-          (cleanInputPhone.length >= 8 && userPhone.contains(cleanInputPhone)) ||
-          userEmail == '$rawInput@mntic.ml' ||
-          userEmail == '$rawInput@malintic.ml';
-
-      if (isMatch) {
-        if (!user.estActif) {
-          throw Exception('Ce compte est désactivé. Veuillez contacter un administrateur.');
-        }
-
-        final savedOfflinePw = _localStorage.getItem('user_pw_${user.id}')?.trim();
-        final effectivePw = (savedOfflinePw != null && savedOfflinePw.isNotEmpty)
-            ? savedOfflinePw
-            : (user.password.isNotEmpty
-                ? user.password
-                : (user.id == 'admin_mamadou' ? 'Doudou5432@' : null));
-
-        if (effectivePw != null && effectivePw.isNotEmpty && effectivePw != '00000000') {
-          // Ce compte a un mot de passe personnalisé : 00000000 est STRICTEMENT EXPIRÉ ET REJETÉ
-          if (cleanPassword == '00000000') return null;
-          if (cleanPassword == effectivePw) return user.copyWith(doitChangerMotDePasse: false);
-          return null;
-        } else {
-          // Première connexion uniquement : 00000000 est temporairement accepté
-          if (cleanPassword == '00000000') {
-            return user.copyWith(doitChangerMotDePasse: true);
-          }
-          return null;
-        }
-      }
-    }
-
-    String? adminId;
-    User? fallbackAdmin;
-    if (rawInput == 'mamadou@mntic.ml' || rawInput == 'mamadou' || rawInput == 'adm-2026-001') {
-      adminId = 'admin_mamadou';
-      fallbackAdmin = User(
-        id: 'admin_mamadou',
-        nom: 'TOURE',
-        prenom: 'Mamadou',
-        email: 'mamadou@mntic.ml',
-        phone: '+223 70 00 00 01',
-        role: UserRole.admin,
-        matricule: 'ADM-2026-001',
-      );
-    } else if (rawInput == 'soulbico@mntic.ml' || rawInput == 'soulbico' || rawInput == 'souleymane') {
-      adminId = 'dg_souleymane';
-      fallbackAdmin = User(
-        id: 'dg_souleymane',
-        nom: 'TRAORE',
-        prenom: 'SOULEYMANE',
-        email: 'soulbico@mntic.ml',
-        phone: '+223 76 00 00 01',
-        role: UserRole.admin,
-      );
-    } else if (rawInput == 'admin@malintic.ml' || rawInput == 'admin') {
-      adminId = 'admin_malintic';
-      fallbackAdmin = User(
-        id: 'admin_malintic',
-        nom: 'M@LI-NTIC',
-        prenom: 'Admin',
-        email: 'admin@malintic.ml',
-        phone: '+223 70 00 00 00',
-        role: UserRole.admin,
-      );
-    }
-
-    if (fallbackAdmin != null && adminId != null) {
-      final savedPw = _localStorage.getItem('user_pw_$adminId')?.trim();
-      final effectiveAdminPw = (savedPw != null && savedPw.isNotEmpty)
-          ? savedPw
-          : (adminId == 'admin_mamadou' ? 'Doudou5432@' : null);
-
-      if (effectiveAdminPw != null && effectiveAdminPw.isNotEmpty && effectiveAdminPw != '00000000') {
-        // Après validation de changement de mot de passe, 00000000 est STRICTEMENT EXPIRÉ ET REJETÉ
-        if (cleanPassword == '00000000') return null;
-        if (cleanPassword == effectiveAdminPw) return fallbackAdmin.copyWith(doitChangerMotDePasse: false);
-        return null;
-      } else {
-        // Première connexion uniquement
-        if (cleanPassword == '00000000') {
-          return fallbackAdmin.copyWith(doitChangerMotDePasse: true);
-        }
-        return null;
-      }
-    }
-
-    return null;
-  }
-
   Future<User?> loginWithEmail(String email, String password) async {
     final rawInput = email
         .replaceAll('`', '')
@@ -200,8 +99,9 @@ class AuthProvider {
         .toLowerCase();
     final cleanPassword = password.trim();
 
+    late final http.Response response;
     try {
-      final response = await http
+      response = await http
           .post(
             Uri.base.resolve('/api/auth/login'),
             headers: const {
@@ -214,38 +114,32 @@ class AuthProvider {
               'password': cleanPassword,
             }),
           )
-          .timeout(const Duration(seconds: 4));
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final serverUser = User.fromMap(data, data['id']?.toString() ?? '');
-        _currentUser = serverUser;
-        TabSessionLifecycle.activate();
-        _authController.add(_currentUser);
-        _localStorage.setSessionItem('currentUserId', serverUser.id);
-        _localStorage.setSessionItem(
-          'currentUserJson',
-          jsonEncode(serverUser.toMap()),
-        );
-        await _db.refreshFromServer();
-        return serverUser;
-      }
+          .timeout(const Duration(seconds: 8));
     } catch (_) {
-      // Le backend Docker/ngrok est éteint : passage transparent en mode hors-ligne
+      throw Exception('Serveur injoignable. Vérifiez votre connexion et réessayez.');
     }
 
-    // Mode Zéro-Interruption : Vérification locale directe (Docker éteint)
-    final offlineUser = _fallbackOfflineLogin(rawInput, cleanPassword);
-    if (offlineUser != null) {
-      _currentUser = offlineUser;
-      TabSessionLifecycle.activate();
-      _authController.add(_currentUser);
-      _localStorage.setSessionItem('currentUserId', offlineUser.id);
-      _localStorage.setSessionItem('currentUserJson', jsonEncode(offlineUser.toMap()));
-      return offlineUser;
+    if (response.statusCode != 200) {
+      var serverMessage = 'Identifiants incorrects.';
+      try {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        serverMessage = data['error']?.toString() ?? serverMessage;
+      } catch (_) {}
+      throw Exception(serverMessage);
     }
 
-    throw Exception('Identifiants incorrects.');
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final serverUser = User.fromMap(data, data['id']?.toString() ?? '');
+    _currentUser = serverUser;
+    TabSessionLifecycle.activate();
+    _authController.add(_currentUser);
+    _localStorage.setSessionItem('currentUserId', serverUser.id);
+    _localStorage.setSessionItem(
+      'currentUserJson',
+      jsonEncode(serverUser.toMap()),
+    );
+    await _db.refreshFromServer();
+    return serverUser;
   }
 
   Future<void> logout() async {
@@ -364,7 +258,6 @@ class AuthProvider {
   Future<User> changePassword({
     String? currentPassword,
     required String newPassword,
-    bool isFirstLogin = false,
   }) async {
     if (_currentUser == null) {
       throw Exception('Aucun utilisateur connecté.');
@@ -374,38 +267,31 @@ class AuthProvider {
       throw Exception('Le nouveau mot de passe doit contenir au moins 8 caractères.');
     }
 
+    late final http.Response response;
     try {
-      final response = await http.post(
+      response = await http.post(
         Uri.base.resolve('/api/auth/change-password'),
         headers: const {
           'Content-Type': 'application/json',
           'ngrok-skip-browser-warning': 'true',
         },
         body: jsonEncode({
-          'userId': _currentUser!.id,
-          'email': _currentUser!.email,
-          'identifier': _currentUser!.email,
           if (currentPassword != null && currentPassword.isNotEmpty)
             'currentPassword': currentPassword,
           'newPassword': newPassword.trim(),
-          'isFirstLogin': isFirstLogin,
         }),
-      ).timeout(const Duration(seconds: 4));
-
-      if (response.statusCode == 400 || response.statusCode == 401) {
-        String serverMessage = 'Impossible de modifier le mot de passe.';
-        try {
-          final body = jsonDecode(response.body) as Map<String, dynamic>;
-          serverMessage = body['error']?.toString() ?? serverMessage;
-        } catch (_) {}
-        throw Exception(serverMessage);
-      }
+      ).timeout(const Duration(seconds: 8));
     } catch (e) {
-      if (e is Exception &&
-          (e.toString().contains('mot de passe') || e.toString().contains('caractères'))) {
-        rethrow;
-      }
-      // Offline mode: non-blocking server error, continue with local update
+      throw Exception('Serveur injoignable. Réessayez plus tard.');
+    }
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      var serverMessage = 'Impossible de modifier le mot de passe.';
+      try {
+        final body = jsonDecode(response.body) as Map<String, dynamic>;
+        serverMessage = body['error']?.toString() ?? serverMessage;
+      } catch (_) {}
+      throw Exception(serverMessage);
     }
 
     User updatedUser = _currentUser!.copyWith(
@@ -415,16 +301,7 @@ class AuthProvider {
     _currentUser = updatedUser;
     _authController.add(_currentUser);
     _localStorage.setSessionItem('currentUserJson', jsonEncode(_currentUser!.toMap()));
-    _localStorage.setItem('user_pw_${_currentUser!.id}', newPassword.trim());
-    _localStorage.setItem('user_pw_changed_${_currentUser!.id}', 'true');
-
-    final localUser = _db.getUserById(updatedUser.id);
-    if (localUser != null) {
-      await _db.addUser(localUser.copyWith(
-        doitChangerMotDePasse: false,
-        dateModification: DateTime.now(),
-      ));
-    }
+    await _db.refreshFromServer();
 
     return updatedUser;
   }
@@ -480,15 +357,13 @@ class AuthProvider {
       dateCreation: DateTime.now(),
     );
 
-    _localStorage.setItem('user_pw_$userId', effectivePassword);
-    _localStorage.setItem('user_pw_changed_$userId', (!doitChangerMotDePasse).toString());
     await _db.addUser(newUser);
     return newUser;
   }
 
   Future<String> adminChangeUserPassword(
     String userId, {
-    String newPassword = '00000000',
+    required String newPassword,
     bool mustChangePassword = true,
   }) async {
     final cleanPassword = newPassword.trim();
@@ -496,8 +371,9 @@ class AuthProvider {
       throw Exception('Le mot de passe doit contenir au moins 6 caractères.');
     }
 
+    late final http.Response response;
     try {
-      await http.post(
+      response = await http.post(
         Uri.base.resolve('/api/admin/users/$userId/password'),
         headers: const {
           'Content-Type': 'application/json',
@@ -507,34 +383,20 @@ class AuthProvider {
           'newPassword': cleanPassword,
           'mustChangePassword': mustChangePassword,
         }),
-      ).timeout(const Duration(seconds: 4));
-    } catch (_) {}
-
-    // Mise à jour locale en mémoire et synchronisation
-    final user = _db.getUserById(userId);
-    if (user != null) {
-      final updated = User(
-        id: user.id,
-        email: user.email,
-        nom: user.nom,
-        prenom: user.prenom,
-        phone: user.phone,
-        matricule: user.matricule,
-        role: user.role,
-        password: cleanPassword,
-        photoUrl: user.photoUrl,
-        specialite: user.specialite,
-        sexe: user.sexe,
-        assignedFormations: user.assignedFormations,
-        estActif: user.estActif,
-        doitChangerMotDePasse: mustChangePassword,
-        dateCreation: user.dateCreation,
-        dateModification: DateTime.now(),
-      );
-      await _db.addUser(updated);
+      ).timeout(const Duration(seconds: 8));
+    } catch (e) {
+      throw Exception('Serveur injoignable. Réessayez plus tard.');
     }
-    _localStorage.setItem('user_pw_$userId', cleanPassword);
-    _localStorage.setItem('user_pw_changed_$userId', (!mustChangePassword).toString());
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      var errMsg = 'Erreur lors de la mise à jour du mot de passe.';
+      try {
+        final body = jsonDecode(response.body) as Map<String, dynamic>;
+        errMsg = body['error']?.toString() ?? errMsg;
+      } catch (_) {}
+      throw Exception(errMsg);
+    }
+
     await _db.refreshFromServer();
     return cleanPassword;
   }
