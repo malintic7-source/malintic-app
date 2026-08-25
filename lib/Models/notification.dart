@@ -1,4 +1,5 @@
 // Removed Firestore import (migrating off Firebase)
+import 'package:gestion_formations/utils/date_parsing.dart';
 
 class AppNotification {
   final String id;
@@ -32,13 +33,7 @@ class AppNotification {
   });
 
   factory AppNotification.fromMap(Map<String, dynamic> data, String id) {
-    DateTime parseDate(dynamic val) {
-      if (val is DateTime) return val;
-      if (val is String) return DateTime.tryParse(val) ?? DateTime.now();
-      return DateTime.now();
-    }
-
-    final createdAtValue = parseDate(data['createdAt'] ?? data['dateCreation']);
+    final createdAtValue = parseDynamicDate(data['createdAt'] ?? data['dateCreation']);
 
     return AppNotification(
       id: id,
@@ -69,7 +64,7 @@ class AppNotification {
           [],
       reminderCount: (data['reminderCount'] ?? 0) as int,
       createdAt: createdAtValue,
-      updatedAt: data['updatedAt'] != null ? parseDate(data['updatedAt']) : createdAtValue,
+      updatedAt: data['updatedAt'] != null ? parseDynamicDate(data['updatedAt']) : createdAtValue,
     );
   }
 

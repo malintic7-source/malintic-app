@@ -1,4 +1,5 @@
 // Removed Firestore import (migrating off Firebase)
+import 'package:gestion_formations/utils/date_parsing.dart';
 
 enum InscriptionStatus { enAttente, acceptee, rejetee }
 
@@ -57,23 +58,12 @@ class Inscription {
       return InscriptionStatus.enAttente;
     }
 
-    DateTime parseDate(dynamic val) {
-      if (val is DateTime) return val;
-      if (val != null && val.runtimeType.toString().contains('Timestamp')) {
-        try {
-          return (val as dynamic).toDate();
-        } catch (_) {}
-      }
-      if (val is String) return DateTime.tryParse(val) ?? DateTime.now();
-      return DateTime.now();
-    }
-
     return Inscription(
       id: id,
       apprenantId: data['apprenantId'] ?? data['etudiantId'] ?? '',
       formationId: data['formationId'] ?? '',
       status: parseStatus(data['status']?.toString() ?? 'InscriptionStatus.enAttente'),
-      dateInscription: parseDate(data['dateInscription']),
+      dateInscription: parseDynamicDate(data['dateInscription']),
       paiementId: data['paiementId'],
       paiementEffectue: data['paiementEffectue'] ?? false,
       dateAcceptation: data['dateAcceptation'],

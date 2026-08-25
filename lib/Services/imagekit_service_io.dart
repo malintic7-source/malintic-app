@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
+import 'package:gestion_formations/utils/mime_types.dart';
 
 class ImageKitService {
   Future<String?> pickAndUploadImage({String folder = 'formations'}) async {
@@ -29,22 +30,12 @@ class ImageKitService {
     }
   }
 
-  String _getMimeType(String? name) {
-    final ext = (name ?? '').split('.').last.toLowerCase();
-    if (ext == 'png') return 'image/png';
-    if (ext == 'jpg' || ext == 'jpeg') return 'image/jpeg';
-    if (ext == 'webp') return 'image/webp';
-    if (ext == 'gif') return 'image/gif';
-    if (ext == 'svg') return 'image/svg+xml';
-    return 'image/png';
-  }
-
   Future<String?> uploadImageFromBytes(
     List<int> bytes, {
     String folder = 'formations',
     String? fileName,
   }) async {
-    final mime = _getMimeType(fileName);
+    final mime = mimeTypeForFileName(fileName);
     final base64Str = base64Encode(bytes);
     return 'data:$mime;base64,$base64Str';
   }

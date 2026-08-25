@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:gestion_formations/config/theme.dart';
+import 'package:gestion_formations/utils/formatters.dart';
+import 'package:gestion_formations/utils/ui_feedback.dart';
 import 'package:gestion_formations/Models/user.dart';
 import 'package:gestion_formations/Models/inscription.dart';
 import 'package:gestion_formations/Models/payment.dart';
@@ -234,13 +236,9 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
           return sum + _db.getInscriptionBalance(ins.id);
         });
 
-        final revenueFormatted = totalRevenue >= 1000000
-            ? '${(totalRevenue / 1000000).toStringAsFixed(1)}M FCFA'
-            : '${(totalRevenue / 1000).toStringAsFixed(0)}k FCFA';
+        final revenueFormatted = AppFormat.fcfaCompact(totalRevenue);
 
-        final unpaidFormatted = totalUnpaid >= 1000000
-            ? '${(totalUnpaid / 1000000).toStringAsFixed(1)}M FCFA'
-            : '${(totalUnpaid / 1000).toStringAsFixed(0)}k FCFA';
+        final unpaidFormatted = AppFormat.fcfaCompact(totalUnpaid);
 
         final cols = isMobile ? 2 : (isTablet ? 3 : 4);
         final ratio = isMobile ? 1.15 : (isTablet ? 1.4 : 1.7);
@@ -891,7 +889,7 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        Text('Reste: ${balance.toStringAsFixed(0)} FCFA', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w800, color: AppTheme.accent)),
+                        Text('Reste: ${AppFormat.fcfa(balance)}', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w800, color: AppTheme.accent)),
                         const SizedBox(height: 4),
                         OutlinedButton.icon(
                           style: OutlinedButton.styleFrom(
@@ -904,7 +902,7 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
                           label: Text(phone.isNotEmpty ? phone : 'Relancer', style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w700, color: AppTheme.success)),
                           onPressed: () {
                             Clipboard.setData(ClipboardData(text: phone));
-                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Numéro $phone copié pour relance !'), backgroundColor: AppTheme.success));
+                            context.showSuccessSnack('Numéro $phone copié pour relance !');
                           },
                         ),
                       ],
@@ -1022,7 +1020,7 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
   void _showShareFormationModal() {
     final formations = _db.getFormations();
     if (formations.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Aucune formation disponible pour le partage.')));
+      context.showSnack('Aucune formation disponible pour le partage.');
       return;
     }
 
@@ -1197,7 +1195,7 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text('Prix Brut Initial:', style: GoogleFonts.poppins(fontSize: 12, color: Colors.black54)),
-                                Text('${baseTotal.toStringAsFixed(0)} FCFA', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+                                Text(AppFormat.fcfa(baseTotal), style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
                               ],
                             ),
                             const SizedBox(height: 4),
@@ -1205,7 +1203,7 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text('Remise Accordée:', style: GoogleFonts.poppins(fontSize: 12, color: AppTheme.accent)),
-                                Text('- ${remise.toStringAsFixed(0)} FCFA', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w800, color: AppTheme.accent)),
+                                Text('- ${AppFormat.fcfa(remise)}', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w800, color: AppTheme.accent)),
                               ],
                             ),
                             const SizedBox(height: 4),
@@ -1213,7 +1211,7 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text('Net Dû (Après Remise):', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w700)),
-                                Text('${netTotal.toStringAsFixed(0)} FCFA', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w800, color: AppTheme.primary)),
+                                Text(AppFormat.fcfa(netTotal), style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w800, color: AppTheme.primary)),
                               ],
                             ),
                             const Divider(height: 12),
@@ -1221,7 +1219,7 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text('Somme Déjà Versée:', style: GoogleFonts.poppins(fontSize: 12, color: AppTheme.success)),
-                                Text('${alreadyPaid.toStringAsFixed(0)} FCFA', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w700, color: AppTheme.success)),
+                                Text(AppFormat.fcfa(alreadyPaid), style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w700, color: AppTheme.success)),
                               ],
                             ),
                             const SizedBox(height: 4),
@@ -1229,7 +1227,7 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text('Solde Restant à Payer:', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w700, color: AppTheme.warningDark)),
-                                Text('${balanceDue.toStringAsFixed(0)} FCFA', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w800, color: AppTheme.warningDark)),
+                                Text(AppFormat.fcfa(balanceDue), style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w800, color: AppTheme.warningDark)),
                               ],
                             ),
                           ],
@@ -1247,7 +1245,7 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
                           icon: const Icon(Icons.local_offer_rounded, color: AppTheme.accent, size: 20),
                           label: Text(
                             remise > 0
-                                ? '🏷️ Remise Appliquée: ${remise.toStringAsFixed(0)} FCFA (Modifier)'
+                                ? '🏷️ Remise Appliquée: ${AppFormat.fcfa(remise)} (Modifier)'
                                 : '🏷️ Accorder une Remise (Décision Manuelle)',
                             style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w700, color: AppTheme.accent),
                           ),
@@ -1308,7 +1306,7 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
                 label: const Text('Valider le Versement'),
                 onPressed: () async {
                   if (selectedStudentId == null || selectedFormationId == null) {
-                    ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Sélectionnez un stagiaire et une formation.')));
+                    ctx.showSnack('Sélectionnez un stagiaire et une formation.');
                     return;
                   }
 
@@ -1317,7 +1315,7 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
                   ).firstOrNull;
 
                   if (inscription == null) {
-                    ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Inscription introuvable.')));
+                    ctx.showSnack('Inscription introuvable.');
                     return;
                   }
 
@@ -1345,7 +1343,7 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
                     userNom: widget.user.nomComplet,
                     userRole: 'Admin',
                     action: 'Nouveau Versement',
-                    description: 'Versement de ${m.toStringAsFixed(0)} FCFA enregistré pour ${inscription.id}',
+                    description: 'Versement de ${AppFormat.fcfa(m)} enregistré pour ${inscription.id}',
                   );
 
                   if (mounted && ctx.mounted) {
@@ -1457,7 +1455,7 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
                   final phone = phoneCtrl.text.trim();
 
                   if (prenom.isEmpty || nom.isEmpty) {
-                    ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Veuillez remplir au moins le prénom et le nom.')));
+                    ctx.showSnack('Veuillez remplir au moins le prénom et le nom.');
                     return;
                   }
 
@@ -1560,7 +1558,7 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text('Prix Brut Initial:', style: GoogleFonts.poppins(fontSize: 12, color: Colors.black54)),
-                            Text('${basePrice.toStringAsFixed(0)} FCFA', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w700, color: AppTheme.primary)),
+                            Text(AppFormat.fcfa(basePrice), style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w700, color: AppTheme.primary)),
                           ],
                         ),
                         const SizedBox(height: 4),
@@ -1568,7 +1566,7 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text('Remise Accordée:', style: GoogleFonts.poppins(fontSize: 12, color: AppTheme.accent)),
-                            Text('- ${calculatedDiscount.toStringAsFixed(0)} FCFA', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w800, color: AppTheme.accent)),
+                            Text('- ${AppFormat.fcfa(calculatedDiscount)}', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w800, color: AppTheme.accent)),
                           ],
                         ),
                         const Divider(height: 12),
@@ -1576,7 +1574,7 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text('Nouveau Total Net à Payer:', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w700)),
-                            Text('${netPrice.toStringAsFixed(0)} FCFA', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w800, color: AppTheme.success)),
+                            Text(AppFormat.fcfa(netPrice), style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w800, color: AppTheme.success)),
                           ],
                         ),
                       ],
@@ -1649,7 +1647,7 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
                           }).toList()
                         : [5000, 10000, 15000, 25000, 50000].map((amt) {
                             return ActionChip(
-                              label: Text('${(amt / 1000).toStringAsFixed(0)}k FCFA'),
+                              label: Text(AppFormat.fcfaCompact(amt)),
                               onPressed: () {
                                 discountValController.text = amt.toString();
                                 recalculate(amt.toString());
@@ -1761,7 +1759,7 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
       final student = _db.getUserById(p.etudiantId);
       final studentName = student != null ? '${student.prenom} ${student.nom}' : 'Étudiant';
       activities.add({
-        'title': 'Paiement ${p.montant.toStringAsFixed(0)} FCFA',
+        'title': 'Paiement ${AppFormat.fcfa(p.montant)}',
         'description': '$studentName - Motif: ${p.motif ?? "Versement"} (${p.methode.name.toUpperCase()})',
         'time': '${p.dateCreation.day}/${p.dateCreation.month}',
         'type': 'payment',

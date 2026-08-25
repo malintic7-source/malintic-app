@@ -1,4 +1,5 @@
 // Removed Firestore import (migrating off Firebase)
+import 'package:gestion_formations/utils/date_parsing.dart';
 
 enum PaymentStatus { enAttente, effectue, echoue }
 
@@ -74,18 +75,6 @@ class Payment {
       return PaymentMethod.carte;
     }
 
-    DateTime? parseDate(dynamic val) {
-      if (val == null) return null;
-      if (val is DateTime) return val;
-      if (val != null && val.runtimeType.toString().contains('Timestamp')) {
-        try {
-          return (val as dynamic).toDate();
-        } catch (_) {}
-      }
-      if (val is String) return DateTime.tryParse(val);
-      return null;
-    }
-
     return Payment(
       id: id,
       inscriptionId: data['inscriptionId'] ?? '',
@@ -94,8 +83,8 @@ class Payment {
       montant: (data['montant'] ?? 0).toDouble(),
       status: parseStatus(data['status']?.toString() ?? 'PaymentStatus.enAttente'),
       methode: parseMethod(data['methode']?.toString() ?? 'PaymentMethod.carte'),
-      dateCreation: parseDate(data['dateCreation']) ?? DateTime.now(),
-      dateEffectuation: parseDate(data['dateEffectuation']),
+      dateCreation: parseDynamicDate(data['dateCreation']),
+      dateEffectuation: tryParseDynamicDate(data['dateEffectuation']),
       referenceTransaction: data['referenceTransaction'],
       motifEchec: data['motifEchec'],
       motif: data['motif']?.toString(),
@@ -103,7 +92,7 @@ class Payment {
       trancheNumero: (data['trancheNumero'] as num?)?.toInt() ?? 1,
       nombreTranches: (data['nombreTranches'] as num?)?.toInt() ?? 1,
       remise: (data['remise'] as num?)?.toDouble() ?? 0,
-      dateEcheance: parseDate(data['dateEcheance']),
+      dateEcheance: tryParseDynamicDate(data['dateEcheance']),
     );
   }
 

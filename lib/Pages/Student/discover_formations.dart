@@ -5,6 +5,8 @@ import 'package:gestion_formations/Models/user.dart';
 import 'package:gestion_formations/Models/formation.dart';
 import 'package:gestion_formations/Services/db_services.dart';
 import 'package:gestion_formations/config/theme.dart';
+import 'package:gestion_formations/utils/formatters.dart';
+import 'package:gestion_formations/utils/ui_feedback.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:gestion_formations/Widgets/share_formation_dialog.dart';
 
@@ -379,21 +381,21 @@ class _DiscoverFormationsPageState extends State<DiscoverFormationsPage> with Ti
                           children: [
                             if (formation.type == FormationType.mixte && formation.prixEnLigne != null) ...[
                               Text(
-                                'En ligne: ${formation.prixEnLigne!.toStringAsFixed(0)} F',
+                                'En ligne: ${AppFormat.fcfaShort(formation.prixEnLigne!)}',
                                 style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.black87),
                               ),
                               Text(
-                                'Présentiel: ${formation.prix.toStringAsFixed(0)} F',
+                                'Présentiel: ${AppFormat.fcfaShort(formation.prix)}',
                                 style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.black87),
                               ),
                             ] else if (formation.type == FormationType.enligne) ...[
                               Text(
-                                'En ligne: ${(formation.prixEnLigne ?? formation.prix).toStringAsFixed(0)} F',
+                                'En ligne: ${AppFormat.fcfaShort(formation.prixEnLigne ?? formation.prix)}',
                                 style: GoogleFonts.poppins(fontSize: 11.5, fontWeight: FontWeight.w800, color: Colors.black87),
                               ),
                             ] else ...[
                               Text(
-                                'Présentiel: ${formation.prix.toStringAsFixed(0)} F',
+                                'Présentiel: ${AppFormat.fcfaShort(formation.prix)}',
                                 style: GoogleFonts.poppins(fontSize: 11.5, fontWeight: FontWeight.w800, color: Colors.black87),
                               ),
                             ],
@@ -760,9 +762,7 @@ class _DiscoverFormationsPageState extends State<DiscoverFormationsPage> with Ti
                               // enforce maximum 3 modules
                               if (selectedModules.length >= 3) {
                                 // show feedback
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('Vous pouvez sélectionner au maximum 3 modules.')),
-                                );
+                                context.showSnack('Vous pouvez sélectionner au maximum 3 modules.');
                                 return;
                               }
                               selectedModules.add(module);
@@ -955,24 +955,12 @@ class _DiscoverFormationsPageState extends State<DiscoverFormationsPage> with Ti
     try {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('✅ Inscription réussie!'),
-          backgroundColor: Color(0xFF10B981),
-          duration: Duration(seconds: 2),
-        ),
-      );
+      context.showSnack('✅ Inscription réussie!', background: const Color(0xFF10B981), duration: const Duration(seconds: 2));
 
       await Future.delayed(Duration(seconds: 1));
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('✅ Inscription réussie!'),
-          backgroundColor: Color(0xFF10B981),
-          duration: Duration(seconds: 2),
-        ),
-      );
+      context.showSnack('✅ Inscription réussie!', background: const Color(0xFF10B981), duration: const Duration(seconds: 2));
 
       await Future.delayed(Duration(seconds: 1));
       if (!mounted) return;
@@ -980,13 +968,7 @@ class _DiscoverFormationsPageState extends State<DiscoverFormationsPage> with Ti
       Navigator.pop(context);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('❌ Erreur lors de l\'inscription: $e'),
-          backgroundColor: Color(0xFFEF4444),
-          duration: Duration(seconds: 3),
-        ),
-      );
+      context.showSnack('❌ Erreur lors de l\'inscription: $e', background: const Color(0xFFEF4444), duration: const Duration(seconds: 3));
     }
   }
 

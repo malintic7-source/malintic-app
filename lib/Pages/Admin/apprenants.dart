@@ -1,19 +1,22 @@
 import 'package:animate_do/animate_do.dart';
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:gestion_formations/Models/formation.dart';
 import 'package:gestion_formations/Models/user.dart';
 import 'package:gestion_formations/Models/inscription.dart';
 import 'package:gestion_formations/Models/payment.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:flutter/services.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:gestion_formations/Services/auth_provider.dart';
 import 'package:gestion_formations/Services/db_services.dart';
 import 'package:gestion_formations/Services/pdf_helper.dart';
 import 'package:gestion_formations/Services/pdf_service.dart';
 import 'package:gestion_formations/config/theme.dart';
+import 'package:gestion_formations/utils/schedule_utils.dart';
+import 'package:gestion_formations/utils/formatters.dart';
+import 'package:gestion_formations/utils/user_export.dart';
+import 'package:gestion_formations/utils/ui_feedback.dart';
 
 class AdminApprenants extends StatefulWidget {
   const AdminApprenants({super.key});
@@ -915,41 +918,21 @@ class _AdminApprenantsState extends State<AdminApprenants>
         .getUsers()
         .where((u) => _selected.contains(u.id))
         .toList();
-    final buffer = StringBuffer();
-    buffer.writeln('id,prenom,nom,email,phone,estActif');
-    for (final u in users) {
-      buffer.writeln(
-        '${u.id},${u.prenom},${u.nom},${u.email},${u.phone},${u.estActif}',
-      );
-    }
-    final csv = buffer.toString();
-    await Clipboard.setData(ClipboardData(text: csv));
+    await copyUsersCsvToClipboard(users);
     if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('CSV copié dans le presse-papier')));
+    context.showSnack('CSV copié dans le presse-papier');
   }
 
   Future<void> _mailtoSelected() async {
-    final emails = _db
-        .getUsers()
-        .where((u) => _selected.contains(u.id))
-        .map((u) => u.email)
-        .where((e) => e.isNotEmpty)
-        .join(',');
-    if (emails.isEmpty) {
+    final users = _db.getUsers().where((u) => _selected.contains(u.id)).toList();
+    if (!users.any((u) => u.email.isNotEmpty)) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Aucun email disponible')));
+      context.showSnack('Aucun email disponible');
       return;
     }
-    final uri = Uri.parse('mailto:$emails');
-    if (!await launchUrl(uri)) {
+    if (!await launchMailtoForUsers(users)) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Impossible d\'ouvrir le client mail')),
-      );
+      context.showSnack('Impossible d\'ouvrir le client mail');
     }
   }
 
@@ -959,11 +942,7 @@ class _AdminApprenantsState extends State<AdminApprenants>
     }
     _selected.clear();
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(activate ? 'Apprenants débloqués' : 'Apprenants bloqués'),
-      ),
-    );
+    context.showSnack(activate ? 'Apprenants débloqués' : 'Apprenants bloqués');
   }
 
 
@@ -1017,13 +996,13 @@ class _AdminApprenantsState extends State<AdminApprenants>
       bgColor = AppTheme.success.withValues(alpha: 0.1);
       statusIcon = Icons.check_circle_rounded;
     } else if (totalPaid > 0) {
-      statusLabel = 'Reste: ${remaining.toStringAsFixed(0)} F';
+      statusLabel = 'Reste: ${AppFormat.fcfaShort(remaining)}';
       filterCategory = 'Reste à payer';
       statusColor = const Color(0xFFF59E0B);
       bgColor = const Color(0xFFFEF3C7);
       statusIcon = Icons.timelapse_rounded;
     } else {
-      statusLabel = 'Non Payé (${totalDue.toStringAsFixed(0)} F)';
+      statusLabel = 'Non Payé (${AppFormat.fcfaShort(totalDue)})';
       filterCategory = 'Non payé';
       statusColor = AppTheme.error;
       bgColor = AppTheme.error.withValues(alpha: 0.1);
@@ -2453,9 +2432,9 @@ class _AdminApprenantsState extends State<AdminApprenants>
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text('Total Dû : ${totalDue.toStringAsFixed(0)} FCFA', style: GoogleFonts.poppins(fontSize: 11, color: Colors.black54)),
-                                Text('Versé : ${totalPaid.toStringAsFixed(0)} FCFA', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: AppTheme.success)),
-                                Text('Reste : ${remaining.toStringAsFixed(0)} FCFA', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w700, color: remaining > 0 ? AppTheme.error : Colors.black54)),
+                                Text('Total Dû : ${AppFormat.fcfa(totalDue)}', style: GoogleFonts.poppins(fontSize: 11, color: Colors.black54)),
+                                Text('Versé : ${AppFormat.fcfa(totalPaid)}', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: AppTheme.success)),
+                                Text('Reste : ${AppFormat.fcfa(remaining)}', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w700, color: remaining > 0 ? AppTheme.error : Colors.black54)),
                               ],
                             ),
                           ],
@@ -2639,7 +2618,7 @@ class _AdminApprenantsState extends State<AdminApprenants>
                                           ),
                                         ),
                                         child: Text(
-                                          '${(formationProgress * 100).toStringAsFixed(0)}%',
+                                          AppFormat.percent(formationProgress),
                                           style: GoogleFonts.poppins(
                                             fontSize: 11,
                                             fontWeight: FontWeight.w600,
@@ -2868,15 +2847,7 @@ class _AdminApprenantsState extends State<AdminApprenants>
                         return SizedBox.shrink();
                       }
 
-                      final daysOrder = [
-                        'Lundi',
-                        'Mardi',
-                        'Mercredi',
-                        'Jeudi',
-                        'Vendredi',
-                        'Samedi',
-                        'Dimanche',
-                      ];
+                      final daysOrder = frenchWeekdays;
                       final scheduleDays = daysOrder
                           .where((d) => scheduleByDay.containsKey(d))
                           .toList();
@@ -2998,7 +2969,7 @@ class _AdminApprenantsState extends State<AdminApprenants>
                     );
                   } catch (e) {
                     if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: $e')));
+                      context.showSnack('Erreur: $e');
                     }
                   }
                 },
@@ -3056,7 +3027,7 @@ class _AdminApprenantsState extends State<AdminApprenants>
                       );
                     } catch (e) {
                       if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: $e')));
+                        context.showSnack('Erreur: $e');
                       }
                     }
                   },
@@ -3251,7 +3222,7 @@ class _AdminApprenantsState extends State<AdminApprenants>
                                             borderRadius: BorderRadius.circular(6),
                                           ),
                                           child: Text(
-                                            isPaid ? 'Paiement : 100% Soldé' : 'Paiement : Solde restant ${balance.toStringAsFixed(0)} FCFA',
+                                            isPaid ? 'Paiement : 100% Soldé' : 'Paiement : Solde restant ${AppFormat.fcfa(balance)}',
                                             style: GoogleFonts.poppins(
                                               fontSize: 11,
                                               fontWeight: FontWeight.w600,
@@ -3325,7 +3296,7 @@ class _AdminApprenantsState extends State<AdminApprenants>
                                                 );
                                               } catch (e) {
                                                 if (context.mounted) {
-                                                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: $e')));
+                                                  context.showSnack('Erreur: $e');
                                                 }
                                               }
                                             },

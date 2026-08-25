@@ -2,6 +2,8 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:flutter/services.dart';
 import 'package:gestion_formations/config/theme.dart';
+import 'package:gestion_formations/utils/status_styles.dart';
+import 'package:gestion_formations/utils/formatters.dart';
 
 class PaymentReportService {
   static Future<Uint8List> generatePaymentReportPDF({
@@ -260,8 +262,8 @@ class PaymentReportService {
                   // Data rows
                   ...payments.map((payment) {
                     final rawStatus = (payment['status'] ?? payment['statut'] ?? payment['statutMontant'] ?? 'effectue').toString();
-                    final statusColor = _getStatusColor(rawStatus);
-                    final statusLabel = _getStatusLabel(rawStatus);
+                    final statusColor = PdfColor.fromInt(fuzzyPaymentStatusColorValue(rawStatus));
+                    final statusLabel = fuzzyPaymentStatusLabel(rawStatus);
 
                     // Extract Student Info
                     final studentName = (payment['studentName'] ??
@@ -362,7 +364,7 @@ class PaymentReportService {
                             crossAxisAlignment: pw.CrossAxisAlignment.start,
                             children: [
                               pw.Text(
-                                '${montantNum.toStringAsFixed(0)} FCFA',
+                                AppFormat.fcfa(montantNum),
                                 style: pw.TextStyle(
                                   fontSize: 9.5,
                                   fontWeight: pw.FontWeight.bold,
@@ -465,31 +467,4 @@ class PaymentReportService {
     return pdf.save();
   }
 
-  static PdfColor _getStatusColor(String status) {
-    final s = status.toLowerCase();
-    if (s.contains('valide') || s.contains('pay') || s.contains('effectue')) {
-      return PdfColor.fromInt(0xFF10B981);
-    } else if (s.contains('incomplet') || s.contains('partiel') || s.contains('avance')) {
-      return PdfColor.fromInt(0xFFFB923C);
-    } else if (s.contains('attente')) {
-      return PdfColor.fromInt(0xFFF59E0B);
-    } else if (s.contains('echou') || s.contains('annul') || s.contains('rej')) {
-      return PdfColor.fromInt(0xFFEF4444);
-    }
-    return PdfColor.fromInt(0xFF10B981);
-  }
-
-  static String _getStatusLabel(String status) {
-    final s = status.toLowerCase();
-    if (s.contains('valide') || s.contains('pay') || s.contains('effectue')) {
-      return 'Validé';
-    } else if (s.contains('incomplet') || s.contains('partiel') || s.contains('avance')) {
-      return 'Incomplet';
-    } else if (s.contains('attente')) {
-      return 'En Attente';
-    } else if (s.contains('echou') || s.contains('annul') || s.contains('rej')) {
-      return 'Échoué';
-    }
-    return 'Validé';
-  }
 }

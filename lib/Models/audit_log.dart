@@ -1,3 +1,5 @@
+import 'package:gestion_formations/utils/date_parsing.dart';
+
 /// Niveaux de sévérité pour le journal d'audit.
 enum AuditSeverity { info, warning, critical }
 
@@ -41,17 +43,6 @@ class AuditLog {
   }
 
   factory AuditLog.fromMap(Map<String, dynamic> map) {
-    DateTime parseTimestamp(dynamic value) {
-      if (value is DateTime) return value;
-      if (value != null && value.runtimeType.toString().contains('Timestamp')) {
-        try {
-          return (value as dynamic).toDate() as DateTime;
-        } catch (_) {}
-      }
-      if (value is String) return DateTime.tryParse(value) ?? DateTime.now();
-      return DateTime.now();
-    }
-
     AuditSeverity parseSeverity(dynamic value) {
       switch (value?.toString()) {
         case 'warning':
@@ -69,7 +60,7 @@ class AuditLog {
       userRole: map['userRole'] ?? 'Admin',
       action: map['action'] ?? 'ACTION',
       description: map['description'] ?? '',
-      timestamp: parseTimestamp(map['timestamp']),
+      timestamp: parseDynamicDate(map['timestamp']),
       targetId: map['targetId']?.toString(),
       targetType: map['targetType']?.toString(),
       severity: parseSeverity(map['severity']),

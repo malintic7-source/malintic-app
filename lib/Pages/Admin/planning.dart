@@ -5,6 +5,7 @@ import 'package:gestion_formations/config/theme.dart';
 import 'package:gestion_formations/Models/formation.dart';
 import 'package:gestion_formations/Models/user.dart';
 import 'package:gestion_formations/Services/db_services.dart';
+import 'package:gestion_formations/utils/schedule_utils.dart';
 
 class AdminPlanning extends StatefulWidget {
   const AdminPlanning({super.key});
@@ -22,16 +23,7 @@ class _AdminPlanningState extends State<AdminPlanning> with TickerProviderStateM
   String? _filterFormateurId;
   final TextEditingController _searchController = TextEditingController();
 
-  final List<String> _days = [
-    'Tous',
-    'Lundi',
-    'Mardi',
-    'Mercredi',
-    'Jeudi',
-    'Vendredi',
-    'Samedi',
-    'Dimanche',
-  ];
+  final List<String> _days = ['Tous', ...frenchWeekdays];
 
   @override
   void initState() {
@@ -114,7 +106,7 @@ class _AdminPlanningState extends State<AdminPlanning> with TickerProviderStateM
 
         // Sort by day and start time
         filteredSessions.sort((a, b) {
-          final dayCompare = _dayOrder(a.horaire.jour).compareTo(_dayOrder(b.horaire.jour));
+          final dayCompare = weekdayOrder(a.horaire.jour).compareTo(weekdayOrder(b.horaire.jour));
           if (dayCompare != 0) return dayCompare;
           return a.horaire.heureDebut.compareTo(b.horaire.heureDebut);
         });
@@ -143,27 +135,6 @@ class _AdminPlanningState extends State<AdminPlanning> with TickerProviderStateM
         );
       },
     );
-  }
-
-  int _dayOrder(String day) {
-    switch (day) {
-      case 'Lundi':
-        return 1;
-      case 'Mardi':
-        return 2;
-      case 'Mercredi':
-        return 3;
-      case 'Jeudi':
-        return 4;
-      case 'Vendredi':
-        return 5;
-      case 'Samedi':
-        return 6;
-      case 'Dimanche':
-        return 7;
-      default:
-        return 8;
-    }
   }
 
   Widget _buildHeader(bool isMobile, List<Formation> formations) {

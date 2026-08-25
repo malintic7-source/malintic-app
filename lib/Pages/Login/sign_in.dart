@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gestion_formations/config/theme.dart';
+import 'package:gestion_formations/utils/ui_feedback.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:gestion_formations/Pages/Login/welcome_page.dart';
 import 'package:gestion_formations/Pages/home_screen.dart';
@@ -259,11 +260,9 @@ class _SignInPageState extends State<SignInPage> {
               alignment: Alignment.centerRight,
               child: TextButton(
                 onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Veuillez contacter votre administrateur pour réinitialiser votre mot de passe.'),
-                      backgroundColor: AppTheme.info,
-                    ),
+                  context.showSnack(
+                    'Veuillez contacter votre administrateur pour réinitialiser votre mot de passe.',
+                    background: AppTheme.info,
                   );
                 },
                 style: TextButton.styleFrom(
@@ -390,12 +389,7 @@ class _SignInPageState extends State<SignInPage> {
     final password = _passwordController.text.trim();
 
     if (email.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Veuillez remplir tous les champs'),
-          backgroundColor: AppTheme.error,
-        ),
-      );
+      context.showErrorSnack('Veuillez remplir tous les champs');
       return;
     }
 
@@ -414,22 +408,12 @@ class _SignInPageState extends State<SignInPage> {
           ),
         );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Identifiants invalides.'),
-            backgroundColor: AppTheme.error,
-          ),
-        );
+        context.showErrorSnack('Identifiants invalides.');
       }
     } catch (e) {
       if (!mounted) return;
       final msg = e.toString().replaceAll('Exception: ', '').trim();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(msg.isNotEmpty ? msg : 'Identifiants invalides.'),
-          backgroundColor: AppTheme.error,
-        ),
-      );
+      context.showErrorSnack(msg.isNotEmpty ? msg : 'Identifiants invalides.');
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -440,5 +424,4 @@ class _SignInPageState extends State<SignInPage> {
 
 /// Backward compatibility alias
 typedef SignIn = SignInPage;
-
 

@@ -1,4 +1,5 @@
 // Removed Firestore import for Docker migration
+import 'package:gestion_formations/utils/date_parsing.dart';
 
 enum FormationType { enligne, presentielle, mixte }
 
@@ -135,18 +136,6 @@ class Formation {
       return null;
     }
 
-    DateTime? parseDate(dynamic val) {
-      if (val == null) return null;
-      if (val is DateTime) return val;
-      if (val != null && val.runtimeType.toString().contains('Timestamp')) {
-        try {
-          return (val as dynamic).toDate();
-        } catch (_) {}
-      }
-      if (val is String) return DateTime.tryParse(val);
-      return null;
-    }
-
     return Formation(
       id: id,
       titre: data['titre'] ?? '',
@@ -171,9 +160,9 @@ class Formation {
               ?.map((h) => Horaire.fromMap(h as Map<String, dynamic>))
               .toList() ??
           [],
-      dateDebut: parseDate(data['dateDebut']),
-      dateFin: parseDate(data['dateFin']),
-      dateCreation: parseDate(data['dateCreation']) ?? DateTime.now(),
+      dateDebut: tryParseDynamicDate(data['dateDebut']),
+      dateFin: tryParseDynamicDate(data['dateFin']),
+      dateCreation: parseDynamicDate(data['dateCreation']),
       capaciteMax: data['capaciteMax'],
       nombreInscrits: data['nombreInscrits'] ?? 0,
       estStage: data['estStage'] ?? false,

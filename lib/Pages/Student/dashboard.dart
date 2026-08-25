@@ -10,6 +10,8 @@ import 'package:gestion_formations/Services/pdf_service.dart';
 import 'package:gestion_formations/Pages/Student/discover_formations.dart';
 import 'package:gestion_formations/Widgets/chart_widgets.dart';
 import 'package:gestion_formations/config/theme.dart';
+import 'package:gestion_formations/utils/formatters.dart';
+import 'package:gestion_formations/utils/ui_feedback.dart';
 
 class StudentDashboard extends StatefulWidget {
   final User user;
@@ -257,7 +259,7 @@ class _StudentDashboardState extends State<StudentDashboard> with TickerProvider
               const SizedBox(height: 12),
               _buildStatCard(
                 title: 'Progression moyenne',
-                value: '${(averageProgress * 100).toStringAsFixed(0)}%',
+                value: AppFormat.percent(averageProgress),
                 subtitle: 'Sur vos modules en cours',
                 icon: Icons.show_chart_rounded,
                 color: AppTheme.success,
@@ -283,7 +285,7 @@ class _StudentDashboardState extends State<StudentDashboard> with TickerProvider
               Expanded(
                 child: _buildStatCard(
                   title: 'Progression moyenne',
-                  value: '${(averageProgress * 100).toStringAsFixed(0)}%',
+                  value: AppFormat.percent(averageProgress),
                   subtitle: 'Sur vos modules en cours',
                   icon: Icons.show_chart_rounded,
                   color: AppTheme.success,
@@ -766,18 +768,11 @@ class _StudentDashboardState extends State<StudentDashboard> with TickerProvider
                               );
 
                               if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Attestation téléchargée avec succès !', style: GoogleFonts.poppins()),
-                                    backgroundColor: Colors.green,
-                                  ),
-                                );
+                                context.showSuccessSnack('Attestation téléchargée avec succès !');
                               }
                             } catch (e) {
                               if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('Erreur: $e'), backgroundColor: AppTheme.error),
-                                );
+                                context.showErrorSnack('Erreur: $e');
                               }
                             }
                           },

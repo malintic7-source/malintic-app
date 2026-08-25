@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:gestion_formations/Models/user.dart';
 import 'package:gestion_formations/Services/auth_provider.dart';
 import 'package:gestion_formations/config/theme.dart';
+import 'package:gestion_formations/utils/ui_feedback.dart';
 
 class ProfilePage extends StatefulWidget {
   final User user;
@@ -512,14 +513,10 @@ class _ProfilePageState extends State<ProfilePage> with TickerProviderStateMixin
                           currentUser = updatedUser!;
                           isEditing = false;
                         });
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('✅ Profil mis à jour')),
-                        );
+                        context.showSnack('✅ Profil mis à jour');
                       } catch (e) {
                         if (!mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('❌ Erreur: $e')),
-                        );
+                        context.showSnack('❌ Erreur: $e');
                       }
                     },
                     borderRadius: BorderRadius.circular(12),
@@ -689,21 +686,15 @@ class _ProfilePageState extends State<ProfilePage> with TickerProviderStateMixin
                         onTap: () async {
                           final localContext = context;
                           if (oldPasswordController.text.isEmpty) {
-                            ScaffoldMessenger.of(localContext).showSnackBar(
-                              const SnackBar(content: Text('Veuillez saisir votre ancien mot de passe')),
-                            );
+                            localContext.showSnack('Veuillez saisir votre ancien mot de passe');
                             return;
                           }
                           if (newPasswordController.text.length < 8) {
-                            ScaffoldMessenger.of(localContext).showSnackBar(
-                              const SnackBar(content: Text('Le nouveau mot de passe doit contenir au moins 8 caractères')),
-                            );
+                            localContext.showSnack('Le nouveau mot de passe doit contenir au moins 8 caractères');
                             return;
                           }
                           if (newPasswordController.text != confirmPasswordController.text) {
-                            ScaffoldMessenger.of(localContext).showSnackBar(
-                              const SnackBar(content: Text('Les mots de passe ne correspondent pas')),
-                            );
+                            localContext.showSnack('Les mots de passe ne correspondent pas');
                             return;
                           }
                           try {
@@ -713,14 +704,10 @@ class _ProfilePageState extends State<ProfilePage> with TickerProviderStateMixin
                             );
                             if (!localContext.mounted) return;
                             Navigator.pop(localContext);
-                            ScaffoldMessenger.of(localContext).showSnackBar(
-                              const SnackBar(content: Text('✅ Mot de passe modifié avec succès')),
-                            );
+                            localContext.showSnack('✅ Mot de passe modifié avec succès');
                           } catch (e) {
                             if (!localContext.mounted) return;
-                            ScaffoldMessenger.of(localContext).showSnackBar(
-                              SnackBar(content: Text('❌ $e')),
-                            );
+                            localContext.showSnack('❌ $e');
                           }
                         },
                         borderRadius: BorderRadius.circular(12),

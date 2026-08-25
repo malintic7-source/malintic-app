@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:gestion_formations/Models/user.dart';
 import 'package:gestion_formations/Services/db_services.dart';
 import 'package:gestion_formations/config/theme.dart';
+import 'package:gestion_formations/utils/schedule_utils.dart';
 
 class StudentSchedule extends StatefulWidget {
   final User user;
@@ -142,7 +143,7 @@ class _StudentScheduleState extends State<StudentSchedule> with TickerProviderSt
           );
         }
 
-        final daysOrder = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
+        final daysOrder = frenchWeekdays;
 
         return Column(
           children: daysOrder.map((day) {
@@ -334,7 +335,7 @@ class _StudentScheduleState extends State<StudentSchedule> with TickerProviderSt
         .map((f) => f['formationId']?.toString() ?? '')
         .toSet();
 
-    final dayNames = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
+    final dayNames = frenchWeekdays;
 
     for (var s in publishedSeances) {
       if (!studentAssignedIds.contains(s.formationId)) continue;
