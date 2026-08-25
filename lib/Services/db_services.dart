@@ -63,6 +63,7 @@ class LocalDataService {
       Uri.base.hasAuthority;
 
   void _initLocalApiSync() {
+    if (!_hasLocalApi && Uri.base.scheme == 'file') return;
     _syncFromLocalApi();
     _apiPollingTimer = Timer.periodic(
       const Duration(seconds: 2),
