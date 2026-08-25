@@ -694,7 +694,6 @@ app.put('/api/:collection/:id', (req, res) => {
   if (isPublicRegistration && existingIndex >= 0) {
     return res.status(409).json({ error: 'Une inscription publique ne peut pas être modifiée.' });
   }
-  const session = sessionFromRequest(req);
   if (collection === 'users' && existingIndex >= 0 && String(session?.userId) === String(id)) {
     const existing = list[existingIndex];
     const profileFields = ['nom', 'prenom', 'phone', 'photoUrl', 'sexe', 'specialite'];
