@@ -1269,9 +1269,9 @@ class _AdminApprenantsState extends State<AdminApprenants>
 
       // 2. Student MUST be 100% paid (zero debt)
       final balance = _db.getInscriptionBalance(ins.id);
-      final payments = _db.getPaymentsForInscription(ins.id);
-      final totalPaid = payments.fold<double>(0.0, (s, p) => s + p.montant);
-      final isPaid = balance <= 0 && (f.prix == 0 || totalPaid >= f.prix || ins.paiementEffectue);
+      final totalPaid = _db.getInscriptionPaidAmount(ins.id);
+      final totalDue = _db.getInscriptionTotalDue(ins.id);
+      final isPaid = balance <= 0 && (totalDue == 0 || totalPaid >= totalDue || ins.paiementEffectue);
       if (!isPaid) continue;
 
       eligibleAttestations.add({'inscription': ins, 'formation': f});
@@ -3087,9 +3087,9 @@ class _AdminApprenantsState extends State<AdminApprenants>
       if (!isCompletedByAdmin) continue;
 
       final balance = _db.getInscriptionBalance(ins.id);
-      final payments = _db.getPaymentsForInscription(ins.id);
-      final totalPaid = payments.fold<double>(0.0, (s, p) => s + p.montant);
-      final isPaid = balance <= 0 && (f.prix == 0 || totalPaid >= f.prix || ins.paiementEffectue);
+      final totalPaid = _db.getInscriptionPaidAmount(ins.id);
+      final totalDue = _db.getInscriptionTotalDue(ins.id);
+      final isPaid = balance <= 0 && (totalDue == 0 || totalPaid >= totalDue || ins.paiementEffectue);
       if (isPaid) return true;
     }
     return false;

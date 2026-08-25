@@ -183,24 +183,12 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
     return StreamBuilder<List<Payment>>(
       stream: _db.watchPayments(),
       builder: (context, snapshot) {
-        final payments = snapshot.data ?? [];
-        final totalReceived = payments
-            .where((p) => p.status == PaymentStatus.effectue)
-            .fold<double>(0, (sum, p) => sum + p.montant);
-
-        final deletedInscIds = _db.getDeletedDocs('inscriptions');
-        final deletedUserIds = _db.getDeletedDocs('users');
-        final deletedUserEmails = _db.getDeletedDocs('user_emails');
-
-        final inscriptions = _db.getInscriptions().where((i) {
-          final email = (i.email ?? '').trim().toLowerCase();
-          return !deletedInscIds.contains(i.id) &&
-              !deletedUserIds.contains(i.etudiantId) &&
-              !deletedUserIds.contains(i.id) &&
-              (email.isEmpty || !deletedUserEmails.contains(email));
-        }).toList();
-        final totalDue = inscriptions.fold<double>(0, (sum, ins) => sum + _db.getInscriptionTotalDue(ins.id));
-        final totalBalance = inscriptions.fold<double>(0, (sum, ins) => sum + _db.getInscriptionBalance(ins.id));
+        final kpis = _db.getFinancialKpis();
+        final totalReceived = (kpis['totalReceived'] as num?)?.toDouble() ?? 0.0;
+        final totalDue = (kpis['totalDue'] as num?)?.toDouble() ?? 0.0;
+        final totalBalance = (kpis['totalBalance'] as num?)?.toDouble() ?? 0.0;
+        final recoveryRate = (kpis['recoveryRate'] as num?)?.toDouble() ?? 0.0;
+        final totalTransactions = (kpis['totalTransactions'] as num?)?.toInt() ?? 0;
 
         return LayoutBuilder(
           builder: (context, constraints) {
@@ -213,7 +201,7 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
                 _buildStatCard('Encaissé Total', '${totalReceived.toStringAsFixed(0)} FCFA', Icons.account_balance_wallet_rounded, AppTheme.success, cardWidth),
                 _buildStatCard('Reste à Recouvrer', '${totalBalance.toStringAsFixed(0)} FCFA', Icons.pending_actions_rounded, const Color(0xFFD4AF37), cardWidth),
                 _buildStatCard('Total Dû Formations', '${totalDue.toStringAsFixed(0)} FCFA', Icons.receipt_rounded, AppTheme.primary, cardWidth),
-                _buildStatCard('Total Transactions', '${payments.length} versements', Icons.swap_horiz_rounded, Colors.purple, cardWidth),
+                _buildStatCard('Taux de Recouvrement', '${recoveryRate.toStringAsFixed(1)}% ($totalTransactions reçus)', Icons.insights_rounded, Colors.purple, cardWidth),
               ],
             );
           },

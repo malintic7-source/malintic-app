@@ -213,14 +213,18 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
 
   // ========== 2. RICH KPI STATS GRID ==========
   Widget _buildStatsGrid(bool isMobile, bool isTablet) {
-    return StreamBuilder<List<User>>(
-      stream: _db.watchUsers(),
-      builder: (context, userSnapshot) {
-        final deletedUserIds = _db.getDeletedDocs('users');
-        final deletedInscIds = _db.getDeletedDocs('inscriptions');
-        final deletedUserEmails = _db.getDeletedDocs('user_emails');
+    return StreamBuilder<List<Payment>>(
+      stream: _db.watchPayments(),
+      builder: (context, paymentSnapshot) {
+        final kpis = _db.getFinancialKpis();
+        final totalRevenue = (kpis['totalReceived'] as num?)?.toDouble() ?? 0.0;
+        final totalUnpaid = (kpis['totalBalance'] as num?)?.toDouble() ?? 0.0;
+        final pendingInscriptions = (kpis['pendingCount'] as num?)?.toInt() ?? 0;
+        final recoveryRate = (kpis['recoveryRate'] as num?)?.toDouble() ?? 0.0;
 
-        final users = (userSnapshot.data ?? _db.getUsers()).where((u) {
+        final deletedUserIds = _db.getDeletedDocs('users');
+        final deletedUserEmails = _db.getDeletedDocs('user_emails');
+        final users = _db.getUsers().where((u) {
           final email = u.email.trim().toLowerCase();
           return !deletedUserIds.contains(u.id) &&
               (email.isEmpty || !deletedUserEmails.contains(email));
@@ -229,34 +233,13 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
         final etudiants = users.where((u) => u.role == UserRole.apprenant).length;
         final totalFormations = _db.getFormations().length;
 
-        final inscriptions = _db.getInscriptions().where((i) {
-          final email = (i.email ?? '').trim().toLowerCase();
-          return !deletedInscIds.contains(i.id) &&
-              !deletedUserIds.contains(i.etudiantId) &&
-              !deletedUserIds.contains(i.id) &&
-              (email.isEmpty || !deletedUserEmails.contains(email));
-        }).toList();
-
-        final pendingInscriptions = inscriptions.where((i) => i.status == InscriptionStatus.enAttente).length;
-
-        final payments = _db.getPayments();
-        final totalRevenue = payments
-            .where((p) => p.status == PaymentStatus.effectue)
-            .fold<double>(0, (sum, p) => sum + p.montant);
-
-        // Compute total unpaid balance across accepted inscriptions
-        final acceptedInscriptions = inscriptions.where((i) => i.status == InscriptionStatus.acceptee);
-        final totalUnpaid = acceptedInscriptions.fold<double>(0, (sum, ins) {
-          return sum + _db.getInscriptionBalance(ins.id);
-        });
-
         final revenueFormatted = totalRevenue >= 1000000
-            ? '${(totalRevenue / 1000000).toStringAsFixed(1)}M FCFA'
-            : '${(totalRevenue / 1000).toStringAsFixed(0)}k FCFA';
+            ? '${(totalRevenue / 1000000).toStringAsFixed(2)}M FCFA'
+            : '${totalRevenue.toStringAsFixed(0)} FCFA';
 
         final unpaidFormatted = totalUnpaid >= 1000000
-            ? '${(totalUnpaid / 1000000).toStringAsFixed(1)}M FCFA'
-            : '${(totalUnpaid / 1000).toStringAsFixed(0)}k FCFA';
+            ? '${(totalUnpaid / 1000000).toStringAsFixed(2)}M FCFA'
+            : '${totalUnpaid.toStringAsFixed(0)} FCFA';
 
         final cols = isMobile ? 2 : (isTablet ? 3 : 4);
         final ratio = isMobile ? 1.15 : (isTablet ? 1.4 : 1.7);
@@ -272,7 +255,7 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
             _buildStatCard(
               title: 'Recettes Encaissées',
               value: revenueFormatted,
-              subtitle: 'Encaissements validés',
+              subtitle: '${recoveryRate.toStringAsFixed(1)}% recouvré',
               icon: Icons.payments_rounded,
               colors: const [AppTheme.success, AppTheme.successDark],
               onTap: () => widget.onNavigateTab?.call(5),
@@ -286,7 +269,7 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
             _buildStatCard(
               title: 'Reste à Recouvrer',
               value: unpaidFormatted,
-              subtitle: 'Solde dû étudiants',
+              subtitle: 'Solde dû stagiaires',
               icon: Icons.account_balance_wallet_rounded,
               colors: const [AppTheme.warningDark, AppTheme.accent],
               onTap: () => widget.onNavigateTab?.call(5),
@@ -1117,6 +1100,8 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
 
     final amountController = TextEditingController();
     final motifController = TextEditingController();
+    final trancheNumController = TextEditingController(text: '1');
+    final totalTranchesController = TextEditingController(text: '1');
     List<Map<String, dynamic>> studentFormations = [];
 
     showDialog(
@@ -1189,6 +1174,28 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
                                 .toList();
                             studentFormations = list;
                             selectedFormationId = list.isNotEmpty ? list.first['id'].toString() : null;
+
+                            if (selectedFormationId != null) {
+                              final insc = _db.getInscriptions().where(
+                                (item) => item.etudiantId == v && item.formationId == selectedFormationId,
+                              ).firstOrNull;
+                              if (insc != null) {
+                                remise = _db.getInscriptionDiscountTotal(insc.id);
+                                final history = _db.getPaymentsForInscription(insc.id);
+                                final settled = history.where((p) => p.status == PaymentStatus.effectue).toList();
+                                trancheNum = settled.isEmpty
+                                    ? 1
+                                    : settled.map((p) => p.trancheNumero).reduce((a, b) => a > b ? a : b) + 1;
+                                nombreTranches = history.isNotEmpty ? history.first.nombreTranches : (trancheNum > 1 ? trancheNum : 1);
+                                if (trancheNum > nombreTranches) nombreTranches = trancheNum;
+                                trancheNumController.text = '$trancheNum';
+                                totalTranchesController.text = '$nombreTranches';
+                                final b = _db.getInscriptionBalance(insc.id);
+                                amountController.text = b.toStringAsFixed(0);
+                                montant = b;
+                                motifController.text = 'Versement Tranche $trancheNum';
+                              }
+                            }
                           }
                         });
                       },
@@ -1205,7 +1212,30 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
                           return DropdownMenuItem(value: f['id'].toString(), child: Text(f['titre'].toString()));
                         }).toList(),
                         onChanged: (v) {
-                          setModalState(() => selectedFormationId = v);
+                          setModalState(() {
+                            selectedFormationId = v;
+                            if (v != null && selectedStudentId != null) {
+                              final insc = _db.getInscriptions().where(
+                                (item) => item.etudiantId == selectedStudentId && item.formationId == v,
+                              ).firstOrNull;
+                              if (insc != null) {
+                                remise = _db.getInscriptionDiscountTotal(insc.id);
+                                final history = _db.getPaymentsForInscription(insc.id);
+                                final settled = history.where((p) => p.status == PaymentStatus.effectue).toList();
+                                trancheNum = settled.isEmpty
+                                    ? 1
+                                    : settled.map((p) => p.trancheNumero).reduce((a, b) => a > b ? a : b) + 1;
+                                nombreTranches = history.isNotEmpty ? history.first.nombreTranches : (trancheNum > 1 ? trancheNum : 1);
+                                if (trancheNum > nombreTranches) nombreTranches = trancheNum;
+                                trancheNumController.text = '$trancheNum';
+                                totalTranchesController.text = '$nombreTranches';
+                                final b = _db.getInscriptionBalance(insc.id);
+                                amountController.text = b.toStringAsFixed(0);
+                                montant = b;
+                                motifController.text = 'Versement Tranche $trancheNum';
+                              }
+                            }
+                          });
                         },
                       ),
                       const SizedBox(height: 16),
@@ -1297,6 +1327,48 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
                         ),
                       ),
                       const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('N° Tranche', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w700)),
+                                const SizedBox(height: 6),
+                                TextField(
+                                  controller: trancheNumController,
+                                  keyboardType: TextInputType.number,
+                                  decoration: InputDecoration(
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                  ),
+                                  onChanged: (v) => trancheNum = int.tryParse(v) ?? 1,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Total Tranches', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w700)),
+                                const SizedBox(height: 6),
+                                TextField(
+                                  controller: totalTranchesController,
+                                  keyboardType: TextInputType.number,
+                                  decoration: InputDecoration(
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                  ),
+                                  onChanged: (v) => nombreTranches = int.tryParse(v) ?? 1,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
                     ],
                     Text('Montant Versé (FCFA)', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w700)),
                     const SizedBox(height: 6),
@@ -1349,6 +1421,13 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
                   }
 
                   final m = montant > 0 ? montant : (double.tryParse(amountController.text) ?? 0);
+                  if (m <= 0) {
+                    ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Le montant doit être supérieur à 0 FCFA.')));
+                    return;
+                  }
+
+                  final tNum = int.tryParse(trancheNumController.text) ?? trancheNum;
+                  final tTotal = int.tryParse(totalTranchesController.text) ?? nombreTranches;
 
                   final payment = Payment(
                     id: 'pay_${DateTime.now().millisecondsSinceEpoch}',
@@ -1360,14 +1439,22 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
                     methode: method,
                     dateCreation: DateTime.now(),
                     dateEffectuation: DateTime.now(),
-                    referenceTransaction: 'OM-${DateTime.now().millisecondsSinceEpoch.toString().substring(6)}',
-                    trancheNumero: trancheNum,
-                    nombreTranches: nombreTranches,
+                    referenceTransaction: 'REC-${DateTime.now().millisecondsSinceEpoch.toString().substring(6)}',
+                    trancheNumero: tNum,
+                    nombreTranches: tTotal,
                     remise: remise,
-                    motif: motifController.text.isNotEmpty ? motifController.text : 'Versement Tranche $trancheNum',
+                    motif: motifController.text.isNotEmpty ? motifController.text : 'Versement Tranche $tNum',
                   );
 
-                  await _db.addPayment(payment);
+                  try {
+                    await _db.addPayment(payment);
+                  } catch (e) {
+                    if (ctx.mounted) {
+                      ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('⚠️ $e'), backgroundColor: AppTheme.error));
+                    }
+                    return;
+                  }
+
                   await _db.logAction(
                     userNom: widget.user.nomComplet,
                     userRole: 'Admin',

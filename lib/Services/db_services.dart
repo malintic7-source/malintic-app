@@ -2734,6 +2734,7 @@ class LocalDataService {
   }
 
   Future<void> deletePayment(String id) async {
+    _recordDeletedDoc('payments', id);
     _payments.removeWhere((p) => p.id == id);
     _paymentsController.add(List.unmodifiable(_payments));
     _savePaymentsToStorage();
@@ -2744,11 +2745,15 @@ class LocalDataService {
 
   List<Payment> getPaymentsForInscription(String inscriptionId) {
     final targetInsc = getInscriptionById(inscriptionId);
+    final deletedPaymentIds = getDeletedDocs('payments');
     return _payments.where((payment) {
+      if (deletedPaymentIds.contains(payment.id)) return false;
       if (payment.inscriptionId == inscriptionId) return true;
       if (targetInsc != null &&
+          targetInsc.formationId.isNotEmpty &&
           payment.formationId == targetInsc.formationId &&
-          (payment.etudiantId == targetInsc.etudiantId || payment.etudiantId == targetInsc.apprenantId)) {
+          ((targetInsc.etudiantId.isNotEmpty && payment.etudiantId == targetInsc.etudiantId) ||
+           (targetInsc.apprenantId.isNotEmpty && payment.etudiantId == targetInsc.apprenantId))) {
         return true;
       }
       return false;
@@ -2768,20 +2773,24 @@ class LocalDataService {
         ? formation.prixEnLigne!
         : formation.prix;
 
-    final selected = moduleIds == null || moduleIds.isEmpty
-        ? formation.modules
-        : moduleIds;
-    final hasPrices = selected.any(
-      (module) => formation.modulePrices.containsKey(module),
-    );
-    if (!hasPrices) return basePrice;
+    // Si une sélection partielle de modules est spécifiée et que des prix individuels existent
+    if (moduleIds != null &&
+        moduleIds.isNotEmpty &&
+        moduleIds.length < formation.modules.length &&
+        formation.modulePrices.isNotEmpty) {
+      final hasPrices = moduleIds.any(
+        (module) => formation.modulePrices.containsKey(module),
+      );
+      if (hasPrices) {
+        final modulesTotal = moduleIds.fold<double>(
+          0,
+          (total, module) => total + (formation.modulePrices[module] ?? 0),
+        );
+        if (modulesTotal > 0) return modulesTotal;
+      }
+    }
 
-    final modulesTotal = selected.fold<double>(
-      0,
-      (total, module) => total + (formation.modulePrices[module] ?? 0),
-    );
-
-    return modulesTotal > 0 ? modulesTotal : basePrice;
+    return basePrice;
   }
 
   double getInscriptionBaseTotal(String inscriptionId) {
@@ -2797,8 +2806,9 @@ class LocalDataService {
   double getInscriptionDiscountTotal(String inscriptionId) {
     // A discount is a decision for an inscription, not one discount per
     // installment. Keep the highest recorded decision instead of adding it.
+    final deletedPaymentIds = getDeletedDocs('payments');
     return getPaymentsForInscription(inscriptionId)
-        .where((payment) => payment.status != PaymentStatus.echoue)
+        .where((payment) => !deletedPaymentIds.contains(payment.id) && payment.status != PaymentStatus.echoue)
         .fold<double>(
           0,
           (value, payment) => payment.remise > value ? payment.remise : value,
@@ -2812,8 +2822,9 @@ class LocalDataService {
   }
 
   double getInscriptionPaidAmount(String inscriptionId) {
+    final deletedPaymentIds = getDeletedDocs('payments');
     return getPaymentsForInscription(inscriptionId)
-        .where((payment) => payment.status == PaymentStatus.effectue)
+        .where((payment) => !deletedPaymentIds.contains(payment.id) && payment.status == PaymentStatus.effectue)
         .fold<double>(0, (total, payment) => total + payment.montant);
   }
 
@@ -2822,6 +2833,75 @@ class LocalDataService {
             getInscriptionPaidAmount(inscriptionId))
         .clamp(0, double.infinity)
         .toDouble();
+  }
+
+  /// Calcul unifié des indicateurs clés de performance (KPI) financiers
+  Map<String, dynamic> getFinancialKpis() {
+    final deletedPaymentIds = getDeletedDocs('payments');
+    final deletedInscIds = getDeletedDocs('inscriptions');
+    final deletedUserIds = getDeletedDocs('users');
+    final deletedUserEmails = getDeletedDocs('user_emails');
+
+    final activeInscriptions = _inscriptions.where((i) {
+      final email = (i.email ?? '').trim().toLowerCase();
+      return !deletedInscIds.contains(i.id) &&
+          !deletedUserIds.contains(i.etudiantId) &&
+          !deletedUserIds.contains(i.id) &&
+          (email.isEmpty || !deletedUserEmails.contains(email)) &&
+          i.status != InscriptionStatus.rejetee;
+    }).toList();
+
+    final activePayments = _payments.where((p) {
+      if (deletedPaymentIds.contains(p.id)) return false;
+      if (deletedInscIds.contains(p.inscriptionId)) return false;
+      if (deletedUserIds.contains(p.etudiantId)) return false;
+      final user = getUserById(p.etudiantId);
+      final email = (user?.email ?? '').trim().toLowerCase();
+      if (email.isNotEmpty && deletedUserEmails.contains(email)) return false;
+      return true;
+    }).toList();
+
+    final totalReceived = activePayments
+        .where((p) => p.status == PaymentStatus.effectue)
+        .fold<double>(0, (sum, p) => sum + p.montant);
+
+    // Inscriptions comptabilisées : acceptées ou avec acompte/paiement
+    final billableInscriptions = activeInscriptions.where((i) =>
+        i.status == InscriptionStatus.acceptee ||
+        getInscriptionPaidAmount(i.id) > 0).toList();
+
+    final totalDue = billableInscriptions.fold<double>(
+      0,
+      (sum, ins) => sum + getInscriptionTotalDue(ins.id),
+    );
+
+    final totalBalance = billableInscriptions.fold<double>(
+      0,
+      (sum, ins) => sum + getInscriptionBalance(ins.id),
+    );
+
+    final totalDiscount = billableInscriptions.fold<double>(
+      0,
+      (sum, ins) => sum + getInscriptionDiscountTotal(ins.id),
+    );
+
+    final recoveryRate = totalDue > 0
+        ? ((totalReceived / totalDue) * 100).clamp(0.0, 100.0)
+        : 0.0;
+
+    return {
+      'totalReceived': totalReceived,
+      'totalDue': totalDue,
+      'totalBalance': totalBalance,
+      'totalDiscount': totalDiscount,
+      'recoveryRate': recoveryRate,
+      'totalTransactions': activePayments.length,
+      'effectueTransactions': activePayments.where((p) => p.status == PaymentStatus.effectue).length,
+      'activeInscriptionsCount': activeInscriptions.length,
+      'acceptedCount': activeInscriptions.where((i) => i.status == InscriptionStatus.acceptee).length,
+      'pendingCount': activeInscriptions.where((i) => i.status == InscriptionStatus.enAttente).length,
+      'debtorsCount': billableInscriptions.where((i) => getInscriptionBalance(i.id) > 0).length,
+    };
   }
 
   Future<Payment> updatePayment(Payment payment) async {
@@ -2848,16 +2928,14 @@ class LocalDataService {
     PaymentStatus newStatus = old.status;
     if (statusStr == 'valide' ||
         statusStr == 'effectue' ||
-        statusStr == 'effectué' ||
-        statusStr == 'effectue') {
+        statusStr == 'effectué') {
       newStatus = PaymentStatus.effectue;
     } else if (statusStr == 'incomplet' ||
         statusStr == 'echoue' ||
         statusStr == 'échoué') {
       newStatus = PaymentStatus.echoue;
     } else if (statusStr == 'en_attente' ||
-        statusStr == 'enAttente' ||
-        statusStr == 'en_attente') {
+        statusStr == 'enAttente') {
       newStatus = PaymentStatus.enAttente;
     }
 
@@ -2871,8 +2949,8 @@ class LocalDataService {
       methode: old.methode,
       dateCreation: old.dateCreation,
       dateEffectuation: newStatus == PaymentStatus.effectue
-          ? DateTime.now()
-          : old.dateEffectuation,
+          ? (old.dateEffectuation ?? DateTime.now())
+          : null,
       referenceTransaction:
           old.referenceTransaction ??
           'REF-${DateTime.now().millisecondsSinceEpoch}',
@@ -2897,8 +2975,10 @@ class LocalDataService {
         throw StateError('Cette tranche a déjà été validée.');
       }
       final totalDue = getInscriptionTotalDue(updated.inscriptionId);
-      final proposedPaid =
-          getInscriptionPaidAmount(updated.inscriptionId) + updated.montant;
+      final alreadyPaidWithoutThis = getPaymentsForInscription(updated.inscriptionId)
+          .where((p) => p.id != updated.id && p.status == PaymentStatus.effectue)
+          .fold<double>(0, (s, p) => s + p.montant);
+      final proposedPaid = alreadyPaidWithoutThis + updated.montant;
       if (proposedPaid > totalDue) {
         throw StateError('La validation dépasse le solde de l’inscription.');
       }
