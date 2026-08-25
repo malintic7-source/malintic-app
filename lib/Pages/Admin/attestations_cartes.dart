@@ -171,8 +171,24 @@ class _AdminAttestationsCartesState extends State<AdminAttestationsCartes> with 
     return StreamBuilder<List<Inscription>>(
       stream: _db.watchInscriptions(),
       builder: (context, snapshot) {
-        final inscriptions = snapshot.data ?? [];
-        final users = _db.getUsers().where((u) => u.role == UserRole.apprenant).toList();
+        final deletedUserIds = _db.getDeletedDocs('users');
+        final deletedInscIds = _db.getDeletedDocs('inscriptions');
+        final deletedUserEmails = _db.getDeletedDocs('user_emails');
+
+        final inscriptions = (snapshot.data ?? []).where((i) {
+          final email = (i.email ?? '').trim().toLowerCase();
+          return !deletedInscIds.contains(i.id) &&
+              !deletedUserIds.contains(i.etudiantId) &&
+              !deletedUserIds.contains(i.id) &&
+              (email.isEmpty || !deletedUserEmails.contains(email));
+        }).toList();
+
+        final users = _db.getUsers().where((u) {
+          final email = u.email.trim().toLowerCase();
+          return u.role == UserRole.apprenant &&
+              !deletedUserIds.contains(u.id) &&
+              (email.isEmpty || !deletedUserEmails.contains(email));
+        }).toList();
 
         final Map<String, Map<String, dynamic>> studentsMap = {};
 

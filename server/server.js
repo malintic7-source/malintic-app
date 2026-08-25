@@ -871,7 +871,7 @@ app.put('/api/:collection/:id', (req, res) => {
   res.json(publicDocument(collection, data));
 });
 
-app.delete('/api/audit_logs/clear', (req, res) => {
+app.delete('/api/audit_logs/clear', requireAdministrator, (req, res) => {
   const state = readState();
   state.audit_logs = [];
   writeState(state);
@@ -880,14 +880,17 @@ app.delete('/api/audit_logs/clear', (req, res) => {
 
 app.delete('/api/:collection/:id', (req, res) => {
   const { collection, id } = req.params;
+  const session = sessionFromRequest(req);
   if (collection === 'audit_logs' && id === 'clear') {
+    if (!isAdministrator(session)) {
+      return res.status(403).json({ error: "La purge du journal est réservée à l'administration." });
+    }
     const state = readState();
     state.audit_logs = [];
     writeState(state);
     return res.status(200).json({ success: true });
   }
   if (!isCollection(collection)) return res.status(404).json({ error: 'Collection inconnue' });
-  const session = sessionFromRequest(req);
   if (!isEmployee(session)) return res.status(403).json({ error: 'Accès réservé au personnel' });
   if (collection === 'users' && !isAdministrator(session)) {
     return res.status(403).json({ error: "La gestion des comptes est réservée à l'administration." });

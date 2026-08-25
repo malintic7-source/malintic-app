@@ -216,11 +216,27 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
     return StreamBuilder<List<User>>(
       stream: _db.watchUsers(),
       builder: (context, userSnapshot) {
-        final users = userSnapshot.data ?? [];
+        final deletedUserIds = _db.getDeletedDocs('users');
+        final deletedInscIds = _db.getDeletedDocs('inscriptions');
+        final deletedUserEmails = _db.getDeletedDocs('user_emails');
+
+        final users = (userSnapshot.data ?? _db.getUsers()).where((u) {
+          final email = u.email.trim().toLowerCase();
+          return !deletedUserIds.contains(u.id) &&
+              (email.isEmpty || !deletedUserEmails.contains(email));
+        }).toList();
+
         final etudiants = users.where((u) => u.role == UserRole.apprenant).length;
         final totalFormations = _db.getFormations().length;
 
-        final inscriptions = _db.getInscriptions();
+        final inscriptions = _db.getInscriptions().where((i) {
+          final email = (i.email ?? '').trim().toLowerCase();
+          return !deletedInscIds.contains(i.id) &&
+              !deletedUserIds.contains(i.etudiantId) &&
+              !deletedUserIds.contains(i.id) &&
+              (email.isEmpty || !deletedUserEmails.contains(email));
+        }).toList();
+
         final pendingInscriptions = inscriptions.where((i) => i.status == InscriptionStatus.enAttente).length;
 
         final payments = _db.getPayments();
@@ -544,7 +560,18 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
 
   /// Calcule les inscriptions réelles des 6 derniers mois
   List<double> _computeMonthlyInscriptions() {
-    final inscriptions = _db.getInscriptions();
+    final deletedInscIds = _db.getDeletedDocs('inscriptions');
+    final deletedUserIds = _db.getDeletedDocs('users');
+    final deletedUserEmails = _db.getDeletedDocs('user_emails');
+
+    final inscriptions = _db.getInscriptions().where((i) {
+      final email = (i.email ?? '').trim().toLowerCase();
+      return !deletedInscIds.contains(i.id) &&
+          !deletedUserIds.contains(i.etudiantId) &&
+          !deletedUserIds.contains(i.id) &&
+          (email.isEmpty || !deletedUserEmails.contains(email));
+    });
+
     final now = DateTime.now();
     final result = List<double>.filled(6, 0);
     for (final ins in inscriptions) {

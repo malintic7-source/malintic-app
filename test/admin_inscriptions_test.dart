@@ -101,32 +101,30 @@ void main() {
 
   test('SFP requires exactly three selected modules', () async {
     final db = LocalDataService();
+    final sfpFormation = db.getFormations().firstWhere((f) => f.estStage);
+    final validModules = sfpFormation.modules.take(3).toList();
 
     await expectLater(
       db.createInscription(
         apprenantId: 'web_sfp_invalid',
-        formationId: 'form_sfp_2026',
+        formationId: sfpFormation.id,
         prenom: 'Moussa',
         nom: 'Traore',
         email: 'moussa@example.com',
         telephone: '770000002',
-        modules: ['Base de données + IA', 'Initiation à Windows Server'],
+        modules: validModules.take(2).toList(),
       ),
       throwsA(isA<ArgumentError>()),
     );
 
     final validInscription = await db.createInscription(
       apprenantId: 'web_sfp_valid',
-      formationId: 'form_sfp_2026',
+      formationId: sfpFormation.id,
       prenom: 'Moussa',
       nom: 'Traore',
       email: 'moussa_valid@example.com',
       telephone: '770000003',
-      modules: [
-        'Base de données + IA',
-        'Initiation à Windows Server',
-        'Initiation au Réseau Téléphonique VoIP',
-      ],
+      modules: validModules,
     );
 
     expect(validInscription.modules, hasLength(3));

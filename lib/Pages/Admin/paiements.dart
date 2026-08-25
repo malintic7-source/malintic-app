@@ -188,7 +188,17 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
             .where((p) => p.status == PaymentStatus.effectue)
             .fold<double>(0, (sum, p) => sum + p.montant);
 
-        final inscriptions = _db.getInscriptions();
+        final deletedInscIds = _db.getDeletedDocs('inscriptions');
+        final deletedUserIds = _db.getDeletedDocs('users');
+        final deletedUserEmails = _db.getDeletedDocs('user_emails');
+
+        final inscriptions = _db.getInscriptions().where((i) {
+          final email = (i.email ?? '').trim().toLowerCase();
+          return !deletedInscIds.contains(i.id) &&
+              !deletedUserIds.contains(i.etudiantId) &&
+              !deletedUserIds.contains(i.id) &&
+              (email.isEmpty || !deletedUserEmails.contains(email));
+        }).toList();
         final totalDue = inscriptions.fold<double>(0, (sum, ins) => sum + _db.getInscriptionTotalDue(ins.id));
         final totalBalance = inscriptions.fold<double>(0, (sum, ins) => sum + _db.getInscriptionBalance(ins.id));
 
@@ -344,16 +354,23 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
         StreamBuilder<List<Inscription>>(
           stream: _db.watchInscriptions(),
           builder: (context, snapshot) {
-            final inscriptions = snapshot.data ?? [];
+            final deletedInscIds2 = _db.getDeletedDocs('inscriptions');
+            final deletedUserIds2 = _db.getDeletedDocs('users');
+            final deletedEmails2 = _db.getDeletedDocs('user_emails');
 
-            final filteredInscriptions = inscriptions.where((ins) {
+            final filteredInscriptions = (snapshot.data ?? []).where((ins) {
+              final email = (ins.email ?? '').trim().toLowerCase();
+              if (deletedInscIds2.contains(ins.id)) return false;
+              if (deletedUserIds2.contains(ins.etudiantId)) return false;
+              if (deletedUserIds2.contains(ins.id)) return false;
+              if (email.isNotEmpty && deletedEmails2.contains(email)) return false;
               final student = _db.getUserById(ins.etudiantId);
               final prenom = (ins.prenom ?? student?.prenom ?? '').toLowerCase();
               final nom = (ins.nom ?? student?.nom ?? '').toLowerCase();
-              final email = (ins.email ?? student?.email ?? '').toLowerCase();
+              final emailQ = (ins.email ?? student?.email ?? '').toLowerCase();
               final phone = (ins.telephone ?? student?.phone ?? '').toLowerCase();
               final matricule = (student?.matricule ?? '').toLowerCase();
-              final fullText = '$prenom $nom $email $phone $matricule'.toLowerCase();
+              final fullText = '$prenom $nom $emailQ $phone $matricule'.toLowerCase();
               if (_searchQuery.isEmpty) return true;
               return fullText.contains(_searchQuery);
             }).toList();

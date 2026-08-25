@@ -338,16 +338,17 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildFormateurPage() {
-    switch (_selectedIndex) {
-      case 0:
+    final label = navigationItems[_selectedIndex].label;
+    switch (label) {
+      case 'Dashboard Formateur':
         return FormateurDashboard(user: widget.user);
-      case 1:
+      case 'Mes Apprenants':
         return FormateurApprenants(user: widget.user);
-      case 2:
+      case 'Mon Emploi du temps':
         return FormateurSchedule(user: widget.user);
-      case 3:
+      case 'Notifications':
         return NotificationsPage(user: widget.user);
-      case 4:
+      case 'Profil':
         return ProfilePage(user: widget.user);
       default:
         return const SizedBox();
@@ -355,18 +356,19 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildApprenantPage() {
-    switch (_selectedIndex) {
-      case 0:
+    final label = navigationItems[_selectedIndex].label;
+    switch (label) {
+      case 'Mon Espace':
         return StudentDashboard(user: widget.user);
-      case 1:
+      case 'Mes Formations':
         return StudentFormations(user: widget.user);
-      case 2:
+      case 'Mon Emploi du temps':
         return StudentSchedule(user: widget.user);
-      case 3:
+      case 'Mes Paiements':
         return PaymentsPage(user: widget.user);
-      case 4:
+      case 'Notifications':
         return NotificationsPage(user: widget.user);
-      case 5:
+      case 'Profil':
         return ProfilePage(user: widget.user);
       default:
         return const SizedBox();
