@@ -541,12 +541,12 @@ class AuthProvider {
 
   Future<String> resetUserPassword(
     String userId, {
-    String? password, // #2 — null = génère un mot de passe temporaire aléatoire
+    String? password, // null = génère un mot de passe temporaire aléatoire sécurisé
     bool doitChangerMotDePasse = true,
   }) async {
     final newPassword = (password != null && password.isNotEmpty)
         ? password
-        : '00000000';
+        : _generateTempPassword();
 
     return adminChangeUserPassword(
       userId,
