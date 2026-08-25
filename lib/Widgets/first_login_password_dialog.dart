@@ -1,8 +1,11 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:gestion_formations/Models/formation.dart';
 import 'package:gestion_formations/Models/user.dart';
 import 'package:gestion_formations/Pages/Login/welcome_page.dart';
 import 'package:gestion_formations/Services/auth_provider.dart';
+import 'package:gestion_formations/Services/db_services.dart';
 import 'package:gestion_formations/config/theme.dart';
 
 class FirstLoginPasswordDialog extends StatefulWidget {
@@ -15,16 +18,23 @@ class FirstLoginPasswordDialog extends StatefulWidget {
     this.onPasswordSet,
   });
 
+  static bool _isShowing = false;
+
   static Future<void> showIfNeeded(BuildContext context, User user, {VoidCallback? onPasswordSet}) async {
-    if (!user.doitChangerMotDePasse) return;
-    await showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => FirstLoginPasswordDialog(
-        user: user,
-        onPasswordSet: onPasswordSet,
-      ),
-    );
+    if (!user.doitChangerMotDePasse || _isShowing) return;
+    _isShowing = true;
+    try {
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => FirstLoginPasswordDialog(
+          user: user,
+          onPasswordSet: onPasswordSet,
+        ),
+      );
+    } finally {
+      _isShowing = false;
+    }
   }
 
   @override
@@ -51,6 +61,52 @@ class _FirstLoginPasswordDialogState extends State<FirstLoginPasswordDialog> {
   bool get _hasLetter => RegExp(r'[a-zA-Z]').hasMatch(_newPasswordController.text);
   bool get _hasDigit => RegExp(r'[0-9]').hasMatch(_newPasswordController.text);
 
+  Widget _buildFormationThumbnail(Formation formation, {double size = 32}) {
+    final imageUrl = formation.imageUrl?.trim() ?? '';
+    if (imageUrl.isNotEmpty) {
+      if (imageUrl.startsWith('data:image')) {
+        try {
+          final base64Part = imageUrl.split(',').last;
+          final bytes = base64Decode(base64Part);
+          return ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: Image.memory(
+              bytes,
+              width: size,
+              height: size,
+              fit: BoxFit.cover,
+              errorBuilder: (ctx, err, stack) => _buildFallbackIcon(size),
+            ),
+          );
+        } catch (_) {}
+      } else if (imageUrl.startsWith('http')) {
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(6),
+          child: Image.network(
+            imageUrl,
+            width: size,
+            height: size,
+            fit: BoxFit.cover,
+            errorBuilder: (ctx, err, stack) => _buildFallbackIcon(size),
+          ),
+        );
+      }
+    }
+    return _buildFallbackIcon(size);
+  }
+
+  Widget _buildFallbackIcon(double size) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: AppTheme.primary.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Icon(Icons.school_rounded, color: AppTheme.primary, size: size * 0.55),
+    );
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (_newPasswordController.text != _confirmPasswordController.text) {
@@ -70,7 +126,7 @@ class _FirstLoginPasswordDialogState extends State<FirstLoginPasswordDialog> {
       );
 
       if (!mounted) return;
-      Navigator.of(context).pop();
+      Navigator.of(context, rootNavigator: true).pop();
       widget.onPasswordSet?.call();
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -80,7 +136,7 @@ class _FirstLoginPasswordDialogState extends State<FirstLoginPasswordDialog> {
               const Icon(Icons.check_circle_rounded, color: Colors.white),
               const SizedBox(width: 10),
               Text(
-                'Mot de passe personnel défini avec succès !',
+                'Mot de passe enregistré ! Accès accordé.',
                 style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600),
               ),
             ],
@@ -114,6 +170,13 @@ class _FirstLoginPasswordDialogState extends State<FirstLoginPasswordDialog> {
     final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
     final textColor = isDark ? Colors.white : AppTheme.textPrimary;
     final subtextColor = isDark ? Colors.white70 : AppTheme.textSecondary;
+
+    final allFormations = LocalDataService().getFormations();
+    final assignedIds = widget.user.assignedFormations
+        .map((a) => a['formationId']?.toString() ?? '')
+        .where((id) => id.isNotEmpty)
+        .toSet();
+    final userFormations = allFormations.where((f) => assignedIds.contains(f.id)).toList();
 
     return PopScope(
       canPop: false,
@@ -162,7 +225,7 @@ class _FirstLoginPasswordDialogState extends State<FirstLoginPasswordDialog> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
 
                   // Title
                   Text(
@@ -174,19 +237,86 @@ class _FirstLoginPasswordDialogState extends State<FirstLoginPasswordDialog> {
                       color: textColor,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
 
                   // Subtitle
                   Text(
-                    'Bienvenue ${widget.user.prenom} ! Pour sécuriser votre compte, veuillez définir votre propre mot de passe personnel.',
+                    'Bienvenue ${widget.user.prenom} ${widget.user.nom} ! Pour sécuriser votre compte, veuillez définir votre mot de passe personnel.',
                     textAlign: TextAlign.center,
                     style: GoogleFonts.poppins(
                       fontSize: 13,
-                      height: 1.5,
+                      height: 1.4,
                       color: subtextColor,
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 16),
+
+                  // Assigned Formations preview if present
+                  if (userFormations.isNotEmpty) ...[
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.school_rounded, size: 16, color: AppTheme.primary),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Vos formations assignées :',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: textColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 6,
+                            children: userFormations.map((formation) {
+                              return Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: isDark ? Colors.white10 : const Color(0xFFE2E8F0)),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    _buildFormationThumbnail(formation, size: 22),
+                                    const SizedBox(width: 6),
+                                    ConstrainedBox(
+                                      constraints: const BoxConstraints(maxWidth: 160),
+                                      child: Text(
+                                        formation.titre,
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          color: textColor,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
 
                   if (_errorMessage != null) ...[
                     Container(

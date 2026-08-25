@@ -87,8 +87,11 @@ Future<void> _importFromApi() async {
 
     final response = await http.get(
       Uri.parse('$origin/api/inscriptions'),
-      headers: {'Accept': 'application/json'},
-    ).timeout(const Duration(seconds: 2));
+      headers: {
+        'Accept': 'application/json',
+        'ngrok-skip-browser-warning': 'true',
+      },
+    ).timeout(const Duration(seconds: 3));
     if (response.statusCode != 200) return;
     final text = response.body;
     if (text.isEmpty) return;
@@ -103,9 +106,7 @@ Future<void> _importFromApi() async {
         debugPrint('[Malintic] Erreur import API inscription item: $e');
       }
     }
-  } catch (e) {
-    debugPrint('[Malintic] API inscriptions non joignable: $e');
-  }
+  } catch (_) {}
 }
 
 class MyApp extends StatelessWidget {
