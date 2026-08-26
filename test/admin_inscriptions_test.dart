@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gestion_formations/Models/user.dart';
 import 'package:gestion_formations/Models/inscription.dart';
+import 'package:gestion_formations/Models/formation.dart';
 import 'package:gestion_formations/Pages/Admin/inscriptions.dart';
 import 'package:gestion_formations/Services/db_services.dart';
 
@@ -57,9 +58,10 @@ void main() {
 
   test('accepting a web inscription creates and links the student', () async {
     final db = LocalDataService();
-    const email = 'nouvel.etudiant@example.com';
+    final timestamp = DateTime.now().microsecondsSinceEpoch;
+    final email = 'nouvel.etudiant.$timestamp@example.com';
     final inscription = await db.createInscription(
-      apprenantId: 'web_test_student',
+      apprenantId: 'web_test_student_$timestamp',
       formationId: 'form_2',
       prenom: 'Nouvel',
       nom: 'Etudiant',
@@ -101,7 +103,28 @@ void main() {
 
   test('SFP requires exactly three selected modules', () async {
     final db = LocalDataService();
-    final sfpFormation = db.getFormations().firstWhere((f) => f.estStage);
+    Formation sfpFormation;
+    final existing = db.getFormations().where((f) => f.estStage).firstOrNull;
+    if (existing == null) {
+      sfpFormation = Formation(
+        id: 'form_sfp_test',
+        titre: 'Stage SFP Test',
+        description: 'Description SFP',
+        modules: ['Module 1', 'Module 2', 'Module 3', 'Module 4'],
+        formateurIds: const [],
+        estStage: true,
+        maxModulesParEtudiant: 3,
+        prix: 100000,
+        type: FormationType.mixte,
+        status: FormationStatus.enCours,
+        dureeSemaines: 12,
+        horaires: const [],
+        dateCreation: DateTime.now(),
+      );
+      await db.addFormation(sfpFormation);
+    } else {
+      sfpFormation = existing;
+    }
     final validModules = sfpFormation.modules.take(3).toList();
 
     await expectLater(

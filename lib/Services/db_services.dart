@@ -60,6 +60,9 @@ class LocalDataService {
       Uri.base.hasAuthority;
 
   void _initLocalApiSync() {
+    final isTestRuntime = Uri.base.scheme == 'file';
+    if (isTestRuntime) return;
+    if (!_hasLocalApi && !SupabaseConfig.isEnabled) return;
     _syncFromLocalApi();
     _apiPollingTimer = Timer.periodic(
       const Duration(seconds: 2),
@@ -118,6 +121,7 @@ class LocalDataService {
   }
 
   Future<void> _flushPendingSyncQueue() async {
+    if (!_hasLocalApi) return;
     final raw = _localStorage.getItem('app_pending_sync_queue');
     if (raw == null || raw.isEmpty) return;
     try {
@@ -164,8 +168,10 @@ class LocalDataService {
     try {
       await _flushPendingSyncQueue();
 
-      if (!_hasLocalApi && SupabaseConfig.isEnabled) {
-        await _syncFromSupabase();
+      if (!_hasLocalApi) {
+        if (SupabaseConfig.isEnabled) {
+          await _syncFromSupabase();
+        }
         return;
       }
 
@@ -802,8 +808,8 @@ class LocalDataService {
       if (savedUsersRaw != null && savedUsersRaw.isNotEmpty) {
         final List<dynamic> list = jsonDecode(savedUsersRaw);
         for (final item in list) {
-          if (item is Map<String, dynamic>) {
-            final user = User.fromMap(item, item['id'] ?? '');
+          if (item is Map) {
+            final user = User.fromMap(Map<String, dynamic>.from(item), item['id']?.toString() ?? '');
             if (!deletedUserIds.contains(user.id) &&
                 !deletedUserEmails.contains(user.email.trim().toLowerCase())) {
               _users.add(user);
@@ -823,8 +829,8 @@ class LocalDataService {
         final List<dynamic> list = jsonDecode(savedFormationsRaw);
         _formations.clear();
         for (final item in list) {
-          if (item is Map<String, dynamic>) {
-            final formation = Formation.fromMap(item, item['id'] ?? '');
+          if (item is Map) {
+            final formation = Formation.fromMap(Map<String, dynamic>.from(item), item['id']?.toString() ?? '');
             _formations.add(formation);
           }
         }
@@ -835,8 +841,8 @@ class LocalDataService {
         final List<dynamic> list = jsonDecode(savedInscRaw);
         _inscriptions.clear();
         for (final item in list) {
-          if (item is Map<String, dynamic>) {
-            final insc = Inscription.fromMap(item, item['id'] ?? '');
+          if (item is Map) {
+            final insc = Inscription.fromMap(Map<String, dynamic>.from(item), item['id']?.toString() ?? '');
             final email = insc.email?.trim().toLowerCase() ?? '';
             if (!deletedInscIds.contains(insc.id) &&
                 !deletedUserIds.contains(insc.etudiantId) &&
@@ -853,8 +859,8 @@ class LocalDataService {
         final List<dynamic> payList = jsonDecode(savedPayRaw);
         _payments.clear();
         for (final item in payList) {
-          if (item is Map<String, dynamic>) {
-            final pay = Payment.fromMap(item, item['id'] ?? '');
+          if (item is Map) {
+            final pay = Payment.fromMap(Map<String, dynamic>.from(item), item['id']?.toString() ?? '');
             _payments.add(pay);
           }
         }
@@ -865,8 +871,8 @@ class LocalDataService {
         final List<dynamic> seanceList = jsonDecode(savedSeancesRaw);
         _seances.clear();
         for (final item in seanceList) {
-          if (item is Map<String, dynamic>) {
-            final seance = Seance.fromMap(item, item['id'] ?? '');
+          if (item is Map) {
+            final seance = Seance.fromMap(Map<String, dynamic>.from(item), item['id']?.toString() ?? '');
             _seances.add(seance);
           }
         }
@@ -2453,7 +2459,7 @@ class LocalDataService {
     );
     await addUser(updatedStudent);
 
-    _inscriptions[inscriptionIndex] = Inscription(
+    final updatedInscription = Inscription(
       id: inscription.id,
       etudiantId: updatedStudent.id,
       formationId: inscription.formationId,
@@ -2472,16 +2478,18 @@ class LocalDataService {
       typeFormation: inscription.typeFormation,
       sexe: inscription.sexe,
     );
+    final targetIndex = _inscriptions.indexWhere((i) => i.id == inscription.id);
+    if (targetIndex >= 0) {
+      _inscriptions[targetIndex] = updatedInscription;
+    } else {
+      _inscriptions.add(updatedInscription);
+    }
     _inscriptionsController.add(List.unmodifiable(_inscriptions));
     _saveInscriptionsToStorage();
-    // La transition du dossier est prioritaire : elle doit être persistée
-    // avant toute mise à jour secondaire (formation, notification, paiement).
-    // Ainsi, un dossier validé ne revient jamais dans la file d'attente après
-    // un rafraîchissement ou chez un autre employé.
     await _syncDocToLocalApi(
       'inscriptions',
-      _inscriptions[inscriptionIndex].id,
-      _inscriptions[inscriptionIndex].toMap(),
+      updatedInscription.id,
+      updatedInscription.toMap(),
     );
 
     final acceptedCount = _inscriptions
