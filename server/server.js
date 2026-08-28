@@ -323,6 +323,192 @@ function readState() {
   }
 }
 
+// ─── Synchronisation Supabase ─────────────────────────────────────────────────
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://mzixlwnrsqoxolzafmjb.supabase.co';
+const SUPABASE_KEY = process.env.SUPABASE_KEY || 'sb_publishable_X9Srmcc9dIppUO8Hl0EDAw_C-giTCqt';
+const _syncQueue = []; // queue de documents à synchroniser
+let _syncRunning = false;
+
+function _cleanRole(r) { return String(r || 'apprenant').replace(/UserRole\./gi, '').trim(); }
+function _cleanStatus(s, prefix) { return String(s || '').replace(new RegExp(prefix + '\\.', 'gi'), '').trim() || undefined; }
+function _ts(v) { try { return v ? new Date(v).toISOString() : null; } catch (_) { return null; } }
+
+function _mapFormation(f) {
+  return {
+    id: f.id,
+    titre: f.titre || '',
+    description: f.description || '',
+    prix: Number(f.prix) || 0,
+    modules: f.modules || [],
+    formateur_ids: f.formateurIds || f.formateur_ids || [],
+    module_formateur_ids: f.moduleFormateurIds || f.module_formateur_ids || {},
+    type: _cleanStatus(f.type, 'FormationType') || 'presentielle',
+    status: _cleanStatus(f.status, 'FormationStatus') || 'programmee',
+    duree_semaines: Number(f.dureeSemaines || f.duree_semaines) || 0,
+    duree_heures: f.dureeHeures || f.duree_heures || null,
+    horaires: f.horaires || [],
+    photo_url: f.photoUrl || f.photo_url || null,
+    est_stage: !!f.estStage,
+    max_modules_par_etudiant: Number(f.maxModulesParEtudiant || f.max_modules_par_etudiant) || null,
+    nombre_inscrits: Number(f.nombreInscrits || f.nombre_inscrits) || 0,
+    date_creation: _ts(f.dateCreation || f.date_creation),
+    prix_en_ligne: f.prixEnLigne != null ? Number(f.prixEnLigne) : null,
+    capacite_max: f.capaciteMax != null ? Number(f.capaciteMax) : null,
+    date_debut: _ts(f.dateDebut || f.date_debut),
+    date_fin: _ts(f.dateFin || f.date_fin),
+    modules_bonus: f.modulesBonus || f.modules_bonus || [],
+    module_prices: f.modulePrices || f.module_prices || {},
+  };
+}
+
+function _mapUser(u) {
+  return {
+    id: u.id,
+    email: u.email || '',
+    nom: u.nom || '',
+    prenom: u.prenom || '',
+    phone: u.phone || '',
+    matricule: u.matricule || null,
+    role: _cleanRole(u.role),
+    photo_url: u.photoUrl || u.photo_url || null,
+    specialite: u.specialite || null,
+    sexe: u.sexe || 'Homme',
+    est_actif: u.estActif !== false,
+    assigned_formations: u.assignedFormations || u.assigned_formations || [],
+    date_creation: _ts(u.dateCreation || u.date_creation),
+    date_modification: _ts(u.dateModification || u.date_modification),
+  };
+}
+
+function _mapInscription(i) {
+  return {
+    id: i.id,
+    etudiant_id: i.etudiantId || i.apprenantId || null,
+    formation_id: i.formationId || null,
+    nom: i.nom || null,
+    prenom: i.prenom || null,
+    email: i.email || null,
+    telephone: i.telephone || null,
+    sexe: i.sexe || null,
+    status: _cleanStatus(i.status, 'InscriptionStatus') || 'enAttente',
+    paiement_effectue: !!i.paiementEffectue,
+    paiement_id: i.paiementId || null,
+    motif_rejet: i.motifRejet || null,
+    date_inscription: _ts(i.dateInscription || i.date_inscription),
+    date_acceptation: _ts(i.dateAcceptation || i.date_acceptation),
+    source: i.source || 'web',
+    modules: i.selectedModules || i.modules || [],
+    type_formation: i.typeFormation || null,
+    description: i.description || null,
+  };
+}
+
+function _mapPayment(p) {
+  return {
+    id: p.id,
+    inscription_id: p.inscriptionId || p.inscription_id || null,
+    etudiant_id: p.etudiantId || p.etudiant_id || null,
+    formation_id: p.formationId || p.formation_id || null,
+    montant: Number(p.montant) || 0,
+    remise: Number(p.remise) || 0,
+    tranche_numero: Number(p.trancheNumero || p.tranche_numero) || 1,
+    nombre_tranches: Number(p.nombreTranches || p.nombre_tranches) || 1,
+    status: p.status || 'effectue',
+    methode: p.methode || 'especes',
+    reference: p.reference || null,
+    recu_par: p.recuPar || p.recu_par || null,
+    module_id: p.moduleId || p.module_id || null,
+    date_paiement: _ts(p.datePaiement || p.date_paiement),
+    date_creation: _ts(p.dateCreation || p.date_creation),
+  };
+}
+
+async function _supabaseUpsert(table, row, retries = 2) {
+  const fetchFn = globalThis.fetch;
+  if (!fetchFn) return;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await fetchFn(`${SUPABASE_URL}/rest/v1/${table}`, {
+        method: 'POST',
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'resolution=merge-duplicates',
+        },
+        body: JSON.stringify(row),
+        signal: AbortSignal.timeout ? AbortSignal.timeout(8000) : undefined,
+      });
+      if (res.ok || res.status === 200 || res.status === 201 || res.status === 204) return;
+      const errText = await res.text();
+      console.error(`[Supabase] ${table} upsert ${res.status}: ${errText.substring(0, 200)}`);
+      return; // ne pas retenter si erreur schema (4xx)
+    } catch (err) {
+      if (attempt < retries) await new Promise(r => setTimeout(r, 500 * (attempt + 1)));
+      else console.error(`[Supabase] ${table} network error: ${err.message}`);
+    }
+  }
+}
+
+async function _supabaseDelete(table, id, retries = 2) {
+  const fetchFn = globalThis.fetch;
+  if (!fetchFn) return;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await fetchFn(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`,
+        },
+        signal: AbortSignal.timeout ? AbortSignal.timeout(8000) : undefined,
+      });
+      if (res.ok || res.status === 204) return;
+      return;
+    } catch (err) {
+      if (attempt < retries) await new Promise(r => setTimeout(r, 500 * (attempt + 1)));
+    }
+  }
+}
+
+async function _drainSyncQueue() {
+  if (_syncRunning || _syncQueue.length === 0) return;
+  _syncRunning = true;
+  while (_syncQueue.length > 0) {
+    const task = _syncQueue.shift();
+    try { await task(); } catch (_) { }
+  }
+  _syncRunning = false;
+}
+
+function enqueueSyncState(state) {
+  _syncQueue.push(async () => {
+    const tableMap = {
+      formations: { rows: state.formations || [], mapper: _mapFormation },
+      users: { rows: state.users || [], mapper: _mapUser },
+      inscriptions: { rows: state.inscriptions || [], mapper: _mapInscription },
+      payments: { rows: state.payments || [], mapper: _mapPayment },
+    };
+    for (const [table, { rows, mapper }] of Object.entries(tableMap)) {
+      for (const row of rows) {
+        await _supabaseUpsert(table, mapper(row));
+      }
+    }
+  });
+  setImmediate(_drainSyncQueue);
+}
+
+function enqueueSyncDocument(collection, doc, deleted = false) {
+  const mappers = { formations: _mapFormation, users: _mapUser, inscriptions: _mapInscription, payments: _mapPayment };
+  const mapper = mappers[collection];
+  if (!mapper) return;
+  _syncQueue.push(async () => {
+    if (deleted) await _supabaseDelete(collection, doc.id);
+    else await _supabaseUpsert(collection, mapper(doc));
+  });
+  setImmediate(_drainSyncQueue);
+}
+
 function writeState(state) {
   const temporary = `${dataFile}.tmp`;
   fs.writeFileSync(temporary, JSON.stringify(state, null, 2));
@@ -331,6 +517,8 @@ function writeState(state) {
   _stateCache = state;
   _stateCacheDirty = false;
   _stateVersion = Date.now().toString();
+  // Synchronisation asynchrone vers Supabase (ne bloque pas la réponse HTTP)
+  enqueueSyncState(state);
 }
 
 function isCollection(name) { return collections.includes(name); }
