@@ -131,7 +131,7 @@ class WelcomePage extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Text(
-                  'Votre partenaire pour des solutions numériques utiles',
+                  'L’univers des technologies — 4 pôles à votre service',
                   textAlign: TextAlign.center,
                   style: GoogleFonts.poppins(
                     fontSize: 26,
@@ -174,7 +174,7 @@ class WelcomePage extends StatelessWidget {
         _buildLogoCircle(170, isDark),
         const SizedBox(height: 24),
         Text(
-          'Votre partenaire pour des solutions numériques utiles',
+          'L’univers des technologies — 4 pôles à votre service',
           textAlign: TextAlign.center,
           style: GoogleFonts.poppins(
             fontSize: 20,
