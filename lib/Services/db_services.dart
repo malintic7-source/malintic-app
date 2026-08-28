@@ -192,7 +192,12 @@ class LocalDataService {
         // État inchangé côté serveur, aucune désérialisation nécessaire (optimisation latence)
         return;
       }
-      if (response.statusCode != 200) return;
+      if (response.statusCode != 200) {
+        if (SupabaseConfig.isEnabled) {
+          await _syncFromSupabase();
+        }
+        return;
+      }
       if (response.headers['etag'] != null) {
         _lastStateEtag = response.headers['etag'];
       }
@@ -386,6 +391,11 @@ class LocalDataService {
       }
     } catch (e) {
       debugPrint('[Malintic] Erreur sync API: $e');
+      if (SupabaseConfig.isEnabled) {
+        try {
+          await _syncFromSupabase();
+        } catch (_) {}
+      }
     } finally {
       _syncInProgress = false;
     }
@@ -545,7 +555,6 @@ class LocalDataService {
     String docId,
     Map<String, dynamic> data,
   ) async {
-    // Une seule source de vérité : Docker local prioritaire, Supabase en fallback.
     if (_hasLocalApi) {
       bool localSuccess = false;
       try {
@@ -566,7 +575,6 @@ class LocalDataService {
       if (!localSuccess) {
         _enqueuePendingSync(collection, docId, 'PUT', data);
       }
-      return;
     }
 
     if (SupabaseConfig.isEnabled && SupabaseConfig.isConfigured) {
@@ -587,8 +595,8 @@ class LocalDataService {
 
   Future<void> _deleteRemoteDoc(String collection, String docId) async {
     _recordDeletedDoc(collection, docId);
-    bool localSuccess = false;
     if (_hasLocalApi) {
+      bool localSuccess = false;
       try {
         final response = await http
             .delete(
@@ -603,7 +611,6 @@ class LocalDataService {
       if (!localSuccess) {
         _enqueuePendingSync(collection, docId, 'DELETE', null);
       }
-      return;
     }
 
     if (SupabaseConfig.isEnabled && SupabaseConfig.isConfigured) {
