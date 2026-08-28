@@ -975,7 +975,7 @@ app.put('/api/:collection/:id', (req, res) => {
   res.json(publicDocument(collection, data));
 });
 
-app.delete('/api/audit_logs/clear', (req, res) => {
+app.delete('/api/audit_logs/clear', requireAdministrator, (req, res) => {
   const state = readState();
   state.audit_logs = [];
   writeState(state);
