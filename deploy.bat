@@ -130,7 +130,7 @@ echo.
 echo   [1] ACCES LOCAL (LAN / Wi-Fi Bureau) :
 echo       - Domaine Local Pro  : http://mntic_app.local
 if defined LOCAL_IP (
-echo       - Adresse IP Directe : http://!LOCAL_IP!  (ou http://!LOCAL_IP!:8080)
+echo       - Adresse IP Directe : http://!LOCAL_IP!
 )
 echo       - Local sur serveur  : http://localhost
 echo.

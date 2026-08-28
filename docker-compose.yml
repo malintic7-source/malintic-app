@@ -6,7 +6,6 @@ services:
     container_name: malintic_app
     ports:
       - "80:80"
-      - "8080:80"
     restart: always
     init: true
     stop_grace_period: 15s

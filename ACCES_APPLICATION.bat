@@ -34,7 +34,7 @@ echo  Choisissez le mode d'acces souhaite :
 echo.
 echo  [1] ACCES RESEAU LOCAL (LAN / Wi-Fi Bureau) [Recommande au bureau]
 if defined LOCAL_IP (
-echo      Lien : http://!LOCAL_IP!  (ou http://!LOCAL_IP!:8080)
+echo      Lien : http://!LOCAL_IP!
 ) else (
 echo      Lien : http://localhost
 )
@@ -69,11 +69,10 @@ if "%CHOIX%"=="3" (
     echo.
     echo   1. Connectez l'autre appareil (PC, Tablette, Telephone) au meme Wi-Fi.
     echo   2. Ouvrez le navigateur (Chrome, Edge, Safari).
-    echo   3. Entrez directement l'une des adresses suivantes :
+    echo   3. Entrez directement l'adresse suivante (SANS :8080) :
     echo.
     if defined LOCAL_IP (
         echo      👉 http://!LOCAL_IP!
-        echo      👉 http://!LOCAL_IP!:8080
     ) else (
         echo      👉 http://%COMPUTERNAME%
     )
