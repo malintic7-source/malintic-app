@@ -369,12 +369,14 @@ class _PoleCardState extends State<_PoleCard> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      Text(
-                        'Déploiement en cours • Bientôt disponible',
-                        style: GoogleFonts.poppins(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: pole.primaryColor,
+                      Flexible(
+                        child: Text(
+                          'Déploiement en cours • Bientôt disponible',
+                          style: GoogleFonts.poppins(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: pole.primaryColor,
+                          ),
                         ),
                       ),
                     ],
