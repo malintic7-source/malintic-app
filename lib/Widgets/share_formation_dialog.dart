@@ -32,8 +32,10 @@ class ShareFormationDialog extends StatefulWidget {
 
 class _ShareFormationDialogState extends State<ShareFormationDialog> {
   final GlobalKey _qrKey = GlobalKey();
-  int _selectedMode = 0; // 0 = Public (Internet / WAN), 1 = Local (Wi-Fi / LAN)
-  String _publicBase = 'https://boil-prude-curry.ngrok-free.dev';
+  int _selectedMode = 0; // 0 = Vercel (Internet), 1 = Local (Wi-Fi / LAN)
+  // URL Vercel fixe — lien public officiel pour les apprenants
+  static const String _vercelBase = 'https://malintic-app.vercel.app';
+  String _publicBase = _vercelBase;
   String _localBase = 'http://192.168.1.10:8080';
   final TextEditingController _customIpController = TextEditingController();
 
@@ -50,48 +52,52 @@ class _ShareFormationDialogState extends State<ShareFormationDialog> {
   }
 
   Future<void> _initUrls() async {
-    // 1. Détection depuis l'URL du navigateur actuel si disponible
+    // L'URL publique est toujours Vercel (fixe, pas de ngrok ici)
+    // Ngrok est réservé aux administrateurs système (accès au backend)
+    _publicBase = _vercelBase;
+
+    // Détection de l'IP locale pour le mode LAN (Wi-Fi bureau)
     try {
-      final currentOrigin = Uri.base.origin;
       final currentHost = Uri.base.host.toLowerCase();
       final currentPort = Uri.base.port;
 
-      if (currentOrigin.startsWith('http')) {
-        if (currentHost.contains('ngrok') || currentHost.contains('cloudflare') || (!currentHost.contains('localhost') && !currentHost.startsWith('127.') && !currentHost.startsWith('192.168.') && !currentHost.startsWith('10.') && !currentHost.endsWith('.local') && !currentHost.contains('vercel.app'))) {
-          _publicBase = currentOrigin;
-        } else {
-          _localBase = currentOrigin;
-        }
-      }
+      // Si on est sur le réseau local, utiliser l'hôte courant
+      if (currentHost.startsWith('192.168.') ||
+          currentHost.startsWith('10.') ||
+          currentHost.startsWith('172.') ||
+          currentHost == 'localhost' ||
+          currentHost.startsWith('127.')) {
+        final portSuffix = (currentPort != 80 && currentPort != 443 && currentPort != 0)
+            ? ':$currentPort'
+            : ':8080';
+        _localBase = 'http://$currentHost$portSuffix';
+        _customIpController.text = currentHost;
+      } else {
+        // Essayer l'API locale pour récupérer l'IP du réseau LAN
+        final response = await http.get(
+          Uri.parse('/api/system/network-info'),
+        ).timeout(
+          const Duration(seconds: 3),
+          onTimeout: () => http.Response('{}', 408),
+        );
 
-      // 2. Interroger l'API pour récupérer les configurations réseau réelles
-      final response = await http.get(
-        Uri.parse('/api/system/network-info'),
-        headers: const {'ngrok-skip-browser-warning': 'true'},
-      ).timeout(
-        const Duration(seconds: 3),
-        onTimeout: () => http.Response('{}', 408),
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final apiPublicUrl = data['publicUrl'] as String?;
-        if (apiPublicUrl != null && apiPublicUrl.trim().isNotEmpty) {
-          _publicBase = apiPublicUrl.trim();
-        }
-        final detectedIps = data['detectedIps'] as List<dynamic>?;
-        if (detectedIps != null && detectedIps.isNotEmpty) {
-          final realIps = detectedIps.map((e) => e.toString()).where((ip) => !ip.startsWith('172.') && !ip.startsWith('127.')).toList();
-          if (realIps.isNotEmpty) {
-            final firstIp = realIps.first;
-            final portSuffix = (currentPort != 80 && currentPort != 443 && currentPort != 0) ? ':$currentPort' : ':8080';
-            _localBase = 'http://$firstIp$portSuffix';
-            _customIpController.text = firstIp;
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body) as Map<String, dynamic>;
+          final detectedIps = data['detectedIps'] as List<dynamic>?;
+          if (detectedIps != null && detectedIps.isNotEmpty) {
+            final realIps = detectedIps
+                .map((e) => e.toString())
+                .where((ip) => !ip.startsWith('172.') && !ip.startsWith('127.'))
+                .toList();
+            if (realIps.isNotEmpty) {
+              _localBase = 'http://${realIps.first}:8080';
+              _customIpController.text = realIps.first;
+            }
           }
         }
       }
     } catch (_) {
-      // Fallback gracieux sur les valeurs par défaut
+      // Fallback gracieux — IP locale par défaut
     }
 
     if (mounted) {
@@ -358,7 +364,7 @@ class _ShareFormationDialogState extends State<ShareFormationDialog> {
                               ),
                               const SizedBox(width: 6),
                               Text(
-                                'Lien Public (Internet)',
+                                'Vercel (Internet)',
                                 style: GoogleFonts.poppins(
                                   fontSize: 12,
                                   fontWeight: _selectedMode == 0 ? FontWeight.w700 : FontWeight.w500,
@@ -489,7 +495,7 @@ class _ShareFormationDialogState extends State<ShareFormationDialog> {
                         const Icon(Icons.public_rounded, size: 16, color: Color(0xFF16A34A)),
                         const SizedBox(width: 6),
                         Text(
-                          'Lien Public (Internet / WhatsApp) :',
+                          'Lien Vercel — Inscription en ligne :',
                           style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w700, color: const Color(0xFF166534)),
                         ),
                         const Spacer(),
