@@ -32,10 +32,9 @@ if %ERRORLEVEL% equ 0 (
     echo [INFO] Aucune donnee anterieure a sauvegarder.
 )
 
-:: 3. Liaison Réseau Carte Physique (Wi-Fi 192.168.10.69) ^<^> WSL & Pare-Feu
+:: 3. Liaison Réseau Carte Physique ^<^> WSL & Pare-Feu
 echo.
 echo [3/6] Configuration du routage reseau Carte Physique ^<^> WSL (Ports 80 et 8080)...
-:: Pont reseau universel pour router les paquets du Wi-Fi physique vers Docker WSL
 netsh interface portproxy add v4tov4 listenaddress=0.0.0.0 listenport=8080 connectaddress=127.0.0.1 connectport=8080 >nul 2>&1
 netsh interface portproxy add v4tov4 listenaddress=0.0.0.0 listenport=80 connectaddress=127.0.0.1 connectport=80 >nul 2>&1
 
@@ -97,13 +96,24 @@ if %ERRORLEVEL% neq 0 (
     echo 127.0.0.1 mntic_app.local mntic-app.local >> "%SystemRoot%\System32\drivers\etc\hosts" 2>nul
 )
 
-:: Detection de l'adresse IP locale
+:: Detection automatique et intelligente de l'adresse IP locale physique (Wi-Fi / Ethernet)
+set LOCAL_IP=
 for /f "tokens=2 delims=:" %%a in ('ipconfig ^| findstr /c:"IPv4" /c:"Adresse IPv4"') do (
-    set IP=%%a
-    set IP=!IP: =!
-    if not "!IP!"=="" (
-        if not "!IP:~0,3!"=="127" (
-            set LOCAL_IP=!IP!
+    set "TMP_IP=%%a"
+    set "TMP_IP=!TMP_IP: =!"
+    if not "!TMP_IP!"=="" (
+        if "!TMP_IP:~0,8!"=="192.168." set "LOCAL_IP=!TMP_IP!"
+        if "!TMP_IP:~0,3!"=="10." if not defined LOCAL_IP set "LOCAL_IP=!TMP_IP!"
+    )
+)
+if not defined LOCAL_IP (
+    for /f "tokens=2 delims=:" %%a in ('ipconfig ^| findstr /c:"IPv4" /c:"Adresse IPv4"') do (
+        set "TMP_IP=%%a"
+        set "TMP_IP=!TMP_IP: =!"
+        if not "!TMP_IP!"=="" (
+            if not "!TMP_IP:~0,3!"=="127" if not "!TMP_IP:~0,8!"=="169.254" if not "!TMP_IP:~0,4!"=="172." (
+                set "LOCAL_IP=!TMP_IP!"
+            )
         )
     )
 )
@@ -118,11 +128,11 @@ echo   DEPLOIEMENT REUSSI - TOUTES DONNEES PRESERVEES A 100%% !
 echo ======================================================================
 echo.
 echo   [1] ACCES LOCAL (LAN / Wi-Fi Bureau) :
-echo       - Domaine Local Pro  : http://mntic_app.local  (ou http://mntic-app.local)
+echo       - Domaine Local Pro  : http://mntic_app.local
 if defined LOCAL_IP (
-echo       - Adresse IP Directe : http://!LOCAL_IP!:8080
+echo       - Adresse IP Directe : http://!LOCAL_IP!  (ou http://!LOCAL_IP!:8080)
 )
-echo       - Local sur serveur  : http://localhost:8080
+echo       - Local sur serveur  : http://localhost
 echo.
 echo   [2] ACCES DISTANT (Internet / WhatsApp / Extranet) :
 echo       - Lien Public Securise : https://malintic-app.vercel.app
