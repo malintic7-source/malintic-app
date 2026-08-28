@@ -222,8 +222,12 @@ class _PaymentsPageState extends State<PaymentsPage> with TickerProviderStateMix
                   ),
                 ),
                 const SizedBox(height: 6),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                // Date + bouton PDF : Wrap pour mobile
+                Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 8,
+                  runSpacing: 6,
                   children: [
                     Text(
                       '${payment.dateCreation.day}/${payment.dateCreation.month}/${payment.dateCreation.year}',

@@ -178,3 +178,75 @@ ON CONFLICT (id) DO UPDATE SET titre = EXCLUDED.titre, photo_url = EXCLUDED.phot
 INSERT INTO public.formations (id, titre, description, prix, modules, formateur_ids, module_formateur_ids, type, status, duree_semaines, duree_heures, horaires, photo_url, est_stage, max_modules_par_etudiant)
 VALUES ('form_2', 'Développement Web Fullstack React & Node.js', 'Formation complète aux technologies Web modernes : Frontend React.js, Backend Node.js/Express, API RESTful et bases de données SQL & NoSQL.', 180000, '["HTML5/CSS3/JavaScript ES6","React.js & Hooks","Node.js & Express","Bases de données SQL & NoSQL"]'::jsonb, '[]'::jsonb, '{}'::jsonb, 'FormationType.enligne', 'FormationStatus.programmee', 10, '60h', '[{"jour":"Lundi & Mercredi","heureDebut":"18:00","heureFin":"20:30","module":null,"groupe":null,"modalite":null,"lieuOuLien":null}]'::jsonb, NULL, false, NULL)
 ON CONFLICT (id) DO UPDATE SET titre = EXCLUDED.titre, photo_url = EXCLUDED.photo_url, modules = EXCLUDED.modules;
+
+-- ========================================================
+-- MIGRATIONS v2 — colonnes étendues, notifications, normalisation
+-- Exécutez cette section sur une base Supabase déjà initialisée.
+-- ========================================================
+
+ALTER TABLE public.formations ADD COLUMN IF NOT EXISTS module_prices JSONB DEFAULT '{}'::jsonb;
+ALTER TABLE public.formations ADD COLUMN IF NOT EXISTS modules_bonus JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE public.formations ADD COLUMN IF NOT EXISTS prix_en_ligne NUMERIC;
+ALTER TABLE public.formations ADD COLUMN IF NOT EXISTS capacite_max INT;
+ALTER TABLE public.formations ADD COLUMN IF NOT EXISTS date_debut TIMESTAMPTZ;
+ALTER TABLE public.formations ADD COLUMN IF NOT EXISTS date_fin TIMESTAMPTZ;
+ALTER TABLE public.formations ADD COLUMN IF NOT EXISTS image_format TEXT;
+
+ALTER TABLE public.inscriptions ADD COLUMN IF NOT EXISTS source TEXT DEFAULT 'web';
+
+ALTER TABLE public.payments ADD COLUMN IF NOT EXISTS formation_id TEXT;
+ALTER TABLE public.payments ADD COLUMN IF NOT EXISTS date_creation TIMESTAMPTZ DEFAULT NOW();
+ALTER TABLE public.payments ADD COLUMN IF NOT EXISTS date_effectuation TIMESTAMPTZ;
+ALTER TABLE public.payments ADD COLUMN IF NOT EXISTS motif TEXT;
+ALTER TABLE public.payments ADD COLUMN IF NOT EXISTS module_id TEXT;
+
+CREATE TABLE IF NOT EXISTS public.notifications (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    description TEXT,
+    image_url TEXT,
+    sender_id TEXT,
+    sender_email TEXT,
+    target_roles JSONB DEFAULT '[]'::jsonb,
+    target_user_ids JSONB DEFAULT '[]'::jsonb,
+    audience JSONB DEFAULT '[]'::jsonb,
+    read_by JSONB DEFAULT '[]'::jsonb,
+    reminder_count INT DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Public Full Access Notifications') THEN
+        CREATE POLICY "Public Full Access Notifications" ON public.notifications FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+END $$;
+
+CREATE OR REPLACE VIEW public.users_public AS
+SELECT id, email, nom, prenom, phone, matricule, role, photo_url, specialite, sexe,
+       est_actif, assigned_formations, date_creation, date_modification
+FROM public.users;
+
+GRANT SELECT ON public.users_public TO anon, authenticated;
+
+UPDATE public.users SET role = 'admin' WHERE role ILIKE '%admin%' AND role <> 'admin';
+UPDATE public.users SET role = 'formateur' WHERE role ILIKE '%formateur%' AND role <> 'formateur';
+UPDATE public.users SET role = 'apprenant' WHERE role ILIKE '%apprenant%' AND role <> 'apprenant';
+UPDATE public.formations SET type = 'mixte' WHERE type ILIKE '%mixte%';
+UPDATE public.formations SET type = 'enligne' WHERE type ILIKE '%enligne%';
+UPDATE public.formations SET type = 'presentielle' WHERE type ILIKE '%presentiel%';
+UPDATE public.formations SET status = 'enCours' WHERE status ILIKE '%encours%';
+UPDATE public.formations SET status = 'terminee' WHERE status ILIKE '%terminee%';
+UPDATE public.formations SET status = 'programmee' WHERE status ILIKE '%programmee%';
+
+DO $$
+BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.notifications;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+-- ⚠️ SÉCURITÉ PRODUCTION : remplacer les policies "Public Full Access" par Supabase Auth
+-- avant mise en production publique. L'app Flutter exclut déjà password_hash des SELECT.

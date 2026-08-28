@@ -302,7 +302,7 @@ class _SignInPageState extends State<SignInPage> {
       ),
       decoration: const InputDecoration(
         labelText: 'Nom d\'utilisateur ou Email',
-        hintText: 'admin@mntic.ml',
+        hintText: 'admin@malintic.ml',
         prefixIcon: Icon(
           Icons.person_outline_rounded,
           size: 20,

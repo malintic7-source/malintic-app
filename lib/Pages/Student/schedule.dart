@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:gestion_formations/Models/user.dart';
 import 'package:gestion_formations/Services/db_services.dart';
 import 'package:gestion_formations/config/theme.dart';
@@ -13,7 +14,8 @@ class StudentSchedule extends StatefulWidget {
   State<StudentSchedule> createState() => _StudentScheduleState();
 }
 
-class _StudentScheduleState extends State<StudentSchedule> with TickerProviderStateMixin {
+class _StudentScheduleState extends State<StudentSchedule>
+    with TickerProviderStateMixin {
   final LocalDataService _db = LocalDataService();
   late AnimationController _fadeController;
 
@@ -67,33 +69,97 @@ class _StudentScheduleState extends State<StudentSchedule> with TickerProviderSt
   Widget _buildHeader(bool isMobile) {
     return FadeTransition(
       opacity: _fadeController,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Mon Emploi du Temps',
-                style: GoogleFonts.poppins(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.black87,
+      child: isMobile
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Mon Emploi du Temps',
+                  style: GoogleFonts.poppins(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.black87,
+                  ),
                 ),
-              ),
-              SizedBox(height: 4),
-              Text(
-                'Horaires de mes formations',
-                style: GoogleFonts.poppins(
-                  fontSize: 13,
-                  color: Colors.black54,
-                  fontWeight: FontWeight.w400,
+                const SizedBox(height: 4),
+                Text(
+                  'Horaires de mes formations & séances de cours',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: Colors.black54,
+                    fontWeight: FontWeight.w400,
+                  ),
                 ),
-              ),
-            ],
-          ),
-        ],
-      ),
+                const SizedBox(height: 10),
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF1D447A),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  icon: const Icon(Icons.qr_code_2_rounded, size: 18),
+                  label: Text(
+                    'Badge QR Présence',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  onPressed: _showQrStudentBadge,
+                ),
+              ],
+            )
+          : Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Mon Emploi du Temps',
+                        style: GoogleFonts.poppins(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Horaires de mes formations & séances de cours',
+                        style: GoogleFonts.poppins(
+                          fontSize: 13,
+                          color: Colors.black54,
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF1D447A),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  icon: const Icon(Icons.qr_code_2_rounded, size: 18),
+                  label: Text(
+                    'Badge QR Présence',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  onPressed: _showQrStudentBadge,
+                ),
+              ],
+            ),
     );
   }
 
@@ -142,7 +208,15 @@ class _StudentScheduleState extends State<StudentSchedule> with TickerProviderSt
           );
         }
 
-        final daysOrder = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
+        final daysOrder = [
+          'Lundi',
+          'Mardi',
+          'Mercredi',
+          'Jeudi',
+          'Vendredi',
+          'Samedi',
+          'Dimanche',
+        ];
 
         return Column(
           children: daysOrder.map((day) {
@@ -224,7 +298,11 @@ class _StudentScheduleState extends State<StudentSchedule> with TickerProviderSt
                     children: [
                       Row(
                         children: [
-                          Icon(Icons.access_time_rounded, size: 16, color: AppTheme.primary),
+                          Icon(
+                            Icons.access_time_rounded,
+                            size: 16,
+                            color: AppTheme.primary,
+                          ),
                           SizedBox(width: 8),
                           Text(
                             '$debut - $fin',
@@ -254,11 +332,20 @@ class _StudentScheduleState extends State<StudentSchedule> with TickerProviderSt
                           fontWeight: FontWeight.w400,
                         ),
                       ),
-                      if (group?.isNotEmpty == true || modality?.isNotEmpty == true || place?.isNotEmpty == true) ...[
+                      if (group?.isNotEmpty == true ||
+                          modality?.isNotEmpty == true ||
+                          place?.isNotEmpty == true) ...[
                         const SizedBox(height: 6),
                         Text(
-                          [if (group?.isNotEmpty == true) 'Groupe : $group', if (modality?.isNotEmpty == true) modality!, if (place?.isNotEmpty == true) place!].join(' • '),
-                          style: GoogleFonts.poppins(fontSize: 10, color: AppTheme.textSecondary),
+                          [
+                            if (group?.isNotEmpty == true) 'Groupe : $group',
+                            if (modality?.isNotEmpty == true) modality!,
+                            if (place?.isNotEmpty == true) place!,
+                          ].join(' • '),
+                          style: GoogleFonts.poppins(
+                            fontSize: 10,
+                            color: AppTheme.textSecondary,
+                          ),
                         ),
                       ],
                       if (modules.isNotEmpty) ...[
@@ -267,7 +354,10 @@ class _StudentScheduleState extends State<StudentSchedule> with TickerProviderSt
                           spacing: 6,
                           children: modules.map((m) {
                             return Container(
-                              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
                               decoration: BoxDecoration(
                                 color: AppTheme.primary.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(4),
@@ -284,6 +374,39 @@ class _StudentScheduleState extends State<StudentSchedule> with TickerProviderSt
                           }).toList(),
                         ),
                       ],
+                      const SizedBox(height: 10),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: Color(0xFF10B981)),
+                              backgroundColor: const Color(0xFFF0FDF4),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            icon: const Icon(
+                              Icons.how_to_reg_rounded,
+                              size: 15,
+                              color: Color(0xFF10B981),
+                            ),
+                            label: Text(
+                              'Émarger à ce cours',
+                              style: GoogleFonts.poppins(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF16A34A),
+                              ),
+                            ),
+                            onPressed: () => _showCheckInDialog(schedule),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ),
@@ -300,24 +423,32 @@ class _StudentScheduleState extends State<StudentSchedule> with TickerProviderSt
     Map<String, List<Map<String, dynamic>>> scheduleByDay = {};
 
     for (var f in formations) {
-      final assignment = widget.user.assignedFormations.cast<Map<String, dynamic>?>().firstWhere(
-        (item) => item?['formationId'] == f.id,
-        orElse: () => null,
-      );
+      final assignment = widget.user.assignedFormations
+          .cast<Map<String, dynamic>?>()
+          .firstWhere(
+            (item) => item?['formationId'] == f.id,
+            orElse: () => null,
+          );
       if (assignment == null) continue;
       final selectedModules = (assignment['modules'] as List? ?? [])
-          .map((item) => item is Map ? item['title']?.toString() : item.toString())
+          .map(
+            (item) => item is Map ? item['title']?.toString() : item.toString(),
+          )
           .whereType<String>()
           .toSet();
       for (var h in f.horaires) {
-        if (h.module?.isNotEmpty == true && !selectedModules.contains(h.module)) continue;
+        if (h.module?.isNotEmpty == true && !selectedModules.contains(h.module)) {
+          continue;
+        }
         if (!scheduleByDay.containsKey(h.jour)) {
           scheduleByDay[h.jour] = [];
         }
         scheduleByDay[h.jour]!.add({
           'formateur': 'Formateur Référent',
           'formation': f.titre,
-          'modules': h.module?.isNotEmpty == true ? [h.module] : selectedModules.toList(),
+          'modules': h.module?.isNotEmpty == true
+              ? [h.module]
+              : selectedModules.toList(),
           'heureDebut': h.heureDebut,
           'heureFin': h.heureFin,
           'groupe': h.groupe,
@@ -329,12 +460,23 @@ class _StudentScheduleState extends State<StudentSchedule> with TickerProviderSt
     }
 
     // Merge published Seance records
-    final publishedSeances = _db.getSeances().where((s) => s.estPubliee).toList();
+    final publishedSeances = _db
+        .getSeances()
+        .where((s) => s.estPubliee)
+        .toList();
     final studentAssignedIds = widget.user.assignedFormations
         .map((f) => f['formationId']?.toString() ?? '')
         .toSet();
 
-    final dayNames = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
+    final dayNames = [
+      'Lundi',
+      'Mardi',
+      'Mercredi',
+      'Jeudi',
+      'Vendredi',
+      'Samedi',
+      'Dimanche',
+    ];
 
     for (var s in publishedSeances) {
       if (!studentAssignedIds.contains(s.formationId)) continue;
@@ -356,5 +498,246 @@ class _StudentScheduleState extends State<StudentSchedule> with TickerProviderSt
     }
 
     return scheduleByDay;
+  }
+
+  void _showQrStudentBadge() {
+    final prenom = widget.user.prenom.trim();
+    final nom = widget.user.nom.trim();
+    final nomComplet = '$prenom $nom'.trim();
+    final matricule = widget.user.matricule ?? widget.user.id.substring(0, 6);
+    final qrData =
+        'MALINTIC-ETUDIANT|ID:${widget.user.id}|NOM:$nomComplet|MATRICULE:$matricule';
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1D447A).withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(
+                Icons.qr_code_2_rounded,
+                color: Color(0xFF1D447A),
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Badge de Présence',
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF1D447A),
+                    ),
+                  ),
+                  Text(
+                    'Présentez ce QR Code en début de cours',
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      color: AppTheme.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        content: SizedBox(
+          width: 320,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.grey.shade300),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.06),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    QrImageView(
+                      data: qrData,
+                      version: QrVersions.auto,
+                      size: 190.0,
+                      eyeStyle: const QrEyeStyle(
+                        eyeShape: QrEyeShape.square,
+                        color: Color(0xFF1D447A),
+                      ),
+                      dataModuleStyle: const QrDataModuleStyle(
+                        dataModuleShape: QrDataModuleShape.square,
+                        color: Color(0xFF0F172A),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      nomComplet.toUpperCase(),
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        color: const Color(0xFF0F172A),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    Text(
+                      'Matricule : #$matricule',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFFD97706),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Fermer'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showCheckInDialog(Map<String, dynamic> schedule) {
+    final codeController = TextEditingController();
+    final formation = schedule['formation'] ?? 'Cours';
+    final debut = schedule['heureDebut'] ?? '';
+    final fin = schedule['heureFin'] ?? '';
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF10B981).withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(
+                Icons.check_circle_rounded,
+                color: Color(0xFF10B981),
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Émargement de Présence',
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF1D447A),
+                    ),
+                  ),
+                  Text(
+                    '$formation ($debut - $fin)',
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      color: AppTheme.textSecondary,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        content: SizedBox(
+          width: 360,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Entrez le code à 6 chiffres communiqué par votre formateur ou scannez le QR code projeté en salle :',
+                style: GoogleFonts.poppins(fontSize: 12, color: Colors.black87),
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: codeController,
+                keyboardType: TextInputType.number,
+                maxLength: 6,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.poppins(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 6,
+                ),
+                decoration: InputDecoration(
+                  hintText: '• • • • • •',
+                  counterText: '',
+                  filled: true,
+                  fillColor: Colors.grey.shade50,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF10B981),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            onPressed: () {
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    '✅ Présence enregistrée avec succès pour cette séance !',
+                  ),
+                  backgroundColor: AppTheme.success,
+                ),
+              );
+            },
+            child: Text(
+              'Valider ma présence',
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

@@ -399,14 +399,19 @@ class _StudentFormationsState extends State<StudentFormations> with TickerProvid
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
-                              moduleTitle,
-                              style: GoogleFonts.poppins(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.black87,
+                            Expanded(
+                              child: Text(
+                                moduleTitle,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black87,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
+                            const SizedBox(width: 8),
                             Text(
                               '$doneHours/$assignedHours h',
                               style: GoogleFonts.poppins(

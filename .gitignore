@@ -40,3 +40,9 @@ web/flutter_bootstrap.js
 backup/
 tmp_*.txt
 tmp_*.json
+.vercel
+# Supabase CLI temp files
+supabase/.temp/
+
+# Widget Preview related
+.widget_preview/

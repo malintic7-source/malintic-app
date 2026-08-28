@@ -142,7 +142,7 @@ class User {
       'nom': nom,
       'prenom': prenom,
       'phone': phone,
-      'role': role.toString(),
+      'role': role.name,
       'photoUrl': photoUrl,
       'matricule': matricule,
       'assignedFormations': assignedFormations,

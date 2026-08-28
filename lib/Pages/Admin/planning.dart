@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:animate_do/animate_do.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:gestion_formations/config/theme.dart';
 import 'package:gestion_formations/Models/formation.dart';
 import 'package:gestion_formations/Models/user.dart';
 import 'package:gestion_formations/Services/db_services.dart';
+import 'package:gestion_formations/Services/pdf_service.dart';
 
 class AdminPlanning extends StatefulWidget {
   const AdminPlanning({super.key});
@@ -13,10 +16,12 @@ class AdminPlanning extends StatefulWidget {
   State<AdminPlanning> createState() => _AdminPlanningState();
 }
 
-class _AdminPlanningState extends State<AdminPlanning> with TickerProviderStateMixin {
+class _AdminPlanningState extends State<AdminPlanning>
+    with TickerProviderStateMixin {
   final LocalDataService _db = LocalDataService();
   late AnimationController _fadeController;
 
+  bool _isCalendarView = true;
   String _selectedDay = 'Tous';
   String? _filterFormationId;
   String? _filterFormateurId;
@@ -74,12 +79,16 @@ class _AdminPlanningState extends State<AdminPlanning> with TickerProviderStateM
         for (final formation in formations) {
           for (int i = 0; i < formation.horaires.length; i++) {
             final horaire = formation.horaires[i];
-            final enrolledStudents = _db.getStudentsForFormationModule(formation.id, horaire.module);
+            final enrolledStudents = _db.getStudentsForFormationModule(
+              formation.id,
+              horaire.module,
+            );
 
             // Determine assigned trainer for this session
             String? formateurNom;
             String? formateurId;
-            if (horaire.module != null && formation.moduleFormateurIds.containsKey(horaire.module)) {
+            if (horaire.module != null &&
+                formation.moduleFormateurIds.containsKey(horaire.module)) {
               formateurId = formation.moduleFormateurIds[horaire.module];
             } else if (formation.formateurIds.isNotEmpty) {
               formateurId = formation.formateurIds.first;
@@ -89,31 +98,67 @@ class _AdminPlanningState extends State<AdminPlanning> with TickerProviderStateM
               if (trainer != null) formateurNom = trainer.nomComplet;
             }
 
-            allSessions.add(_SessionEntry(
-              formation: formation,
-              horaire: horaire,
-              horaireIndex: i,
+            final sessionConflicts = _db.checkPlanningConflicts(
+              day: horaire.jour,
+              start: horaire.heureDebut,
+              end: horaire.heureFin,
               formateurId: formateurId,
-              formateurNom: formateurNom,
-              enrolledStudents: enrolledStudents,
-            ));
+              salleOuLien: horaire.lieuOuLien,
+              currentFormationId: formation.id,
+              currentHoraireIndex: i,
+            );
+
+            allSessions.add(
+              _SessionEntry(
+                formation: formation,
+                horaire: horaire,
+                horaireIndex: i,
+                formateurId: formateurId,
+                formateurNom: formateurNom,
+                enrolledStudents: enrolledStudents,
+                conflicts: sessionConflicts,
+              ),
+            );
           }
         }
 
+        final globalConflicts = _db.getAllPlanningConflicts();
+
         // Apply filters
         final filteredSessions = allSessions.where((s) {
-          if (_selectedDay != 'Tous' && s.horaire.jour != _selectedDay) return false;
-          if (_filterFormationId != null && s.formation.id != _filterFormationId) return false;
-          if (_filterFormateurId != null && s.formateurId != _filterFormateurId) return false;
+          if (_selectedDay != 'Tous' && s.horaire.jour != _selectedDay) {
+            return false;
+          }
+          if (_filterFormationId != null &&
+              s.formation.id != _filterFormationId) {
+            return false;
+          }
+          if (_filterFormateurId != null && s.formateurId != _filterFormateurId) {
+            return false;
+          }
 
           final query = _searchController.text.trim().toLowerCase();
           if (query.isNotEmpty) {
-            final matchFormation = s.formation.titre.toLowerCase().contains(query);
-            final matchModule = (s.horaire.module ?? '').toLowerCase().contains(query);
-            final matchGroupe = (s.horaire.groupe ?? '').toLowerCase().contains(query);
-            final matchSalle = (s.horaire.lieuOuLien ?? '').toLowerCase().contains(query);
-            final matchFormateur = (s.formateurNom ?? '').toLowerCase().contains(query);
-            if (!matchFormation && !matchModule && !matchGroupe && !matchSalle && !matchFormateur) {
+            final matchFormation = s.formation.titre.toLowerCase().contains(
+              query,
+            );
+            final matchModule = (s.horaire.module ?? '').toLowerCase().contains(
+              query,
+            );
+            final matchGroupe = (s.horaire.groupe ?? '').toLowerCase().contains(
+              query,
+            );
+            final matchSalle = (s.horaire.lieuOuLien ?? '')
+                .toLowerCase()
+                .contains(query);
+            final matchFormateur = (s.formateurNom ?? '')
+                .toLowerCase()
+                .contains(query);
+            if (!matchFormation &&
+                !matchModule &&
+                !matchGroupe &&
+                !matchSalle &&
+                !matchFormateur) {
               return false;
             }
           }
@@ -122,30 +167,54 @@ class _AdminPlanningState extends State<AdminPlanning> with TickerProviderStateM
 
         // Sort by day and start time
         filteredSessions.sort((a, b) {
-          final dayCompare = _dayOrder(a.horaire.jour).compareTo(_dayOrder(b.horaire.jour));
+          final dayCompare = _dayOrder(
+            a.horaire.jour,
+          ).compareTo(_dayOrder(b.horaire.jour));
           if (dayCompare != 0) return dayCompare;
           return a.horaire.heureDebut.compareTo(b.horaire.heureDebut);
         });
 
         // Compute metrics
         final totalSessions = allSessions.length;
-        final totalGroups = allSessions.map((s) => s.groupeDisplayName).toSet().length;
-        final totalStudents = allSessions.expand((s) => s.enrolledStudents.map((u) => u.id)).toSet().length;
+        final totalGroups = allSessions
+            .map((s) => s.groupeDisplayName)
+            .toSet()
+            .length;
+        final totalStudents = allSessions
+            .expand((s) => s.enrolledStudents.map((u) => u.id))
+            .toSet()
+            .length;
 
         return SingleChildScrollView(
-          padding: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 24, vertical: 16),
+          padding: EdgeInsets.symmetric(
+            horizontal: isMobile ? 12 : 24,
+            vertical: 16,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildHeader(isMobile, formations),
+              if (globalConflicts.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                _buildGlobalConflictsBanner(isMobile, globalConflicts, formations),
+              ],
               const SizedBox(height: 16),
-              _buildMetricsSummary(isMobile, totalSessions, formations.length, totalGroups, totalStudents),
+              _buildMetricsSummary(
+                isMobile,
+                totalSessions,
+                formations.length,
+                totalGroups,
+                totalStudents,
+              ),
               const SizedBox(height: 20),
               _buildFiltersBar(isMobile, formations, formateurs),
               const SizedBox(height: 16),
               _buildDayFilters(),
               const SizedBox(height: 20),
-              _buildSessionsList(isMobile, filteredSessions),
+              if (_isCalendarView)
+                _buildWeeklyCalendarGrid(isMobile, filteredSessions, formations)
+              else
+                _buildSessionsList(isMobile, filteredSessions),
             ],
           ),
         );
@@ -177,28 +246,207 @@ class _AdminPlanningState extends State<AdminPlanning> with TickerProviderStateM
   Widget _buildHeader(bool isMobile, List<Formation> formations) {
     return FadeTransition(
       opacity: _fadeController,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Wrap(
+        spacing: 12,
+        runSpacing: 12,
+        alignment: WrapAlignment.spaceBetween,
+        crossAxisAlignment: WrapCrossAlignment.center,
         children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Planning & Emploi du Temps',
+                style: GoogleFonts.poppins(
+                  fontSize: isMobile ? 22 : 28,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Gestion visuelle des créneaux, salles et formateurs par semaine',
+                style: GoogleFonts.poppins(
+                  fontSize: isMobile ? 12 : 13,
+                  color: AppTheme.textSecondary,
+                ),
+              ),
+            ],
+          ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // View Switcher (Calendrier / Liste)
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.04),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                padding: const EdgeInsets.all(3),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildViewToggleButton(
+                      icon: Icons.calendar_view_week_rounded,
+                      label: 'Calendrier Hebdo',
+                      isSelected: _isCalendarView,
+                      onTap: () => setState(() => _isCalendarView = true),
+                      isMobile: isMobile,
+                    ),
+                    _buildViewToggleButton(
+                      icon: Icons.view_agenda_rounded,
+                      label: 'Vue Liste',
+                      isSelected: !_isCalendarView,
+                      onTap: () => setState(() => _isCalendarView = false),
+                      isMobile: isMobile,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primary,
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isMobile ? 12 : 18,
+                    vertical: isMobile ? 10 : 13,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 2,
+                ),
+                onPressed: () => _showSessionDialog(formations: formations),
+                icon: const Icon(Icons.add_alarm_rounded, size: 18),
+                label: Text(
+                  isMobile ? 'Créneau' : 'Programmer un Créneau',
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildViewToggleButton({
+    required IconData icon,
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+    required bool isMobile,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(9),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: EdgeInsets.symmetric(
+          horizontal: isMobile ? 8 : 12,
+          vertical: 7,
+        ),
+        decoration: BoxDecoration(
+          color: isSelected ? AppTheme.primary : Colors.transparent,
+          borderRadius: BorderRadius.circular(9),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 16,
+              color: isSelected ? Colors.white : AppTheme.textSecondary,
+            ),
+            if (!isMobile) ...[
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                  color: isSelected ? Colors.white : AppTheme.textSecondary,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGlobalConflictsBanner(
+    bool isMobile,
+    List<Map<String, dynamic>> conflicts,
+    List<Formation> formations,
+  ) {
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: isMobile ? 12 : 16,
+        vertical: isMobile ? 10 : 12,
+      ),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFEF2F2),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFFCA5A5)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.red.withValues(alpha: 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEF4444).withValues(alpha: 0.12),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.warning_amber_rounded,
+              color: Color(0xFFDC2626),
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  'Planning & Emploi du Temps',
+                  '${conflicts.length} conflit${conflicts.length > 1 ? 's' : ''} de planning détecté${conflicts.length > 1 ? 's' : ''} !',
                   style: GoogleFonts.poppins(
-                    fontSize: isMobile ? 22 : 28,
+                    fontSize: isMobile ? 13 : 14,
                     fontWeight: FontWeight.w800,
-                    color: AppTheme.textPrimary,
+                    color: const Color(0xFF991B1B),
                   ),
                 ),
-                const SizedBox(height: 4),
                 Text(
-                  'Gestion des créneaux et groupes d\'apprenants par module',
+                  isMobile
+                      ? 'Chevauchement de salles ou de formateurs.'
+                      : 'Des créneaux horaires se chevauchent pour une même salle ou un même formateur.',
                   style: GoogleFonts.poppins(
-                    fontSize: isMobile ? 12 : 13,
-                    color: AppTheme.textSecondary,
+                    fontSize: 11,
+                    color: const Color(0xFF7F1D1D),
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
@@ -206,21 +454,186 @@ class _AdminPlanningState extends State<AdminPlanning> with TickerProviderStateM
           const SizedBox(width: 8),
           ElevatedButton.icon(
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primary,
+              backgroundColor: const Color(0xFFDC2626),
               foregroundColor: Colors.white,
               padding: EdgeInsets.symmetric(
-                horizontal: isMobile ? 12 : 20,
-                vertical: isMobile ? 10 : 14,
+                horizontal: isMobile ? 10 : 14,
+                vertical: isMobile ? 8 : 10,
               ),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              elevation: 3,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              elevation: 0,
             ),
-            onPressed: () => _showSessionDialog(formations: formations),
-            icon: const Icon(Icons.add_alarm_rounded, size: 18),
+            onPressed: () => _showGlobalConflictsDialog(conflicts, formations),
+            icon: const Icon(Icons.build_circle_outlined, size: 16),
             label: Text(
-              isMobile ? 'Créneau' : 'Programmer un Créneau',
-              style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 13),
+              isMobile ? 'Résoudre' : 'Inspecter & Résoudre',
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showGlobalConflictsDialog(
+    List<Map<String, dynamic>> conflicts,
+    List<Formation> formations,
+  ) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: Row(
+          children: [
+            const Icon(Icons.warning_amber_rounded, color: Color(0xFFDC2626), size: 24),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Détail des Conflits de Planning (${conflicts.length})',
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w800, fontSize: 16),
+              ),
+            ),
+          ],
+        ),
+        content: SizedBox(
+          width: MediaQuery.of(ctx).size.width < 600 ? MediaQuery.of(ctx).size.width * 0.9 : 560,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: conflicts.map((c) {
+                final isRoom = c['type'] == 'salle';
+                final form1Id = c['formation1Id'] as String;
+                final form2Id = c['formation2Id'] as String;
+                final form1 = formations.firstWhere((f) => f.id == form1Id, orElse: () => formations.first);
+                final form2 = formations.firstWhere((f) => f.id == form2Id, orElse: () => formations.first);
+                final horaire1 = c['horaire1'] as Horaire;
+                final horaire2 = c['horaire2'] as Horaire;
+                final hIdx1 = c['horaireIndex1'] as int;
+                final hIdx2 = c['horaireIndex2'] as int;
+
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFEF2F2),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFFCA5A5)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            isRoom ? Icons.meeting_room_rounded : Icons.person_off_rounded,
+                            size: 18,
+                            color: const Color(0xFFDC2626),
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              c['title'] as String,
+                              style: GoogleFonts.poppins(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF991B1B),
+                              ),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFDC2626).withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              c['day'] as String,
+                              style: GoogleFonts.poppins(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFFDC2626),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        c['description'] as String,
+                        style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF7F1D1D)),
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              side: const BorderSide(color: AppTheme.primary),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                            onPressed: () {
+                              Navigator.pop(ctx);
+                              _showSessionDialog(
+                                formations: formations,
+                                existingEntry: _SessionEntry(
+                                  formation: form1,
+                                  horaire: horaire1,
+                                  horaireIndex: hIdx1,
+                                  enrolledStudents: const [],
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.edit_rounded, size: 14),
+                            label: Text(
+                              'Modifier Cours 1',
+                              style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              side: const BorderSide(color: Colors.deepOrange),
+                              foregroundColor: Colors.deepOrange,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                            onPressed: () {
+                              Navigator.pop(ctx);
+                              _showSessionDialog(
+                                formations: formations,
+                                existingEntry: _SessionEntry(
+                                  formation: form2,
+                                  horaire: horaire2,
+                                  horaireIndex: hIdx2,
+                                  enrolledStudents: const [],
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.edit_rounded, size: 14),
+                            label: Text(
+                              'Modifier Cours 2',
+                              style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Fermer'),
           ),
         ],
       ),
@@ -235,7 +648,10 @@ class _AdminPlanningState extends State<AdminPlanning> with TickerProviderStateM
     int totalStudents,
   ) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 16, vertical: isMobile ? 10 : 14),
+      padding: EdgeInsets.symmetric(
+        horizontal: isMobile ? 12 : 16,
+        vertical: isMobile ? 10 : 14,
+      ),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -258,19 +674,39 @@ class _AdminPlanningState extends State<AdminPlanning> with TickerProviderStateM
                   children: [
                     SizedBox(
                       width: itemWidth,
-                      child: _buildMetricItem(Icons.schedule_rounded, '$totalSessions', 'Séances', AppTheme.primary),
+                      child: _buildMetricItem(
+                        Icons.schedule_rounded,
+                        '$totalSessions',
+                        'Séances',
+                        AppTheme.primary,
+                      ),
                     ),
                     SizedBox(
                       width: itemWidth,
-                      child: _buildMetricItem(Icons.school_rounded, '$totalFormations', 'Formations', AppTheme.orangeAccent),
+                      child: _buildMetricItem(
+                        Icons.school_rounded,
+                        '$totalFormations',
+                        'Formations',
+                        AppTheme.orangeAccent,
+                      ),
                     ),
                     SizedBox(
                       width: itemWidth,
-                      child: _buildMetricItem(Icons.groups_rounded, '$totalGroups', 'Groupes', AppTheme.indigoAccent),
+                      child: _buildMetricItem(
+                        Icons.groups_rounded,
+                        '$totalGroups',
+                        'Groupes',
+                        AppTheme.indigoAccent,
+                      ),
                     ),
                     SizedBox(
                       width: itemWidth,
-                      child: _buildMetricItem(Icons.people_outline_rounded, '$totalStudents', 'Apprenants', AppTheme.success),
+                      child: _buildMetricItem(
+                        Icons.people_outline_rounded,
+                        '$totalStudents',
+                        'Apprenants',
+                        AppTheme.success,
+                      ),
                     ),
                   ],
                 );
@@ -282,16 +718,41 @@ class _AdminPlanningState extends State<AdminPlanning> with TickerProviderStateM
               alignment: WrapAlignment.spaceAround,
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                _buildMetricItem(Icons.schedule_rounded, '$totalSessions', 'Séances programmées', AppTheme.primary),
-                _buildMetricItem(Icons.school_rounded, '$totalFormations', 'Formations actives', AppTheme.orangeAccent),
-                _buildMetricItem(Icons.groups_rounded, '$totalGroups', 'Groupes constitués', AppTheme.indigoAccent),
-                _buildMetricItem(Icons.people_outline_rounded, '$totalStudents', 'Apprenants planifiés', AppTheme.success),
+                _buildMetricItem(
+                  Icons.schedule_rounded,
+                  '$totalSessions',
+                  'Séances programmées',
+                  AppTheme.primary,
+                ),
+                _buildMetricItem(
+                  Icons.school_rounded,
+                  '$totalFormations',
+                  'Formations actives',
+                  AppTheme.orangeAccent,
+                ),
+                _buildMetricItem(
+                  Icons.groups_rounded,
+                  '$totalGroups',
+                  'Groupes constitués',
+                  AppTheme.indigoAccent,
+                ),
+                _buildMetricItem(
+                  Icons.people_outline_rounded,
+                  '$totalStudents',
+                  'Apprenants planifiés',
+                  AppTheme.success,
+                ),
               ],
             ),
     );
   }
 
-  Widget _buildMetricItem(IconData icon, String value, String label, Color color) {
+  Widget _buildMetricItem(
+    IconData icon,
+    String value,
+    String label,
+    Color color,
+  ) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -310,11 +771,19 @@ class _AdminPlanningState extends State<AdminPlanning> with TickerProviderStateM
           children: [
             Text(
               value,
-              style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w800, color: AppTheme.textPrimary),
+              style: GoogleFonts.poppins(
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+                color: AppTheme.textPrimary,
+              ),
             ),
             Text(
               label,
-              style: GoogleFonts.poppins(fontSize: 11, color: AppTheme.textSecondary, fontWeight: FontWeight.w500),
+              style: GoogleFonts.poppins(
+                fontSize: 11,
+                color: AppTheme.textSecondary,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ],
         ),
@@ -322,7 +791,11 @@ class _AdminPlanningState extends State<AdminPlanning> with TickerProviderStateM
     );
   }
 
-  Widget _buildFiltersBar(bool isMobile, List<Formation> formations, List<User> formateurs) {
+  Widget _buildFiltersBar(
+    bool isMobile,
+    List<Formation> formations,
+    List<User> formateurs,
+  ) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -350,8 +823,13 @@ class _AdminPlanningState extends State<AdminPlanning> with TickerProviderStateM
                         onPressed: () => _searchController.clear(),
                       )
                     : null,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
                 isDense: true,
               ),
             ),
@@ -366,16 +844,31 @@ class _AdminPlanningState extends State<AdminPlanning> with TickerProviderStateM
               decoration: InputDecoration(
                 labelText: 'Filtrer par Formation',
                 labelStyle: GoogleFonts.poppins(fontSize: 11),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
                 isDense: true,
               ),
               items: [
-                const DropdownMenuItem(value: null, child: Text('Toutes les formations', style: TextStyle(fontSize: 12))),
+                const DropdownMenuItem(
+                  value: null,
+                  child: Text(
+                    'Toutes les formations',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                ),
                 ...formations.map(
                   (f) => DropdownMenuItem(
                     value: f.id,
-                    child: Text(f.titre, style: const TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis),
+                    child: Text(
+                      f.titre,
+                      style: const TextStyle(fontSize: 12),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ),
               ],
@@ -392,16 +885,31 @@ class _AdminPlanningState extends State<AdminPlanning> with TickerProviderStateM
               decoration: InputDecoration(
                 labelText: 'Filtrer par Formateur',
                 labelStyle: GoogleFonts.poppins(fontSize: 11),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
                 isDense: true,
               ),
               items: [
-                const DropdownMenuItem(value: null, child: Text('Tous les formateurs', style: TextStyle(fontSize: 12))),
+                const DropdownMenuItem(
+                  value: null,
+                  child: Text(
+                    'Tous les formateurs',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                ),
                 ...formateurs.map(
                   (u) => DropdownMenuItem(
                     value: u.id,
-                    child: Text(u.nomComplet, style: const TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis),
+                    child: Text(
+                      u.nomComplet,
+                      style: const TextStyle(fontSize: 12),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ),
               ],
@@ -409,7 +917,10 @@ class _AdminPlanningState extends State<AdminPlanning> with TickerProviderStateM
             ),
           ),
 
-          if (_filterFormationId != null || _filterFormateurId != null || _selectedDay != 'Tous' || _searchController.text.isNotEmpty)
+          if (_filterFormationId != null ||
+              _filterFormateurId != null ||
+              _selectedDay != 'Tous' ||
+              _searchController.text.isNotEmpty)
             TextButton.icon(
               onPressed: () {
                 setState(() {
@@ -420,7 +931,13 @@ class _AdminPlanningState extends State<AdminPlanning> with TickerProviderStateM
                 });
               },
               icon: const Icon(Icons.refresh_rounded, size: 16),
-              label: Text('Réinitialiser', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600)),
+              label: Text(
+                'Réinitialiser',
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
         ],
       ),
@@ -454,6 +971,591 @@ class _AdminPlanningState extends State<AdminPlanning> with TickerProviderStateM
     );
   }
 
+  Widget _buildWeeklyCalendarGrid(
+    bool isMobile,
+    List<_SessionEntry> sessions,
+    List<Formation> formations,
+  ) {
+    final activeDays = _selectedDay == 'Tous'
+        ? ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
+        : [_selectedDay];
+
+    return isMobile
+        ? _buildMobileCalendarView(activeDays, sessions, formations)
+        : _buildDesktopCalendarView(activeDays, sessions, formations);
+  }
+
+  Widget _buildDesktopCalendarView(
+    List<String> days,
+    List<_SessionEntry> sessions,
+    List<Formation> formations,
+  ) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      physics: const BouncingScrollPhysics(),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: days.map((day) {
+          final daySessions = sessions
+              .where((s) => s.horaire.jour == day)
+              .toList()
+            ..sort((a, b) => a.horaire.heureDebut.compareTo(b.horaire.heureDebut));
+
+          return Container(
+            width: days.length == 1 ? 650 : 310,
+            margin: const EdgeInsets.only(right: 14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: _selectedDay == day
+                    ? AppTheme.primary.withValues(alpha: 0.5)
+                    : Colors.grey.withValues(alpha: 0.15),
+                width: _selectedDay == day ? 1.8 : 1.0,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Day Column Header
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: _selectedDay == day
+                        ? AppTheme.primary.withValues(alpha: 0.08)
+                        : const Color(0xFFF8FAFC),
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(15),
+                      topRight: Radius.circular(15),
+                    ),
+                    border: Border(
+                      bottom: BorderSide(color: Colors.grey.withValues(alpha: 0.15)),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 10,
+                            height: 10,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: daySessions.isNotEmpty ? AppTheme.primary : Colors.grey.shade400,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            day,
+                            style: GoogleFonts.poppins(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: AppTheme.textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: daySessions.isNotEmpty
+                                  ? AppTheme.primary.withValues(alpha: 0.12)
+                                  : Colors.grey.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              '${daySessions.length} cours',
+                              style: GoogleFonts.poppins(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: daySessions.isNotEmpty ? AppTheme.primary : Colors.grey.shade600,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          IconButton(
+                            icon: const Icon(Icons.add_circle_outline_rounded, size: 19),
+                            color: AppTheme.primary,
+                            tooltip: 'Ajouter un cours le $day',
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            onPressed: () => _showSessionDialog(
+                              formations: formations,
+                              defaultDay: day,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Day Column Content
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: daySessions.isEmpty
+                      ? Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF9FAFB),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.grey.withValues(alpha: 0.15),
+                              style: BorderStyle.solid,
+                            ),
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.calendar_today_rounded,
+                                size: 24,
+                                color: Colors.grey.withValues(alpha: 0.35),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Aucun cours programmé',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade500,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              OutlinedButton.icon(
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  side: BorderSide(color: AppTheme.primary.withValues(alpha: 0.4)),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                ),
+                                onPressed: () => _showSessionDialog(
+                                  formations: formations,
+                                  defaultDay: day,
+                                ),
+                                icon: const Icon(Icons.add, size: 14),
+                                label: Text(
+                                  'Programmer',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppTheme.primary,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : Column(
+                          children: daySessions.map((entry) {
+                            return _buildCalendarSessionCard(entry);
+                          }).toList(),
+                        ),
+                ),
+              ],
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildMobileCalendarView(
+    List<String> days,
+    List<_SessionEntry> sessions,
+    List<Formation> formations,
+  ) {
+    return Column(
+      children: days.map((day) {
+        final daySessions = sessions
+            .where((s) => s.horaire.jour == day)
+            .toList()
+          ..sort((a, b) => a.horaire.heureDebut.compareTo(b.horaire.heureDebut));
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.grey.withValues(alpha: 0.15)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Mobile Day Header
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(15),
+                    topRight: Radius.circular(15),
+                  ),
+                  border: Border(
+                    bottom: BorderSide(color: Colors.grey.withValues(alpha: 0.15)),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      day,
+                      style: GoogleFonts.poppins(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        Text(
+                          '${daySessions.length} cours',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: daySessions.isNotEmpty ? AppTheme.primary : Colors.grey,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          icon: const Icon(Icons.add_circle_outline_rounded, size: 20),
+                          color: AppTheme.primary,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          onPressed: () => _showSessionDialog(
+                            formations: formations,
+                            defaultDay: day,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              // Mobile Day Sessions
+              Padding(
+                padding: const EdgeInsets.all(10),
+                child: daySessions.isEmpty
+                    ? Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        child: Center(
+                          child: Text(
+                            'Aucun cours ce jour-là',
+                            style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey),
+                          ),
+                        ),
+                      )
+                    : Column(
+                        children: daySessions.map((entry) {
+                          return _buildCalendarSessionCard(entry);
+                        }).toList(),
+                      ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildCalendarSessionCard(_SessionEntry entry) {
+    final horaire = entry.horaire;
+    final formation = entry.formation;
+    final students = entry.enrolledStudents;
+    final isEnLigne = horaire.modalite == 'En ligne';
+    final hasConflict = entry.hasConflict;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: hasConflict ? const Color(0xFFFFF5F5) : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: hasConflict
+              ? const Color(0xFFEF4444)
+              : AppTheme.primary.withValues(alpha: 0.18),
+          width: hasConflict ? 1.5 : 1.0,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: hasConflict
+                ? Colors.red.withValues(alpha: 0.08)
+                : AppTheme.primary.withValues(alpha: 0.04),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => _showStudentsDialog(entry),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Top: Time badge + Modality + Conflict Alert + Popup menu
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: hasConflict
+                            ? const Color(0xFFEF4444).withValues(alpha: 0.12)
+                            : AppTheme.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.access_time_rounded,
+                            size: 13,
+                            color: hasConflict ? const Color(0xFFDC2626) : AppTheme.primary,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${horaire.heureDebut} - ${horaire.heureFin}',
+                            style: GoogleFonts.poppins(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: hasConflict ? const Color(0xFFDC2626) : AppTheme.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: (isEnLigne ? Colors.purple : Colors.teal).withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(5),
+                      ),
+                      child: Text(
+                        horaire.modalite ?? 'Présentiel',
+                        style: GoogleFonts.poppins(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: isEnLigne ? Colors.purple : Colors.teal,
+                        ),
+                      ),
+                    ),
+                    if (hasConflict) ...[
+                      const SizedBox(width: 6),
+                      Tooltip(
+                        message: entry.conflicts.join('\n'),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEF4444).withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: const Color(0xFFFCA5A5)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.warning_amber_rounded, size: 11, color: Color(0xFFDC2626)),
+                              const SizedBox(width: 2),
+                              Text(
+                                'Conflit',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.w800,
+                                  color: const Color(0xFFDC2626),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                    const Spacer(),
+                    PopupMenuButton<String>(
+                      icon: const Icon(Icons.more_vert_rounded, size: 18, color: Colors.grey),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      onSelected: (action) => _handleCardAction(action, entry),
+                      itemBuilder: (ctx) => [
+                        const PopupMenuItem(
+                          value: 'qr',
+                          child: Row(
+                            children: [
+                              Icon(Icons.qr_code_2_rounded, size: 16, color: Color(0xFF1D447A)),
+                              SizedBox(width: 8),
+                              Text('Badge QR d\'émargement', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuItem(
+                          value: 'attendance',
+                          child: Row(
+                            children: [
+                              Icon(Icons.picture_as_pdf_rounded, size: 16, color: Color(0xFFDC2626)),
+                              SizedBox(width: 8),
+                              Text('Feuille d\'émargement PDF', style: TextStyle(fontSize: 12)),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuItem(
+                          value: 'students',
+                          child: Row(
+                            children: [
+                              Icon(Icons.people_alt_rounded, size: 16, color: AppTheme.primary),
+                              SizedBox(width: 8),
+                              Text('Voir les apprenants', style: TextStyle(fontSize: 12)),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuItem(
+                          value: 'edit',
+                          child: Row(
+                            children: [
+                              Icon(Icons.edit_rounded, size: 16, color: Colors.blue),
+                              SizedBox(width: 8),
+                              Text('Modifier', style: TextStyle(fontSize: 12)),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuItem(
+                          value: 'delete',
+                          child: Row(
+                            children: [
+                              Icon(Icons.delete_outline_rounded, size: 16, color: Colors.red),
+                              SizedBox(width: 8),
+                              Text('Supprimer', style: TextStyle(fontSize: 12, color: Colors.red)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+
+                // Formation Title
+                Text(
+                  formation.titre,
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.textPrimary,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+
+                // Module Name
+                if (horaire.module != null && horaire.module!.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      const Icon(Icons.bookmark_outline_rounded, size: 13, color: AppTheme.orangeAccent),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          horaire.module!,
+                          style: GoogleFonts.poppins(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.orangeAccent,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+
+                const SizedBox(height: 8),
+
+                // Trainer + Room + Students Row
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 6,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    // Formateur
+                    if (entry.formateurNom != null)
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.person_outline_rounded, size: 13, color: Colors.grey),
+                          const SizedBox(width: 3),
+                          Text(
+                            entry.formateurNom!,
+                            style: GoogleFonts.poppins(fontSize: 11, color: AppTheme.textSecondary),
+                          ),
+                        ],
+                      ),
+
+                    // Salle
+                    if (horaire.lieuOuLien != null && horaire.lieuOuLien!.isNotEmpty)
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            isEnLigne ? Icons.link_rounded : Icons.meeting_room_outlined,
+                            size: 13,
+                            color: Colors.grey,
+                          ),
+                          const SizedBox(width: 3),
+                          Text(
+                            horaire.lieuOuLien!,
+                            style: GoogleFonts.poppins(fontSize: 11, color: AppTheme.textSecondary),
+                          ),
+                        ],
+                      ),
+
+                    // Apprenants
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: AppTheme.success.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        '${students.length} apprenant${students.length > 1 ? 's' : ''}',
+                        style: GoogleFonts.poppins(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.success,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildSessionsList(bool isMobile, List<_SessionEntry> sessions) {
     if (sessions.isEmpty) {
       return Container(
@@ -466,11 +1568,19 @@ class _AdminPlanningState extends State<AdminPlanning> with TickerProviderStateM
         ),
         child: Column(
           children: [
-            Icon(Icons.event_busy_rounded, size: 48, color: Colors.grey.withValues(alpha: 0.4)),
+            Icon(
+              Icons.event_busy_rounded,
+              size: 48,
+              color: Colors.grey.withValues(alpha: 0.4),
+            ),
             const SizedBox(height: 12),
             Text(
               'Aucun créneau programmé pour les filtres sélectionnés.',
-              style: GoogleFonts.poppins(fontSize: 14, color: AppTheme.textSecondary, fontWeight: FontWeight.w600),
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                color: AppTheme.textSecondary,
+                fontWeight: FontWeight.w600,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
@@ -499,16 +1609,24 @@ class _AdminPlanningState extends State<AdminPlanning> with TickerProviderStateM
     final students = entry.enrolledStudents;
     final groupName = entry.groupeDisplayName;
     final isEnLigne = horaire.modalite == 'En ligne';
+    final hasConflict = entry.hasConflict;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: hasConflict ? const Color(0xFFFFF5F5) : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.withValues(alpha: 0.12)),
+        border: Border.all(
+          color: hasConflict
+              ? const Color(0xFFEF4444)
+              : Colors.grey.withValues(alpha: 0.12),
+          width: hasConflict ? 1.5 : 1.0,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
+            color: hasConflict
+                ? Colors.red.withValues(alpha: 0.08)
+                : Colors.black.withValues(alpha: 0.03),
             blurRadius: 8,
             offset: const Offset(0, 3),
           ),
@@ -519,26 +1637,35 @@ class _AdminPlanningState extends State<AdminPlanning> with TickerProviderStateM
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Top row: Day + Time + Actions
+            // Top row: Day + Time + Modality + Conflict + Actions
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
-                    color: AppTheme.primary.withValues(alpha: 0.1),
+                    color: hasConflict
+                        ? const Color(0xFFEF4444).withValues(alpha: 0.12)
+                        : AppTheme.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.access_time_rounded, size: 16, color: AppTheme.primary),
+                      Icon(
+                        Icons.access_time_rounded,
+                        size: 16,
+                        color: hasConflict ? const Color(0xFFDC2626) : AppTheme.primary,
+                      ),
                       const SizedBox(width: 6),
                       Text(
                         '${horaire.jour} • ${horaire.heureDebut} - ${horaire.heureFin}',
                         style: GoogleFonts.poppins(
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
-                          color: AppTheme.primary,
+                          color: hasConflict ? const Color(0xFFDC2626) : AppTheme.primary,
                         ),
                       ),
                     ],
@@ -546,16 +1673,23 @@ class _AdminPlanningState extends State<AdminPlanning> with TickerProviderStateM
                 ),
                 const SizedBox(width: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
-                    color: (isEnLigne ? Colors.purple : Colors.teal).withValues(alpha: 0.1),
+                    color: (isEnLigne ? Colors.purple : Colors.teal).withValues(
+                      alpha: 0.1,
+                    ),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
-                        isEnLigne ? Icons.videocam_rounded : Icons.location_on_rounded,
+                        isEnLigne
+                            ? Icons.videocam_rounded
+                            : Icons.location_on_rounded,
                         size: 13,
                         color: isEnLigne ? Colors.purple : Colors.teal,
                       ),
@@ -571,17 +1705,72 @@ class _AdminPlanningState extends State<AdminPlanning> with TickerProviderStateM
                     ],
                   ),
                 ),
+                if (hasConflict) ...[
+                  const SizedBox(width: 8),
+                  Tooltip(
+                    message: entry.conflicts.join('\n'),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEF4444).withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: const Color(0xFFFCA5A5)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.warning_amber_rounded,
+                            size: 14,
+                            color: Color(0xFFDC2626),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Conflit détecté',
+                            style: GoogleFonts.poppins(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              color: const Color(0xFFDC2626),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
                 const Spacer(),
                 // Actions dropdown popup menu
                 PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_vert_rounded, size: 20, color: Colors.grey),
+                  icon: const Icon(
+                    Icons.more_vert_rounded,
+                    size: 20,
+                    color: Colors.grey,
+                  ),
                   onSelected: (action) => _handleCardAction(action, entry),
                   itemBuilder: (ctx) => [
+                    const PopupMenuItem(
+                      value: 'attendance',
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.picture_as_pdf_rounded,
+                            size: 18,
+                            color: Color(0xFFDC2626),
+                          ),
+                          SizedBox(width: 8),
+                          Text('Feuille d\'émargement PDF'),
+                        ],
+                      ),
+                    ),
                     const PopupMenuItem(
                       value: 'students',
                       child: Row(
                         children: [
-                          Icon(Icons.people_alt_rounded, size: 18, color: AppTheme.primary),
+                          Icon(
+                            Icons.people_alt_rounded,
+                            size: 18,
+                            color: AppTheme.primary,
+                          ),
                           SizedBox(width: 8),
                           Text('Voir les apprenants'),
                         ],
@@ -591,7 +1780,11 @@ class _AdminPlanningState extends State<AdminPlanning> with TickerProviderStateM
                       value: 'edit',
                       child: Row(
                         children: [
-                          Icon(Icons.edit_rounded, size: 18, color: Colors.blue),
+                          Icon(
+                            Icons.edit_rounded,
+                            size: 18,
+                            color: Colors.blue,
+                          ),
                           SizedBox(width: 8),
                           Text('Modifier le créneau'),
                         ],
@@ -601,7 +1794,11 @@ class _AdminPlanningState extends State<AdminPlanning> with TickerProviderStateM
                       value: 'duplicate',
                       child: Row(
                         children: [
-                          Icon(Icons.copy_rounded, size: 18, color: Colors.amber),
+                          Icon(
+                            Icons.copy_rounded,
+                            size: 18,
+                            color: Colors.amber,
+                          ),
                           SizedBox(width: 8),
                           Text('Dupliquer sur un autre jour'),
                         ],
@@ -612,9 +1809,16 @@ class _AdminPlanningState extends State<AdminPlanning> with TickerProviderStateM
                       value: 'delete',
                       child: Row(
                         children: [
-                          Icon(Icons.delete_forever_rounded, size: 18, color: Colors.red),
+                          Icon(
+                            Icons.delete_forever_rounded,
+                            size: 18,
+                            color: Colors.red,
+                          ),
                           SizedBox(width: 8),
-                          Text('Supprimer', style: TextStyle(color: Colors.red)),
+                          Text(
+                            'Supprimer',
+                            style: TextStyle(color: Colors.red),
+                          ),
                         ],
                       ),
                     ),
@@ -651,7 +1855,9 @@ class _AdminPlanningState extends State<AdminPlanning> with TickerProviderStateM
                           // Module Badge
                           _buildChip(
                             Icons.menu_book_rounded,
-                            horaire.module?.isNotEmpty == true ? horaire.module! : 'Tronc Commun',
+                            horaire.module?.isNotEmpty == true
+                                ? horaire.module!
+                                : 'Tronc Commun',
                             AppTheme.primary,
                           ),
                           // Automatic Group Badge
@@ -675,7 +1881,9 @@ class _AdminPlanningState extends State<AdminPlanning> with TickerProviderStateM
                           // Room or Link Badge
                           if (horaire.lieuOuLien?.isNotEmpty == true)
                             _buildChip(
-                              isEnLigne ? Icons.link_rounded : Icons.meeting_room_rounded,
+                              isEnLigne
+                                  ? Icons.link_rounded
+                                  : Icons.meeting_room_rounded,
                               horaire.lieuOuLien!,
                               Colors.deepOrange,
                             ),
@@ -689,27 +1897,39 @@ class _AdminPlanningState extends State<AdminPlanning> with TickerProviderStateM
 
             const SizedBox(height: 12),
 
-            // Bottom bar: Quick button to see enrolled group
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            // Bottom bar: étudiants + actions
+            Wrap(
+              spacing: 4,
+              runSpacing: 4,
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 InkWell(
                   onTap: () => _showStudentsDialog(entry),
                   borderRadius: BorderRadius.circular(6),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 6),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 4,
+                      horizontal: 6,
+                    ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.people_outline_rounded, size: 16, color: AppTheme.primary),
+                        const Icon(
+                          Icons.people_outline_rounded,
+                          size: 16,
+                          color: AppTheme.primary,
+                        ),
                         const SizedBox(width: 6),
-                        Text(
-                          '${students.length} apprenant${students.length > 1 ? 's' : ''} dans ce groupe (cliquer pour voir la liste)',
-                          style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: AppTheme.primary,
-                            decoration: TextDecoration.underline,
+                        Flexible(
+                          child: Text(
+                            '${students.length} apprenant${students.length > 1 ? 's' : ''} inscrit${students.length > 1 ? 's' : ''}',
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.primary,
+                              decoration: TextDecoration.underline,
+                            ),
                           ),
                         ),
                       ],
@@ -717,9 +1937,23 @@ class _AdminPlanningState extends State<AdminPlanning> with TickerProviderStateM
                   ),
                 ),
                 Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.edit_outlined, size: 18, color: Colors.blueGrey),
+                      icon: const Icon(
+                        Icons.picture_as_pdf_rounded,
+                        size: 18,
+                        color: Color(0xFFDC2626),
+                      ),
+                      tooltip: 'Feuille d\'émargement PDF',
+                      onPressed: () => _printAttendanceSheet(entry),
+                    ),
+                    IconButton(
+                      icon: const Icon(
+                        Icons.edit_outlined,
+                        size: 18,
+                        color: Colors.blueGrey,
+                      ),
                       tooltip: 'Modifier',
                       onPressed: () => _showSessionDialog(
                         formations: _db.getFormations(),
@@ -727,7 +1961,11 @@ class _AdminPlanningState extends State<AdminPlanning> with TickerProviderStateM
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.delete_outline_rounded, size: 18, color: Colors.redAccent),
+                      icon: const Icon(
+                        Icons.delete_outline_rounded,
+                        size: 18,
+                        color: Colors.redAccent,
+                      ),
                       tooltip: 'Supprimer',
                       onPressed: () => _confirmDeleteSession(entry),
                     ),
@@ -741,7 +1979,12 @@ class _AdminPlanningState extends State<AdminPlanning> with TickerProviderStateM
     );
   }
 
-  Widget _buildChip(IconData icon, String label, Color color, {bool isClickable = false}) {
+  Widget _buildChip(
+    IconData icon,
+    String label,
+    Color color, {
+    bool isClickable = false,
+  }) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
@@ -776,11 +2019,20 @@ class _AdminPlanningState extends State<AdminPlanning> with TickerProviderStateM
 
   void _handleCardAction(String action, _SessionEntry entry) {
     switch (action) {
+      case 'qr':
+        _showQrEmargementDialog(entry);
+        break;
+      case 'attendance':
+        _printAttendanceSheet(entry);
+        break;
       case 'students':
         _showStudentsDialog(entry);
         break;
       case 'edit':
-        _showSessionDialog(formations: _db.getFormations(), existingEntry: entry);
+        _showSessionDialog(
+          formations: _db.getFormations(),
+          existingEntry: entry,
+        );
         break;
       case 'duplicate':
         _showDuplicateDialog(entry);
@@ -810,11 +2062,17 @@ class _AdminPlanningState extends State<AdminPlanning> with TickerProviderStateM
                 children: [
                   Text(
                     'Apprenants du Groupe',
-                    style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700),
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   Text(
                     '$groupName • ${entry.formation.titre}',
-                    style: GoogleFonts.poppins(fontSize: 12, color: AppTheme.textSecondary),
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: AppTheme.textSecondary,
+                    ),
                   ),
                 ],
               ),
@@ -840,20 +2098,42 @@ class _AdminPlanningState extends State<AdminPlanning> with TickerProviderStateM
                   itemBuilder: (ctx, i) {
                     final s = students[i];
                     return ListTile(
-                      contentPadding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+                      contentPadding: const EdgeInsets.symmetric(
+                        vertical: 4,
+                        horizontal: 4,
+                      ),
                       leading: CircleAvatar(
-                        backgroundColor: AppTheme.primary.withValues(alpha: 0.15),
+                        backgroundColor: AppTheme.primary.withValues(
+                          alpha: 0.15,
+                        ),
                         child: Text(
                           s.prenom.isNotEmpty ? s.prenom[0].toUpperCase() : '?',
-                          style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primary),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.primary,
+                          ),
                         ),
                       ),
-                      title: Text(s.nomComplet, style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13)),
-                      subtitle: Text('${s.email} • ${s.phone}', style: const TextStyle(fontSize: 11)),
+                      title: Text(
+                        s.nomComplet,
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        ),
+                      ),
+                      subtitle: Text(
+                        '${s.email} • ${s.phone}',
+                        style: const TextStyle(fontSize: 11),
+                      ),
                       trailing: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
-                          color: s.estActif ? Colors.green.withValues(alpha: 0.1) : Colors.red.withValues(alpha: 0.1),
+                          color: s.estActif
+                              ? Colors.green.withValues(alpha: 0.1)
+                              : Colors.red.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
@@ -870,6 +2150,47 @@ class _AdminPlanningState extends State<AdminPlanning> with TickerProviderStateM
                 ),
         ),
         actions: [
+          OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(
+              side: const BorderSide(color: Color(0xFF1D447A)),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            icon: const Icon(Icons.qr_code_2_rounded, size: 16, color: Color(0xFF1D447A)),
+            label: Text(
+              'Badge QR',
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF1D447A),
+              ),
+            ),
+            onPressed: () {
+              Navigator.pop(ctx);
+              _showQrEmargementDialog(entry);
+            },
+          ),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFDC2626),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            icon: const Icon(Icons.picture_as_pdf_rounded, size: 16),
+            label: Text(
+              'Feuille d\'émargement PDF',
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            onPressed: () => _printAttendanceSheet(entry),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: const Text('Fermer'),
@@ -881,16 +2202,23 @@ class _AdminPlanningState extends State<AdminPlanning> with TickerProviderStateM
 
   // --- DUPLICATE SESSION DIALOG ---
   void _showDuplicateDialog(_SessionEntry entry) {
-    String targetDay = _days.where((d) => d != 'Tous' && d != entry.horaire.jour).first;
+    String targetDay = _days
+        .where((d) => d != 'Tous' && d != entry.horaire.jour)
+        .first;
 
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setModalState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           title: Text(
             'Dupliquer ce créneau',
-            style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16),
+            style: GoogleFonts.poppins(
+              fontWeight: FontWeight.w700,
+              fontSize: 16,
+            ),
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -903,7 +2231,10 @@ class _AdminPlanningState extends State<AdminPlanning> with TickerProviderStateM
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
                 initialValue: targetDay,
-                decoration: const InputDecoration(labelText: 'Nouveau Jour', border: OutlineInputBorder()),
+                decoration: const InputDecoration(
+                  labelText: 'Nouveau Jour',
+                  border: OutlineInputBorder(),
+                ),
                 items: _days
                     .where((d) => d != 'Tous')
                     .map((d) => DropdownMenuItem(value: d, child: Text(d)))
@@ -915,16 +2246,28 @@ class _AdminPlanningState extends State<AdminPlanning> with TickerProviderStateM
             ],
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Annuler')),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Annuler'),
+            ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primary, foregroundColor: Colors.white),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primary,
+                foregroundColor: Colors.white,
+              ),
               onPressed: () async {
-                await _db.duplicateHoraireInFormation(entry.formation.id, entry.horaireIndex, targetDay);
+                await _db.duplicateHoraireInFormation(
+                  entry.formation.id,
+                  entry.horaireIndex,
+                  targetDay,
+                );
                 if (ctx.mounted) Navigator.pop(ctx);
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('Séance dupliquée avec succès vers $targetDay.'),
+                      content: Text(
+                        'Séance dupliquée avec succès vers $targetDay.',
+                      ),
                       backgroundColor: AppTheme.success,
                     ),
                   );
@@ -949,15 +2292,27 @@ class _AdminPlanningState extends State<AdminPlanning> with TickerProviderStateM
           'Voulez-vous vraiment supprimer le créneau ${entry.horaire.jour} (${entry.horaire.heureDebut}-${entry.horaire.heureFin}) de "${entry.formation.titre}" ?',
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Annuler')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Annuler'),
+          ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
             onPressed: () async {
-              await _db.deleteHoraireFromFormation(entry.formation.id, entry.horaireIndex);
+              await _db.deleteHoraireFromFormation(
+                entry.formation.id,
+                entry.horaireIndex,
+              );
               if (ctx.mounted) Navigator.pop(ctx);
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Créneau supprimé avec succès.'), backgroundColor: Colors.red),
+                  const SnackBar(
+                    content: Text('Créneau supprimé avec succès.'),
+                    backgroundColor: Colors.red,
+                  ),
                 );
               }
             },
@@ -972,28 +2327,50 @@ class _AdminPlanningState extends State<AdminPlanning> with TickerProviderStateM
   void _showSessionDialog({
     required List<Formation> formations,
     _SessionEntry? existingEntry,
+    String? defaultDay,
   }) {
     if (formations.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Veuillez d\'abord créer au moins une formation.'), backgroundColor: AppTheme.warning),
+        const SnackBar(
+          content: Text('Veuillez d\'abord créer au moins une formation.'),
+          backgroundColor: AppTheme.warning,
+        ),
       );
       return;
     }
 
     final isEdit = existingEntry != null;
-    String selectedFormationId = isEdit ? existingEntry.formation.id : formations.first.id;
+    String selectedFormationId = isEdit
+        ? existingEntry.formation.id
+        : formations.first.id;
     Formation currentFormation = formations.firstWhere(
       (f) => f.id == selectedFormationId,
       orElse: () => formations.first,
     );
 
-    String? selectedModule = isEdit ? existingEntry.horaire.module : (currentFormation.modules.isNotEmpty ? currentFormation.modules.first : null);
-    String selectedDay = isEdit ? existingEntry.horaire.jour : 'Lundi';
-    String selectedModality = isEdit ? (existingEntry.horaire.modalite ?? 'Présentiel') : 'Présentiel';
-    final startController = TextEditingController(text: isEdit ? existingEntry.horaire.heureDebut : '09:00');
-    final endController = TextEditingController(text: isEdit ? existingEntry.horaire.heureFin : '12:00');
-    final placeController = TextEditingController(text: isEdit ? (existingEntry.horaire.lieuOuLien ?? '') : 'Salle 1');
-    final customGroupController = TextEditingController(text: isEdit ? (existingEntry.horaire.groupe ?? '') : '');
+    String? selectedModule = isEdit
+        ? existingEntry.horaire.module
+        : (currentFormation.modules.isNotEmpty
+              ? currentFormation.modules.first
+              : null);
+    String selectedDay = isEdit
+        ? existingEntry.horaire.jour
+        : (defaultDay ?? (_selectedDay != 'Tous' ? _selectedDay : 'Lundi'));
+    String selectedModality = isEdit
+        ? (existingEntry.horaire.modalite ?? 'Présentiel')
+        : 'Présentiel';
+    final startController = TextEditingController(
+      text: isEdit ? existingEntry.horaire.heureDebut : '09:00',
+    );
+    final endController = TextEditingController(
+      text: isEdit ? existingEntry.horaire.heureFin : '12:00',
+    );
+    final placeController = TextEditingController(
+      text: isEdit ? (existingEntry.horaire.lieuOuLien ?? '') : 'Salle 1',
+    );
+    final customGroupController = TextEditingController(
+      text: isEdit ? (existingEntry.horaire.groupe ?? '') : '',
+    );
 
     // Trainer resolution
     String? resolvedTrainerId = isEdit ? existingEntry.formateurId : null;
@@ -1009,15 +2386,21 @@ class _AdminPlanningState extends State<AdminPlanning> with TickerProviderStateM
           );
 
           // Auto-select trainer assigned to this module if not explicitly modified
-          if (selectedModule != null && currentFormation.moduleFormateurIds.containsKey(selectedModule)) {
-            resolvedTrainerId = currentFormation.moduleFormateurIds[selectedModule];
+          if (selectedModule != null &&
+              currentFormation.moduleFormateurIds.containsKey(selectedModule)) {
+            resolvedTrainerId =
+                currentFormation.moduleFormateurIds[selectedModule];
           } else if (currentFormation.formateurIds.isNotEmpty) {
             resolvedTrainerId = currentFormation.formateurIds.first;
           }
 
           // Automatically deduce the enrolled learners group
-          final enrolledStudents = _db.getStudentsForFormationModule(currentFormation.id, selectedModule);
-          final autoGroupName = selectedModule != null && selectedModule!.isNotEmpty
+          final enrolledStudents = _db.getStudentsForFormationModule(
+            currentFormation.id,
+            selectedModule,
+          );
+          final autoGroupName =
+              selectedModule != null && selectedModule!.isNotEmpty
               ? '${currentFormation.titre} • $selectedModule'
               : '${currentFormation.titre} • Tous modules';
 
@@ -1032,77 +2415,109 @@ class _AdminPlanningState extends State<AdminPlanning> with TickerProviderStateM
             currentHoraireIndex: isEdit ? existingEntry.horaireIndex : null,
           );
 
-          final trainerUser = resolvedTrainerId != null ? _db.getUserById(resolvedTrainerId!) : null;
+          final trainerUser = resolvedTrainerId != null
+              ? _db.getUserById(resolvedTrainerId!)
+              : null;
 
           return AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18),
+            ),
             title: Row(
               children: [
                 Icon(
-                  isEdit ? Icons.edit_calendar_rounded : Icons.add_alarm_rounded,
+                  isEdit
+                      ? Icons.edit_calendar_rounded
+                      : Icons.add_alarm_rounded,
                   color: AppTheme.primary,
                 ),
                 const SizedBox(width: 8),
                 Text(
                   isEdit ? 'Modifier le Créneau' : 'Programmer un Créneau',
-                  style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16),
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 16,
+                  ),
                 ),
               ],
             ),
             content: SizedBox(
-              width: MediaQuery.of(ctx).size.width < 550 ? MediaQuery.of(ctx).size.width * 0.9 : 520,
+              width: MediaQuery.of(ctx).size.width < 550
+                  ? MediaQuery.of(ctx).size.width * 0.9
+                  : 520,
               child: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Formation Dropdown
+                    // Formation selector
                     DropdownButtonFormField<String>(
                       initialValue: selectedFormationId,
                       decoration: const InputDecoration(
                         labelText: 'Formation *',
-                        prefixIcon: Icon(Icons.school_rounded, size: 18),
                         border: OutlineInputBorder(),
                         isDense: true,
                       ),
-                      items: formations.map((f) {
-                        return DropdownMenuItem(
-                          value: f.id,
-                          child: Text(f.titre, overflow: TextOverflow.ellipsis),
-                        );
-                      }).toList(),
-                      onChanged: (val) {
-                        if (val != null) {
-                          setDialogState(() {
-                            selectedFormationId = val;
-                            final newForm = formations.firstWhere((f) => f.id == val);
-                            selectedModule = newForm.modules.isNotEmpty ? newForm.modules.first : null;
-                          });
-                        }
-                      },
+                      isExpanded: true,
+                      items: formations
+                          .map(
+                            (f) => DropdownMenuItem(
+                              value: f.id,
+                              child: Text(
+                                f.titre,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: isEdit
+                          ? null
+                          : (val) {
+                              if (val != null) {
+                                setDialogState(() {
+                                  selectedFormationId = val;
+                                  final newForm = formations.firstWhere(
+                                    (f) => f.id == val,
+                                  );
+                                  selectedModule =
+                                      newForm.modules.isNotEmpty
+                                      ? newForm.modules.first
+                                      : null;
+                                });
+                              }
+                            },
                     ),
                     const SizedBox(height: 12),
 
-                    // Module Dropdown
-                    DropdownButtonFormField<String?>(
-                      initialValue: selectedModule,
-                      decoration: const InputDecoration(
-                        labelText: 'Module concerné *',
-                        prefixIcon: Icon(Icons.menu_book_rounded, size: 18),
-                        border: OutlineInputBorder(),
-                        isDense: true,
-                      ),
-                      items: [
-                        const DropdownMenuItem(value: null, child: Text('Tous les modules (Tronc commun)')),
-                        ...currentFormation.modules.map(
-                          (m) => DropdownMenuItem(value: m, child: Text(m, overflow: TextOverflow.ellipsis)),
+                    // Module selector (if available)
+                    if (currentFormation.modules.isNotEmpty) ...[
+                      DropdownButtonFormField<String>(
+                        initialValue:
+                            currentFormation.modules.contains(selectedModule)
+                            ? selectedModule
+                            : currentFormation.modules.first,
+                        decoration: const InputDecoration(
+                          labelText: 'Module concerné *',
+                          border: OutlineInputBorder(),
+                          isDense: true,
                         ),
-                      ],
-                      onChanged: (val) {
-                        setDialogState(() => selectedModule = val);
-                      },
-                    ),
-                    const SizedBox(height: 14),
+                        isExpanded: true,
+                        items: currentFormation.modules
+                            .map(
+                              (m) => DropdownMenuItem(
+                                value: m,
+                                child: Text(m, overflow: TextOverflow.ellipsis),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (val) {
+                          setDialogState(() {
+                            selectedModule = val;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                    ],
 
                     // AUTOMATIC GROUP BADGE & STUDENTS PREVIEW
                     Container(
@@ -1111,19 +2526,29 @@ class _AdminPlanningState extends State<AdminPlanning> with TickerProviderStateM
                       decoration: BoxDecoration(
                         color: AppTheme.primary.withValues(alpha: 0.06),
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: AppTheme.primary.withValues(alpha: 0.2)),
+                        border: Border.all(
+                          color: AppTheme.primary.withValues(alpha: 0.2),
+                        ),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
                             children: [
-                              const Icon(Icons.groups_rounded, size: 18, color: AppTheme.primary),
+                              const Icon(
+                                Icons.groups_rounded,
+                                size: 18,
+                                color: AppTheme.primary,
+                              ),
                               const SizedBox(width: 6),
                               Expanded(
                                 child: Text(
                                   'Groupe constitué automatiquement :',
-                                  style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w700, color: AppTheme.primary),
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppTheme.primary,
+                                  ),
                                 ),
                               ),
                             ],
@@ -1133,20 +2558,31 @@ class _AdminPlanningState extends State<AdminPlanning> with TickerProviderStateM
                             customGroupController.text.trim().isNotEmpty
                                 ? customGroupController.text.trim()
                                 : autoGroupName,
-                            style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black87),
+                            style: GoogleFonts.poppins(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black87,
+                            ),
                           ),
                           const SizedBox(height: 6),
                           Row(
                             children: [
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 3,
+                                ),
                                 decoration: BoxDecoration(
                                   color: Colors.green.withValues(alpha: 0.15),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Text(
                                   '${enrolledStudents.length} apprenant${enrolledStudents.length > 1 ? 's' : ''} inscrit${enrolledStudents.length > 1 ? 's' : ''}',
-                                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.green),
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.green,
+                                  ),
                                 ),
                               ),
                               if (trainerUser != null) ...[
@@ -1154,7 +2590,11 @@ class _AdminPlanningState extends State<AdminPlanning> with TickerProviderStateM
                                 Expanded(
                                   child: Text(
                                     '👨‍🏫 ${trainerUser.nomComplet}',
-                                    style: GoogleFonts.poppins(fontSize: 11, color: Colors.teal, fontWeight: FontWeight.w600),
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 11,
+                                      color: Colors.teal,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
@@ -1172,13 +2612,24 @@ class _AdminPlanningState extends State<AdminPlanning> with TickerProviderStateM
                         Expanded(
                           child: DropdownButtonFormField<String>(
                             initialValue: selectedDay,
-                            decoration: const InputDecoration(labelText: 'Jour *', border: OutlineInputBorder(), isDense: true),
+                            decoration: const InputDecoration(
+                              labelText: 'Jour *',
+                              border: OutlineInputBorder(),
+                              isDense: true,
+                            ),
                             items: _days
                                 .where((d) => d != 'Tous')
-                                .map((d) => DropdownMenuItem(value: d, child: Text(d)))
+                                .map(
+                                  (d) => DropdownMenuItem(
+                                    value: d,
+                                    child: Text(d),
+                                  ),
+                                )
                                 .toList(),
                             onChanged: (val) {
-                              if (val != null) setDialogState(() => selectedDay = val);
+                              if (val != null) {
+                                setDialogState(() => selectedDay = val);
+                              }
                             },
                           ),
                         ),
@@ -1186,14 +2637,29 @@ class _AdminPlanningState extends State<AdminPlanning> with TickerProviderStateM
                         Expanded(
                           child: DropdownButtonFormField<String>(
                             initialValue: selectedModality,
-                            decoration: const InputDecoration(labelText: 'Modalité', border: OutlineInputBorder(), isDense: true),
+                            decoration: const InputDecoration(
+                              labelText: 'Modalité',
+                              border: OutlineInputBorder(),
+                              isDense: true,
+                            ),
                             items: const [
-                              DropdownMenuItem(value: 'Présentiel', child: Text('Présentiel')),
-                              DropdownMenuItem(value: 'En ligne', child: Text('En ligne')),
-                              DropdownMenuItem(value: 'Mixte', child: Text('Mixte')),
+                              DropdownMenuItem(
+                                value: 'Présentiel',
+                                child: Text('Présentiel'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'En ligne',
+                                child: Text('En ligne'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'Mixte',
+                                child: Text('Mixte'),
+                              ),
                             ],
                             onChanged: (val) {
-                              if (val != null) setDialogState(() => selectedModality = val);
+                              if (val != null) {
+                                setDialogState(() => selectedModality = val);
+                              }
                             },
                           ),
                         ),
@@ -1210,21 +2676,32 @@ class _AdminPlanningState extends State<AdminPlanning> with TickerProviderStateM
                             readOnly: true,
                             decoration: const InputDecoration(
                               labelText: 'Début *',
-                              prefixIcon: Icon(Icons.schedule_rounded, size: 16),
+                              prefixIcon: Icon(
+                                Icons.schedule_rounded,
+                                size: 16,
+                              ),
                               border: OutlineInputBorder(),
                               isDense: true,
                             ),
                             onTap: () async {
                               final parts = startController.text.split(':');
                               final initH = int.tryParse(parts.first) ?? 9;
-                              final initM = parts.length > 1 ? (int.tryParse(parts[1]) ?? 0) : 0;
+                              final initM = parts.length > 1
+                                  ? (int.tryParse(parts[1]) ?? 0)
+                                  : 0;
                               final picked = await showTimePicker(
                                 context: context,
-                                initialTime: TimeOfDay(hour: initH, minute: initM),
+                                initialTime: TimeOfDay(
+                                  hour: initH,
+                                  minute: initM,
+                                ),
                               );
                               if (picked != null) {
-                                final formatted = '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
-                                setDialogState(() => startController.text = formatted);
+                                final formatted =
+                                    '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+                                setDialogState(
+                                  () => startController.text = formatted,
+                                );
                               }
                             },
                           ),
@@ -1236,21 +2713,32 @@ class _AdminPlanningState extends State<AdminPlanning> with TickerProviderStateM
                             readOnly: true,
                             decoration: const InputDecoration(
                               labelText: 'Fin *',
-                              prefixIcon: Icon(Icons.schedule_rounded, size: 16),
+                              prefixIcon: Icon(
+                                Icons.schedule_rounded,
+                                size: 16,
+                              ),
                               border: OutlineInputBorder(),
                               isDense: true,
                             ),
                             onTap: () async {
                               final parts = endController.text.split(':');
                               final initH = int.tryParse(parts.first) ?? 12;
-                              final initM = parts.length > 1 ? (int.tryParse(parts[1]) ?? 0) : 0;
+                              final initM = parts.length > 1
+                                  ? (int.tryParse(parts[1]) ?? 0)
+                                  : 0;
                               final picked = await showTimePicker(
                                 context: context,
-                                initialTime: TimeOfDay(hour: initH, minute: initM),
+                                initialTime: TimeOfDay(
+                                  hour: initH,
+                                  minute: initM,
+                                ),
                               );
                               if (picked != null) {
-                                final formatted = '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
-                                setDialogState(() => endController.text = formatted);
+                                final formatted =
+                                    '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+                                setDialogState(
+                                  () => endController.text = formatted,
+                                );
                               }
                             },
                           ),
@@ -1280,24 +2768,40 @@ class _AdminPlanningState extends State<AdminPlanning> with TickerProviderStateM
                         decoration: BoxDecoration(
                           color: Colors.red.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+                          border: Border.all(
+                            color: Colors.red.withValues(alpha: 0.3),
+                          ),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
                               children: [
-                                const Icon(Icons.warning_amber_rounded, size: 18, color: Colors.red),
+                                const Icon(
+                                  Icons.warning_amber_rounded,
+                                  size: 18,
+                                  color: Colors.red,
+                                ),
                                 const SizedBox(width: 6),
                                 Text(
                                   'Attention : Conflit de planning détecté !',
-                                  style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.red),
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.red,
+                                  ),
                                 ),
                               ],
                             ),
                             const SizedBox(height: 4),
                             ...conflicts.map(
-                              (c) => Text('• $c', style: const TextStyle(fontSize: 11, color: Colors.red)),
+                              (c) => Text(
+                                '• $c',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.red,
+                                ),
+                              ),
                             ),
                           ],
                         ),
@@ -1308,15 +2812,22 @@ class _AdminPlanningState extends State<AdminPlanning> with TickerProviderStateM
               ),
             ),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Annuler')),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Annuler'),
+              ),
               ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primary, foregroundColor: Colors.white),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primary,
+                  foregroundColor: Colors.white,
+                ),
                 onPressed: () async {
                   final start = startController.text.trim();
                   final end = endController.text.trim();
                   if (start.isEmpty || end.isEmpty) return;
 
-                  final groupeFinal = customGroupController.text.trim().isNotEmpty
+                  final groupeFinal =
+                      customGroupController.text.trim().isNotEmpty
                       ? customGroupController.text.trim()
                       : autoGroupName;
 
@@ -1327,7 +2838,9 @@ class _AdminPlanningState extends State<AdminPlanning> with TickerProviderStateM
                     module: selectedModule,
                     groupe: groupeFinal,
                     modalite: selectedModality,
-                    lieuOuLien: placeController.text.trim().isNotEmpty ? placeController.text.trim() : null,
+                    lieuOuLien: placeController.text.trim().isNotEmpty
+                        ? placeController.text.trim()
+                        : null,
                   );
 
                   if (isEdit) {
@@ -1343,17 +2856,27 @@ class _AdminPlanningState extends State<AdminPlanning> with TickerProviderStateM
                         existingEntry.formation.id,
                         existingEntry.horaireIndex,
                       );
-                      await _db.addHoraireToFormation(currentFormation.id, newHoraire);
+                      await _db.addHoraireToFormation(
+                        currentFormation.id,
+                        newHoraire,
+                      );
                     }
                   } else {
-                    await _db.addHoraireToFormation(currentFormation.id, newHoraire);
+                    await _db.addHoraireToFormation(
+                      currentFormation.id,
+                      newHoraire,
+                    );
                   }
 
                   if (ctx.mounted) Navigator.pop(ctx);
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text(isEdit ? 'Créneau mis à jour avec succès !' : 'Séance et groupe programmés avec succès !'),
+                        content: Text(
+                          isEdit
+                              ? 'Créneau mis à jour avec succès !'
+                              : 'Séance et groupe programmés avec succès !',
+                        ),
                         backgroundColor: AppTheme.success,
                       ),
                     );
@@ -1367,6 +2890,214 @@ class _AdminPlanningState extends State<AdminPlanning> with TickerProviderStateM
       ),
     );
   }
+
+  void _showQrEmargementDialog(_SessionEntry entry) {
+    final horaire = entry.horaire;
+    final formation = entry.formation;
+    final formateurNom = entry.formateurNom ?? 'Formateur M@LI-NTIC';
+    final dateStr = '${horaire.jour} (${horaire.heureDebut} - ${horaire.heureFin})';
+    final tokenData = 'MALINTIC-EMARGEMENT|FORM:${formation.titre}|MOD:${horaire.module ?? "TRONC-COMMUN"}|JOUR:${horaire.jour}|HEURE:${horaire.heureDebut}-${horaire.heureFin}|FORMATEUR:$formateurNom';
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1D447A).withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.qr_code_2_rounded, color: Color(0xFF1D447A), size: 24),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Badge QR Émargement',
+                    style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700, color: const Color(0xFF1D447A)),
+                  ),
+                  Text(
+                    'Scanner pour valider la présence à la séance',
+                    style: GoogleFonts.poppins(fontSize: 11, color: AppTheme.textSecondary),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        content: SizedBox(
+          width: 380,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.04),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    QrImageView(
+                      data: tokenData,
+                      version: QrVersions.auto,
+                      size: 200.0,
+                      eyeStyle: const QrEyeStyle(
+                        eyeShape: QrEyeShape.square,
+                        color: Color(0xFF1D447A),
+                      ),
+                      dataModuleStyle: const QrDataModuleStyle(
+                        dataModuleShape: QrDataModuleShape.square,
+                        color: Color(0xFF0F172A),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      formation.titre,
+                      style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w700, color: const Color(0xFF1D447A)),
+                      textAlign: TextAlign.center,
+                    ),
+                    if (horaire.module != null && horaire.module!.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        'Module : ${horaire.module}',
+                        style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: AppTheme.orangeAccent),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                    const SizedBox(height: 4),
+                    Text(
+                      '$dateStr • $formateurNom',
+                      style: GoogleFonts.poppins(fontSize: 11, color: AppTheme.textSecondary),
+                      textAlign: TextAlign.center,
+                    ),
+                    if (horaire.lieuOuLien != null && horaire.lieuOuLien!.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        'Lieu / Salle : ${horaire.lieuOuLien}',
+                        style: GoogleFonts.poppins(fontSize: 10.5, color: Colors.teal, fontWeight: FontWeight.w500),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        side: const BorderSide(color: Color(0xFF1D447A)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      icon: const Icon(Icons.copy_rounded, size: 15, color: Color(0xFF1D447A)),
+                      label: Text(
+                        'Copier Token',
+                        style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFF1D447A)),
+                      ),
+                      onPressed: () {
+                        Clipboard.setData(ClipboardData(text: tokenData));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Jeton d\'émargement copié dans le presse-papiers !'),
+                            backgroundColor: Color(0xFF1D447A),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFDC2626),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      icon: const Icon(Icons.picture_as_pdf_rounded, size: 15),
+                      label: Text(
+                        'Feuille PDF',
+                        style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600),
+                      ),
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        _printAttendanceSheet(entry);
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Fermer'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _printAttendanceSheet(_SessionEntry entry) async {
+    try {
+      final pdfBytes = await PdfService().generateAttendanceSheetPdf(
+        formationTitle: entry.formation.titre,
+        moduleTitle: entry.horaire.module,
+        cohortName: entry.groupeDisplayName,
+        formateurNom: entry.formateurNom ?? 'Formateur M@LI-NTIC',
+        jour: entry.horaire.jour,
+        heureDebut: entry.horaire.heureDebut,
+        heureFin: entry.horaire.heureFin,
+        salleOuLien: entry.horaire.lieuOuLien,
+        modalite: entry.horaire.modalite ?? 'Présentiel',
+        students: entry.enrolledStudents,
+        dateSeance: DateTime.now(),
+      );
+
+      final safeName = '${entry.formation.titre}_${entry.horaire.jour}'
+          .replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_');
+      await PdfService().printOrDownloadPdf(
+        pdfBytes: pdfBytes,
+        filename: 'Emargement_$safeName.pdf',
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('📄 Feuille d\'émargement PDF générée avec succès !'),
+            backgroundColor: AppTheme.success,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur génération émargement: $e'),
+            backgroundColor: AppTheme.error,
+          ),
+        );
+      }
+    }
+  }
 }
 
 class _SessionEntry {
@@ -1376,6 +3107,7 @@ class _SessionEntry {
   final String? formateurId;
   final String? formateurNom;
   final List<User> enrolledStudents;
+  final List<String> conflicts;
 
   _SessionEntry({
     required this.formation,
@@ -1384,7 +3116,10 @@ class _SessionEntry {
     this.formateurId,
     this.formateurNom,
     required this.enrolledStudents,
+    this.conflicts = const [],
   });
+
+  bool get hasConflict => conflicts.isNotEmpty;
 
   String get groupeDisplayName {
     if (horaire.groupe != null && horaire.groupe!.trim().isNotEmpty) {

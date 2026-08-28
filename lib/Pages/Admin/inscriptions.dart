@@ -738,11 +738,11 @@ class _AdminInscriptionsState extends State<AdminInscriptions> with TickerProvid
                             ),
                           ],
                         ),
-                        SizedBox(height: 8),
+                        const SizedBox(height: 8),
                         Row(
                           children: [
-                            Icon(Icons.phone_rounded, size: 14, color: Colors.black54),
-                            SizedBox(width: 8),
+                            const Icon(Icons.phone_rounded, size: 14, color: Colors.black54),
+                            const SizedBox(width: 8),
                             Text(
                               displayUserData['telephone'] ?? 'N/A',
                               style: GoogleFonts.poppins(
@@ -750,6 +750,74 @@ class _AdminInscriptionsState extends State<AdminInscriptions> with TickerProvid
                                 color: Colors.black54,
                               ),
                             ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        const Divider(height: 1, color: Color(0xFFE2E8F0)),
+                        const SizedBox(height: 10),
+                        // Quick Action Buttons Bar
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          alignment: WrapAlignment.end,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            OutlinedButton.icon(
+                              onPressed: () => _showDetailDialog(
+                                inscriptionId,
+                                inscription,
+                                resolveInscriptionUserData(userData, inscription),
+                                resolveInscriptionFormationData(formationData, inscription),
+                              ),
+                              icon: const Icon(Icons.visibility_outlined, size: 15),
+                              label: Text(
+                                'Détails',
+                                style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600),
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
+                            ),
+                            if (inscription['status'] == 'en_attente' || inscription['statut'] == 'en_attente') ...[
+                              OutlinedButton.icon(
+                                onPressed: () => _updateStatus(inscriptionId, 'rejete'),
+                                icon: const Icon(Icons.close_rounded, size: 15, color: AppTheme.error),
+                                label: Text(
+                                  'Rejeter',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppTheme.error,
+                                  ),
+                                ),
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                  side: const BorderSide(color: Color(0xFFFCA5A5)),
+                                  backgroundColor: const Color(0xFFFEF2F2),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                ),
+                              ),
+                              ElevatedButton.icon(
+                                onPressed: () => _updateStatus(inscriptionId, 'valide'),
+                                icon: const Icon(Icons.check_circle_outline_rounded, size: 15, color: Colors.white),
+                                label: Text(
+                                  'Valider & Enrôler',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppTheme.success,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                  elevation: 1,
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ],

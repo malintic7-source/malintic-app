@@ -41,7 +41,8 @@ void main() {
       );
 
       final data = formation.toFirestore();
-      expect(data['type'], 'FormationType.mixte');
+      expect(data['type'], 'mixte');
+      expect(data['status'], 'programmee');
     });
 
     test('stores bonus modules in firestore data', () {

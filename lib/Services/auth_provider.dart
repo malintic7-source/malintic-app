@@ -129,9 +129,7 @@ class AuthProvider {
         final savedOfflinePw = _localStorage.getItem('user_pw_${user.id}')?.trim();
         final effectivePw = (savedOfflinePw != null && savedOfflinePw.isNotEmpty)
             ? savedOfflinePw
-            : (user.password.isNotEmpty
-                ? user.password
-                : (user.id == 'admin_mamadou' ? 'Doudou5432@' : null));
+            : (user.password.isNotEmpty ? user.password : null);
 
         if (effectivePw != null && effectivePw.isNotEmpty && effectivePw != '00000000') {
           // Ce compte a un mot de passe personnalisé : 00000000 est STRICTEMENT EXPIRÉ ET REJETÉ
@@ -150,24 +148,24 @@ class AuthProvider {
 
     String? adminId;
     User? fallbackAdmin;
-    if (rawInput == 'mamadou@mntic.ml' || rawInput == 'mamadou' || rawInput == 'adm-2026-001') {
+    if (rawInput == 'mamadou@malintic.ml' || rawInput == 'mamadou@mntic.ml' || rawInput == 'mamadou' || rawInput == 'adm-2026-001' || rawInput == 'ADM-2026-001') {
       adminId = 'admin_mamadou';
       fallbackAdmin = User(
         id: 'admin_mamadou',
         nom: 'TOURE',
         prenom: 'Mamadou',
-        email: 'mamadou@mntic.ml',
+        email: 'mamadou@malintic.ml',
         phone: '+223 70 00 00 01',
         role: UserRole.admin,
         matricule: 'ADM-2026-001',
       );
-    } else if (rawInput == 'soulbico@mntic.ml' || rawInput == 'soulbico' || rawInput == 'souleymane') {
+    } else if (rawInput == 'soulbico@malintic.ml' || rawInput == 'soulbico@mntic.ml' || rawInput == 'soulbico' || rawInput == 'souleymane') {
       adminId = 'dg_souleymane';
       fallbackAdmin = User(
         id: 'dg_souleymane',
         nom: 'TRAORE',
         prenom: 'SOULEYMANE',
-        email: 'soulbico@mntic.ml',
+        email: 'soulbico@malintic.ml',
         phone: '+223 76 00 00 01',
         role: UserRole.admin,
       );
@@ -185,9 +183,10 @@ class AuthProvider {
 
     if (fallbackAdmin != null && adminId != null) {
       final savedPw = _localStorage.getItem('user_pw_$adminId')?.trim();
+      final dbUser = _db.getUserById(adminId);
       final effectiveAdminPw = (savedPw != null && savedPw.isNotEmpty)
           ? savedPw
-          : (adminId == 'admin_mamadou' ? 'Doudou5432@' : null);
+          : (dbUser != null && dbUser.password.isNotEmpty ? dbUser.password : null);
 
       if (effectiveAdminPw != null && effectiveAdminPw.isNotEmpty && effectiveAdminPw != '00000000') {
         // Après validation de changement de mot de passe, 00000000 est STRICTEMENT EXPIRÉ ET REJETÉ

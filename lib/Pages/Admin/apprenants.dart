@@ -1,6 +1,7 @@
 import 'package:animate_do/animate_do.dart';
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:gestion_formations/Models/formation.dart';
 import 'package:gestion_formations/Models/user.dart';
@@ -1072,7 +1073,7 @@ class _AdminApprenantsState extends State<AdminApprenants>
             id: ins.id,
             email: (ins.email != null && ins.email!.isNotEmpty)
                 ? ins.email!
-                : 'apprenant@mali-ntic.ml',
+                : 'apprenant@malintic.ml',
             nom: (ins.nom != null && ins.nom!.isNotEmpty)
                 ? ins.nom!
                 : 'Apprenant',
@@ -1605,6 +1606,39 @@ class _AdminApprenantsState extends State<AdminApprenants>
                         icon: const Icon(Icons.visibility_rounded, size: 15),
                         label: Text('Détails', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600)),
                         onPressed: () => _showApprenantDetail(userId, data),
+                      ),
+                      OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          side: BorderSide(color: AppTheme.primary.withValues(alpha: 0.35)),
+                          backgroundColor: AppTheme.primary.withValues(alpha: 0.05),
+                        ),
+                        icon: const Icon(Icons.badge_rounded, size: 15, color: AppTheme.primary),
+                        label: Text('Carte PDF', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: AppTheme.primary)),
+                        onPressed: () async {
+                          try {
+                            final formationTitle = enrolledFormationTitles.isNotEmpty ? enrolledFormationTitles.first : 'Formation M@LI-NTIC';
+                            final pdfBytes = await PdfService().generateStudentCardPdf(
+                              prenom: prenom,
+                              nom: nom,
+                              email: email,
+                              telephone: phone,
+                              formationTitre: formationTitle,
+                              matricule: matricule.isNotEmpty ? matricule : null,
+                            );
+                            await PdfService().printOrDownloadPdf(
+                              pdfBytes: pdfBytes,
+                              filename: 'Carte_Etudiant_${prenom}_$nom.pdf',
+                            );
+                          } catch (e) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Erreur génération carte: $e'), backgroundColor: AppTheme.error),
+                              );
+                            }
+                          }
+                        },
                       ),
                       OutlinedButton.icon(
                         style: OutlinedButton.styleFrom(
@@ -2450,12 +2484,43 @@ class _AdminApprenantsState extends State<AdminApprenants>
                               ],
                             ),
                             const SizedBox(height: 8),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            // Détail financier : column pour éviter overflow mobile
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('Total Dû : ${totalDue.toStringAsFixed(0)} FCFA', style: GoogleFonts.poppins(fontSize: 11, color: Colors.black54)),
-                                Text('Versé : ${totalPaid.toStringAsFixed(0)} FCFA', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: AppTheme.success)),
-                                Text('Reste : ${remaining.toStringAsFixed(0)} FCFA', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w700, color: remaining > 0 ? AppTheme.error : Colors.black54)),
+                                Row(
+                                  children: [
+                                    Text('Total Dû : ', style: GoogleFonts.poppins(fontSize: 11, color: Colors.black54)),
+                                    Text(
+                                      '${totalDue.toStringAsFixed(0)} FCFA',
+                                      style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.black87),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 2),
+                                Row(
+                                  children: [
+                                    Text('Versé : ', style: GoogleFonts.poppins(fontSize: 11, color: Colors.black54)),
+                                    Text(
+                                      '${totalPaid.toStringAsFixed(0)} FCFA',
+                                      style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: AppTheme.success),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 2),
+                                Row(
+                                  children: [
+                                    Text('Reste : ', style: GoogleFonts.poppins(fontSize: 11, color: Colors.black54)),
+                                    Text(
+                                      '${remaining.toStringAsFixed(0)} FCFA',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700,
+                                        color: remaining > 0 ? AppTheme.error : Colors.black54,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ],
                             ),
                           ],
@@ -2981,6 +3046,15 @@ class _AdminApprenantsState extends State<AdminApprenants>
             ),
             actions: [
               OutlinedButton.icon(
+                icon: const Icon(Icons.description_rounded, size: 16, color: Color(0xFF1D447A)),
+                label: const Text('Fiche Dossier PDF'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF1D447A),
+                  side: const BorderSide(color: Color(0xFF1D447A)),
+                ),
+                onPressed: () => _generateStudentDossierPdf(userId, data),
+              ),
+              OutlinedButton.icon(
                 icon: const Icon(Icons.badge_rounded, size: 16),
                 label: const Text('Carte Étudiant'),
                 onPressed: () async {
@@ -3070,6 +3144,103 @@ class _AdminApprenantsState extends State<AdminApprenants>
         );
       },
     );
+  }
+
+  Future<void> _generateStudentDossierPdf(String userId, Map<String, dynamic> data) async {
+    try {
+      final email = (data['email'] ?? '').toString();
+      final prenom = (data['prenom'] ?? '').toString();
+      final nom = (data['nom'] ?? '').toString();
+      final phone = (data['phone'] ?? data['telephone'] ?? '').toString();
+      final matricule = (data['matricule'] ?? '').toString();
+      final genre = (data['sexe'] ?? data['genre'] ?? 'M').toString();
+
+      final userInscriptions = _db.getInscriptions().where((ins) =>
+          ins.etudiantId == userId ||
+          (ins.email != null && email.isNotEmpty && ins.email!.toLowerCase() == email.toLowerCase())).toList();
+
+      final formationsData = <Map<String, dynamic>>[];
+      double totalDue = 0.0;
+      double totalPaid = 0.0;
+
+      for (final ins in userInscriptions) {
+        final f = _db.getFormationById(ins.formationId);
+        final due = _db.getInscriptionTotalDue(ins.id);
+        final paid = _db.getInscriptionPaidAmount(ins.id);
+        totalDue += due > 0 ? due : (f?.prix ?? 0.0);
+        totalPaid += paid;
+
+        final isCompleted = _db.isStudentFormationCompleted(studentId: userId, formationId: ins.formationId);
+
+        formationsData.add({
+          'title': f?.titre ?? 'Formation M@LI-NTIC',
+          'modules': (ins.modules ?? f?.modules ?? []).map((m) => {'title': m}).toList(),
+          'modeSuivi': ins.typeFormation ?? (f?.type == FormationType.enligne ? 'En ligne' : 'Présentiel'),
+          'progress': isCompleted ? 'Terminée' : 'En cours',
+        });
+      }
+
+      final inscriptionIds = userInscriptions.map((ins) => ins.id).toSet();
+      final allPayments = _db.getPayments();
+      final payments = allPayments.where((p) =>
+          p.etudiantId == userId ||
+          p.apprenantId == userId ||
+          inscriptionIds.contains(p.inscriptionId)).toList();
+      final paymentsData = payments.map((p) => {
+        'date': '${p.dateCreation.day.toString().padLeft(2, '0')}/${p.dateCreation.month.toString().padLeft(2, '0')}/${p.dateCreation.year}',
+        'reference': p.referenceTransaction != null && p.referenceTransaction!.isNotEmpty ? p.referenceTransaction! : p.id,
+        'methode': p.methode.name.toUpperCase(),
+        'montant': p.montant.toStringAsFixed(0),
+      }).toList();
+
+      // Attendance
+      final assignedOriginal = (data['assignedFormations'] as List<dynamic>? ?? []);
+      int presentCount = 0;
+      int absentCount = 0;
+      for (final a in assignedOriginal) {
+        if (a is Map) {
+          final att = (a['attendance'] as List<dynamic>? ?? []);
+          for (final item in att) {
+            if (item is Map) {
+              if (item['status'] == 'present') presentCount++;
+              if (item['status'] == 'absent') absentCount++;
+            }
+          }
+        }
+      }
+      final totalSessions = presentCount + absentCount;
+      final attRate = totalSessions > 0 ? '${((presentCount / totalSessions) * 100).toStringAsFixed(0)}%' : '100%';
+
+      final pdfBytes = await PdfService().generateStudentProfileDossierPdf(
+        prenom: prenom,
+        nom: nom,
+        email: email,
+        telephone: phone,
+        matricule: matricule.isNotEmpty ? matricule : 'MAT-OFFICIEL',
+        genre: genre,
+        formations: formationsData,
+        paiements: paymentsData,
+        assiduite: {
+          'presentCount': presentCount,
+          'absentCount': absentCount,
+          'rate': attRate,
+        },
+        totalDue: totalDue,
+        totalPaid: totalPaid,
+        remainingBalance: math.max(0.0, totalDue - totalPaid),
+      );
+
+      await PdfService().printOrDownloadPdf(
+        pdfBytes: pdfBytes,
+        filename: 'Dossier_Scolaire_${nom}_$prenom.pdf',
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur génération dossier PDF: $e'), backgroundColor: AppTheme.error),
+        );
+      }
+    }
   }
 
   bool _isStudentEligibleForAttestation(String userId, Map<String, dynamic> data) {

@@ -751,8 +751,10 @@ class _InscriptionPageState extends State<InscriptionPage> {
             maxLines: 3,
           ),
           const SizedBox(height: 28),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            spacing: 12,
+            runSpacing: 10,
             children: [
               OutlinedButton.icon(
                 onPressed: currentStep > 0 ? () => setState(() => currentStep -= 1) : null,
@@ -798,8 +800,19 @@ class _InscriptionPageState extends State<InscriptionPage> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Formation', style: GoogleFonts.poppins(fontSize: 13, color: AppTheme.textSecondary)),
-                  Text(selectedFormation?.titre ?? '-', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600)),
+                  Expanded(
+                    child: Text('Formation', style: GoogleFonts.poppins(fontSize: 13, color: AppTheme.textSecondary)),
+                  ),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      selectedFormation?.titre ?? '-',
+                      style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600),
+                      textAlign: TextAlign.end,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 6),
@@ -832,8 +845,10 @@ class _InscriptionPageState extends State<InscriptionPage> {
           ),
         ),
         const SizedBox(height: 28),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        Wrap(
+          alignment: WrapAlignment.spaceBetween,
+          spacing: 12,
+          runSpacing: 10,
           children: [
             OutlinedButton.icon(
               onPressed: () => setState(() => currentStep -= 1),

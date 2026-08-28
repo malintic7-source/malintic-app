@@ -8,9 +8,11 @@ import 'package:gestion_formations/Models/inscription.dart';
 import 'package:gestion_formations/Models/formation.dart';
 import 'package:gestion_formations/Services/payment_report_service.dart';
 import 'package:gestion_formations/Services/db_services.dart';
+import 'package:gestion_formations/Services/auth_provider.dart';
 import 'package:gestion_formations/Services/invoice_service.dart';
 import 'package:gestion_formations/Services/pdf_service.dart';
 import 'package:gestion_formations/Widgets/pro_data_table.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class AdminPaiements extends StatefulWidget {
   const AdminPaiements({super.key});
@@ -109,72 +111,110 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
             ),
           ],
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: isMobile
+            ? Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    'Gestion des Paiements & Tranches',
-                    style: GoogleFonts.poppins(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white,
-                    ),
+                    'Gestion des Paiements',
+                    style: GoogleFonts.poppins(fontSize: 17, fontWeight: FontWeight.w800, color: Colors.white),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Suivi financier des stagiaires, règlement par tranche et reçus de versement officiels.',
-                    style: GoogleFonts.poppins(
-                      fontSize: 12,
-                      color: Colors.white.withValues(alpha: 0.88),
-                      fontWeight: FontWeight.w400,
-                    ),
-                    maxLines: 1,
+                    'Suivi financier des stagiaires et règlement par tranche.',
+                    style: GoogleFonts.poppins(fontSize: 11.5, color: Colors.white.withValues(alpha: 0.88)),
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white.withValues(alpha: 0.2),
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        icon: const Icon(Icons.picture_as_pdf_rounded, size: 16),
+                        label: Text('Rapport PDF', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w700)),
+                        onPressed: _generatePaymentReport,
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.18),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: IconButton(
+                          tooltip: 'Actualiser',
+                          icon: const Icon(Icons.refresh_rounded, color: Colors.white, size: 20),
+                          onPressed: () => setState(() {}),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              )
+            : Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Gestion des Paiements & Tranches',
+                          style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w800, color: Colors.white),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Suivi financier des stagiaires, règlement par tranche et reçus de versement officiels.',
+                          style: GoogleFonts.poppins(fontSize: 12, color: Colors.white.withValues(alpha: 0.88), fontWeight: FontWeight.w400),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white.withValues(alpha: 0.2),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    icon: const Icon(Icons.picture_as_pdf_rounded, size: 18),
+                    label: Text('Rapport PDF', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w700)),
+                    onPressed: _generatePaymentReport,
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.18),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: IconButton(
+                      tooltip: 'Actualiser les paiements',
+                      icon: const Icon(Icons.refresh_rounded, color: Colors.white, size: 20),
+                      onPressed: () {
+                        setState(() {});
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('🔄 Données des paiements actualisées !'),
+                            backgroundColor: AppTheme.primary,
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                      },
+                    ),
                   ),
                 ],
               ),
-            ),
-            const SizedBox(width: 12),
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white.withValues(alpha: 0.2),
-                foregroundColor: Colors.white,
-                elevation: 0,
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-              icon: const Icon(Icons.picture_as_pdf_rounded, size: 18),
-              label: Text('Rapport PDF', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w700)),
-              onPressed: _generatePaymentReport,
-            ),
-            const SizedBox(width: 8),
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.18),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: IconButton(
-                tooltip: 'Actualiser les paiements',
-                icon: const Icon(Icons.refresh_rounded, color: Colors.white, size: 20),
-                onPressed: () {
-                  setState(() {});
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('🔄 Données des paiements actualisées !'),
-                      backgroundColor: AppTheme.primary,
-                      duration: Duration(seconds: 2),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -320,24 +360,43 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Expanded(child: _buildSearchBar('Rechercher un stagiaire par nom, e-mail...')),
-            const SizedBox(width: 12),
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.success,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        isMobile
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildSearchBar('Rechercher un stagiaire par nom, e-mail...'),
+                  const SizedBox(height: 10),
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.success,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    icon: const Icon(Icons.add_card_rounded, size: 20),
+                    label: Text('Nouveau Paiement', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w700)),
+                    onPressed: () => _openAddPaymentDialog(null, null),
+                  ),
+                ],
+              )
+            : Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(child: _buildSearchBar('Rechercher un stagiaire par nom, e-mail...')),
+                  const SizedBox(width: 12),
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.success,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    icon: const Icon(Icons.add_card_rounded, size: 20),
+                    label: Text('Nouveau Paiement', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w700)),
+                    onPressed: () => _openAddPaymentDialog(null, null),
+                  ),
+                ],
               ),
-              icon: const Icon(Icons.add_card_rounded, size: 20),
-              label: Text('Nouveau Paiement', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w700)),
-              onPressed: () => _openAddPaymentDialog(null, null),
-            ),
-          ],
-        ),
         const SizedBox(height: 20),
         StreamBuilder<List<Inscription>>(
           stream: _db.watchInscriptions(),
@@ -494,61 +553,115 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
                           ),
                         ),
                         const SizedBox(height: 12),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'Payé: ${paidAmount.toStringAsFixed(0)} FCFA / ${totalDue.toStringAsFixed(0)} FCFA',
-                              style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black87),
-                            ),
-                            Text(
-                              balance == 0 ? 'Solde réglé' : 'Reste: ${balance.toStringAsFixed(0)} FCFA',
-                              style: GoogleFonts.poppins(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w800,
-                                color: balance == 0 ? AppTheme.success : AppTheme.error,
+                        // Payé / Reste — Wrap pour mobile
+                        isMobile
+                            ? Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Payé: ${paidAmount.toStringAsFixed(0)} FCFA / ${totalDue.toStringAsFixed(0)} FCFA',
+                                    style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black87),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    balance == 0 ? 'Solde réglé ✓' : 'Reste: ${balance.toStringAsFixed(0)} FCFA',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 12, fontWeight: FontWeight.w800,
+                                      color: balance == 0 ? AppTheme.success : AppTheme.error,
+                                    ),
+                                  ),
+                                ],
+                              )
+                            : Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Payé: ${paidAmount.toStringAsFixed(0)} FCFA / ${totalDue.toStringAsFixed(0)} FCFA',
+                                    style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black87),
+                                  ),
+                                  Text(
+                                    balance == 0 ? 'Solde réglé' : 'Reste: ${balance.toStringAsFixed(0)} FCFA',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 12, fontWeight: FontWeight.w800,
+                                      color: balance == 0 ? AppTheme.success : AppTheme.error,
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ),
-                          ],
-                        ),
                         const SizedBox(height: 14),
                         const Divider(height: 1),
                         const SizedBox(height: 12),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                IconButton(
-                                  icon: const Icon(Icons.request_quote_rounded, color: AppTheme.primary, size: 21),
-                                  tooltip: 'Télécharger la facture complète',
-                                  onPressed: () => _generateInvoicePdf(ins),
-                                ),
-                                if (paymentsHistory.isNotEmpty)
-                                  IconButton(
-                                    icon: const Icon(Icons.picture_as_pdf_rounded, color: AppTheme.error, size: 20),
-                                    tooltip: 'Télécharger le reçu du dernier versement',
-                                    onPressed: () => _generateReceiptPdf(paymentsHistory.last),
+                        // Actions : icônes + bouton (colonne sur mobile)
+                        isMobile
+                            ? Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Row(
+                                    children: [
+                                      IconButton(
+                                        icon: const Icon(Icons.request_quote_rounded, color: AppTheme.primary, size: 21),
+                                        tooltip: 'Facture complète',
+                                        onPressed: () => _generateInvoicePdf(ins),
+                                      ),
+                                      if (paymentsHistory.isNotEmpty)
+                                        IconButton(
+                                          icon: const Icon(Icons.picture_as_pdf_rounded, color: AppTheme.error, size: 20),
+                                          tooltip: 'Reçu dernier versement',
+                                          onPressed: () => _generateReceiptPdf(paymentsHistory.last),
+                                        ),
+                                    ],
                                   ),
-                              ],
-                            ),
-                            ElevatedButton.icon(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: balance == 0 ? Colors.grey.shade400 : AppTheme.primary,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                  ElevatedButton.icon(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: balance == 0 ? Colors.grey.shade400 : AppTheme.primary,
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                    ),
+                                    icon: const Icon(Icons.add_card_rounded, size: 16),
+                                    label: Text(
+                                      balance == 0 ? 'Formation Soldée' : '➕ Régler Tranche N°${tranchesPaid + 1}',
+                                      style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w700),
+                                    ),
+                                    onPressed: balance == 0 ? null : () => _openAddPaymentDialog(ins.etudiantId, ins.formationId),
+                                  ),
+                                ],
+                              )
+                            : Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        icon: const Icon(Icons.request_quote_rounded, color: AppTheme.primary, size: 21),
+                                        tooltip: 'Télécharger la facture complète',
+                                        onPressed: () => _generateInvoicePdf(ins),
+                                      ),
+                                      if (paymentsHistory.isNotEmpty)
+                                        IconButton(
+                                          icon: const Icon(Icons.picture_as_pdf_rounded, color: AppTheme.error, size: 20),
+                                          tooltip: 'Télécharger le reçu du dernier versement',
+                                          onPressed: () => _generateReceiptPdf(paymentsHistory.last),
+                                        ),
+                                    ],
+                                  ),
+                                  ElevatedButton.icon(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: balance == 0 ? Colors.grey.shade400 : AppTheme.primary,
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                    ),
+                                    icon: const Icon(Icons.add_card_rounded, size: 16),
+                                    label: Text(
+                                      balance == 0 ? 'Formation Soldée' : '➕ Régler Tranche N°${tranchesPaid + 1}',
+                                      style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w700),
+                                    ),
+                                    onPressed: balance == 0 ? null : () => _openAddPaymentDialog(ins.etudiantId, ins.formationId),
+                                  ),
+                                ],
                               ),
-                              icon: const Icon(Icons.add_card_rounded, size: 16),
-                              label: Text(
-                                balance == 0 ? 'Formation Soldée' : '➕ Régler Tranche N°${tranchesPaid + 1}',
-                                style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w700),
-                              ),
-                              onPressed: balance == 0 ? null : () => _openAddPaymentDialog(ins.etudiantId, ins.formationId),
-                            ),
-                          ],
-                        ),
                       ],
                     ),
                   ),
@@ -743,6 +856,11 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
                           label: const Text('Reçu PDF', style: TextStyle(color: AppTheme.error, fontSize: 12)),
                         ),
                         IconButton(
+                          onPressed: () => _sendWhatsAppPaymentNotice(p),
+                          icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18, color: Color(0xFF25D366)),
+                          tooltip: 'Notifier sur WhatsApp',
+                        ),
+                        IconButton(
                           onPressed: () => _confirmDeletePayment(context, p),
                           icon: const Icon(Icons.delete_outline_rounded, size: 18, color: Colors.grey),
                           tooltip: 'Supprimer',
@@ -815,6 +933,11 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
                       tooltip: 'Reçu PDF',
                     ),
                     IconButton(
+                      onPressed: () => _sendWhatsAppPaymentNotice(p),
+                      icon: const Icon(Icons.chat_bubble_outline_rounded, color: Color(0xFF25D366), size: 20),
+                      tooltip: 'Notifier WhatsApp',
+                    ),
+                    IconButton(
                       onPressed: () => _confirmDeletePayment(context, p),
                       icon: const Icon(Icons.delete_outline_rounded, color: AppTheme.error, size: 20),
                       tooltip: 'Supprimer',
@@ -856,6 +979,51 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('⚠️ $error'), backgroundColor: AppTheme.error),
       );
+    }
+  }
+
+  Future<void> _sendWhatsAppPaymentNotice(Payment payment) async {
+    final student = _db.getUserById(payment.etudiantId);
+    if (student == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Dossier apprenant introuvable.')),
+      );
+      return;
+    }
+
+    final rawPhone = student.phone.replaceAll(RegExp(r'[^0-9+]'), '');
+    if (rawPhone.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Numéro de téléphone introuvable pour cet apprenant.')),
+      );
+      return;
+    }
+
+    final ref = payment.referenceTransaction?.isNotEmpty == true ? payment.referenceTransaction! : payment.id.substring(0, 8);
+    final text = 'Bonjour ${student.nomComplet},\n\n'
+        'Le Centre M@LI_NTIC accuse bonne réception de votre règlement de ${payment.montant.toStringAsFixed(0)} FCFA '
+        '(Tranche ${payment.trancheNumero}/${payment.nombreTranches}, Réf: $ref).\n\n'
+        'Votre reçu officiel de paiement est disponible dans votre Espace Apprenant.\n\n'
+        'Cordialement,\n'
+        'Direction Financière & Comptabilité M@LI_NTIC';
+
+    final uri = Uri.parse('https://wa.me/$rawPhone?text=${Uri.encodeComponent(text)}');
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Impossible d\'ouvrir WhatsApp.')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur WhatsApp: $e')),
+        );
+      }
     }
   }
 
@@ -1390,9 +1558,10 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
       }
       return false;
     }
+    final currentUser = AuthProvider().currentUser;
     await _db.logAction(
-      userNom: 'Mamadou Toure',
-      userRole: 'Admin',
+      userNom: currentUser?.nomComplet ?? 'Admin',
+      userRole: currentUser?.role.name ?? 'admin',
       action: 'Nouveau Versement',
       description: 'Versement de ${parsedAmount.toStringAsFixed(0)} FCFA (Tranche $parsedInstallment/$parsedTotalInstallments) enregistré.',
     );
@@ -1493,10 +1662,25 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
             dateCreation: DateTime.now(),
           );
 
+      final student = _db.getUserById(inscription.etudiantId);
+      final totalDue = _db.getInscriptionTotalDue(inscription.id);
+      final paid = _db.getInscriptionPaidAmount(inscription.id);
+      final balance = _db.getInscriptionBalance(inscription.id);
+      final matricule = student?.matricule ??
+          (inscription.etudiantId.isNotEmpty
+              ? (inscription.etudiantId.startsWith('MAT-')
+                  ? inscription.etudiantId
+                  : 'MAT-${inscription.etudiantId.length > 6 ? inscription.etudiantId.substring(inscription.etudiantId.length - 6) : inscription.etudiantId}')
+              : 'MAT-OFFICIEL');
+
       final pdfBytes = await PdfService().generatePaymentReceiptPdf(
         payment: p,
         inscription: inscription,
         formation: formation,
+        studentMatricule: matricule,
+        totalInscriptionDue: totalDue > 0 ? totalDue : formation.prix,
+        cumulativePaid: paid > 0 ? paid : p.montant,
+        remainingBalance: balance,
       );
 
       await PdfService().printOrDownloadPdf(
@@ -1602,7 +1786,7 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
     final payments = _db.getPayments();
     final statusCounts = <String, int>{
       'valide': payments.where((p) => p.status == PaymentStatus.effectue).length,
-      'enAttente': payments.where((p) => p.status == PaymentStatus.enAttente).length,
+      'en_attente': payments.where((p) => p.status == PaymentStatus.enAttente).length,
       'echoue': payments.where((p) => p.status == PaymentStatus.echoue).length,
     };
     final totalAmount = payments

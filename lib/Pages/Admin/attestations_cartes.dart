@@ -337,16 +337,34 @@ class _AdminAttestationsCartesState extends State<AdminAttestationsCartes> with 
                                 onChanged: (v) => setState(() => _selectedMention = v ?? 'Très Bien'),
                               ),
                               const SizedBox(height: 8),
-                              ElevatedButton.icon(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFFD4AF37),
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                ),
-                                icon: const Icon(Icons.workspace_premium_rounded, size: 18),
-                                label: Text('Générer Attestation PDF', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w700)),
-                                onPressed: () => _printAttestation(st),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: [
+                                  OutlinedButton.icon(
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: AppTheme.primary,
+                                      side: BorderSide(color: AppTheme.primary.withValues(alpha: 0.4)),
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                    ),
+                                    icon: const Icon(Icons.badge_rounded, size: 16),
+                                    label: Text('Carte PDF', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600)),
+                                    onPressed: () => _printStudentCard(st),
+                                  ),
+                                  ElevatedButton.icon(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFFD4AF37),
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                      elevation: 2,
+                                    ),
+                                    icon: const Icon(Icons.workspace_premium_rounded, size: 16),
+                                    label: Text('Attestation PDF', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w700)),
+                                    onPressed: () => _printAttestation(st),
+                                  ),
+                                ],
                               ),
                             ],
                           )
@@ -367,16 +385,34 @@ class _AdminAttestationsCartesState extends State<AdminAttestationsCartes> with 
                                   ),
                                 ],
                               ),
-                              ElevatedButton.icon(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFFD4AF37),
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                ),
-                                icon: const Icon(Icons.workspace_premium_rounded, size: 18),
-                                label: Text('Générer Attestation PDF', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w700)),
-                                onPressed: () => _printAttestation(st),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: [
+                                  OutlinedButton.icon(
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: AppTheme.primary,
+                                      side: BorderSide(color: AppTheme.primary.withValues(alpha: 0.4)),
+                                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                    ),
+                                    icon: const Icon(Icons.badge_rounded, size: 18),
+                                    label: Text('Carte Étudiant PDF', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600)),
+                                    onPressed: () => _printStudentCard(st),
+                                  ),
+                                  ElevatedButton.icon(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFFD4AF37),
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                      elevation: 2,
+                                    ),
+                                    icon: const Icon(Icons.workspace_premium_rounded, size: 18),
+                                    label: Text('Attestation PDF', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w700)),
+                                    onPressed: () => _printAttestation(st),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
@@ -469,6 +505,39 @@ class _AdminAttestationsCartesState extends State<AdminAttestationsCartes> with 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Erreur génération attestation: $e'), backgroundColor: AppTheme.error),
+      );
+    }
+  }
+
+  Future<void> _printStudentCard(Map<String, dynamic> st) async {
+    try {
+      final prenom = st['prenom'] ?? '';
+      final nom = st['nom'] ?? '';
+      final pdfBytes = await PdfService().generateStudentCardPdf(
+        prenom: prenom,
+        nom: nom,
+        email: st['email'] ?? '',
+        telephone: st['phone'] ?? '',
+        formationTitre: st['formationTitre'] ?? 'Formation M@LI-NTIC',
+        matricule: st['matricule'],
+      );
+      await PdfService().printOrDownloadPdf(
+        pdfBytes: pdfBytes,
+        filename: 'Carte_Etudiant_${prenom}_$nom.pdf',
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('🪪 Carte d\'étudiant de $prenom $nom téléchargée avec succès !'),
+            backgroundColor: AppTheme.success,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur génération carte: $e'), backgroundColor: AppTheme.error),
       );
     }
   }

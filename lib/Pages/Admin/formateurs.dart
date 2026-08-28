@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:gestion_formations/Services/auth_provider.dart';
 import 'package:gestion_formations/Services/db_services.dart';
 import 'package:gestion_formations/Services/imagekit_service.dart';
+import 'package:gestion_formations/Services/pdf_service.dart';
 import 'package:gestion_formations/config/theme.dart';
 
 class AdminFormateurs extends StatefulWidget {
@@ -620,6 +621,60 @@ class _AdminFormateursState extends State<AdminFormateurs> with TickerProviderSt
                         ),
                       ),
                     ],
+                    const SizedBox(height: 12),
+                    const Divider(height: 1, color: Color(0xFFE2E8F0)),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      alignment: WrapAlignment.end,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        OutlinedButton.icon(
+                          onPressed: () => _showFormateurDetail(userId, data),
+                          icon: const Icon(Icons.visibility_outlined, size: 14),
+                          label: Text('Détails', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600)),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                        ),
+                        OutlinedButton.icon(
+                          onPressed: () => _showHonorairesDialog(userId, data),
+                          icon: const Icon(Icons.account_balance_wallet_rounded, size: 14, color: Color(0xFFD97706)),
+                          label: Text('Honoraires', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFFD97706))),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                            side: const BorderSide(color: Color(0xFFFDE68A)),
+                            backgroundColor: const Color(0xFFFFFBEB),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                        ),
+                        OutlinedButton.icon(
+                          onPressed: () => _scheduleDialog(userId, data),
+                          icon: const Icon(Icons.calendar_month_rounded, size: 14, color: Color(0xFF0D9488)),
+                          label: Text('Planning', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFF0D9488))),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                            side: const BorderSide(color: Color(0xFF99F6E4)),
+                            backgroundColor: const Color(0xFFF0FDFA),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                        ),
+                        ElevatedButton.icon(
+                          onPressed: () => _assignFormationDialog(userId),
+                          icon: const Icon(Icons.assignment_turned_in_rounded, size: 14, color: Colors.white),
+                          label: Text('Affectations', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.primary,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            elevation: 1,
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
@@ -628,6 +683,8 @@ class _AdminFormateursState extends State<AdminFormateurs> with TickerProviderSt
                 onSelected: (value) async {
                   if (value == 'voir') {
                     _showFormateurDetail(userId, data);
+                  } else if (value == 'honoraires') {
+                    _showHonorairesDialog(userId, data);
                   } else if (value == 'modifier') {
                     final user = _db.getUserById(userId);
                     if (user != null) _showEditFormateurDialog(user);
@@ -648,6 +705,16 @@ class _AdminFormateursState extends State<AdminFormateurs> with TickerProviderSt
                         Icon(Icons.visibility_rounded, size: 18),
                         SizedBox(width: 8),
                         Text('Voir'),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'honoraires',
+                    child: Row(
+                      children: [
+                        Icon(Icons.account_balance_wallet_rounded, size: 18, color: Color(0xFFD97706)),
+                        SizedBox(width: 8),
+                        Text('Bulletin d\'Honoraires'),
                       ],
                     ),
                   ),
@@ -1704,9 +1771,25 @@ class _AdminFormateursState extends State<AdminFormateurs> with TickerProviderSt
               ),
             ),
             actions: [
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: Color(0xFF1D447A)),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                icon: const Icon(Icons.account_balance_wallet_rounded, size: 16, color: Color(0xFF1D447A)),
+                label: Text(
+                  'Calculer Honoraires PDF',
+                  style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF1D447A)),
+                ),
+                onPressed: () {
+                  Navigator.pop(context);
+                  _showHonorairesDialog(userId, data);
+                },
+              ),
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: Text('Fermer'),
+                child: const Text('Fermer'),
               ),
             ],
           ),
@@ -2034,5 +2117,339 @@ class _AdminFormateursState extends State<AdminFormateurs> with TickerProviderSt
     await _db.updateModuleDoneHours(userId, formationId, moduleTitle, delta);
     if (!mounted) return;
     setState(() {});
+  }
+
+  void _showHonorairesDialog(String userId, Map<String, dynamic> data) {
+    final prenom = data['prenom'] ?? '';
+    final nom = data['nom'] ?? '';
+    final nomComplet = '$prenom $nom'.trim();
+    final email = data['email'] ?? '';
+    final phone = data['phone'] ?? '';
+    final matricule = data['matricule']?.toString();
+    final specialite = data['specialite']?.toString();
+
+    final assignedFormations = _db.getFormationsForFormateur(userId);
+    final assigned = data['assignedFormations'] as List<dynamic>? ?? [];
+    int calculatedHours = 0;
+    final List<Map<String, dynamic>> modulesBreakdown = [];
+
+    for (final a in assigned) {
+      final fId = a['formationId']?.toString() ?? '';
+      final formation = _db.getFormationById(fId);
+      final fTitle = formation?.titre ?? 'Formation';
+      final modules = a['modules'] as List<dynamic>? ?? [];
+      for (final m in modules) {
+        final mTitle = m['title']?.toString() ?? 'Module';
+        final doneH = (m['doneHours'] ?? m['assignedHours'] ?? 0) as num;
+        final h = doneH.toDouble();
+        if (h > 0) {
+          calculatedHours += h.toInt();
+          modulesBreakdown.add({
+            'formation': fTitle,
+            'module': mTitle,
+            'heures': h,
+          });
+        }
+      }
+    }
+
+    if (calculatedHours == 0) {
+      for (final f in assignedFormations) {
+        final mods = _db.getModulesForFormateur(f, userId);
+        final defaultH = f.dureeSemaines > 0 ? (f.dureeSemaines * 5).toDouble() : 20.0;
+        calculatedHours += defaultH.toInt();
+        modulesBreakdown.add({
+          'formation': f.titre,
+          'module': mods.isNotEmpty ? mods.join(', ') : 'Tronc Commun',
+          'heures': defaultH,
+        });
+      }
+    }
+
+    final heuresController = TextEditingController(text: '$calculatedHours');
+    final tauxController = TextEditingController(text: '5000');
+    final acompteController = TextEditingController(text: '0');
+    final primesController = TextEditingController(text: '0');
+    final periodeController = TextEditingController(text: 'Mois de ${_getCurrentMonthName()} ${DateTime.now().year}');
+    final noteController = TextEditingController();
+
+    bool isGenerating = false;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) {
+          final hours = double.tryParse(heuresController.text.trim()) ?? 0.0;
+          final rate = double.tryParse(tauxController.text.trim()) ?? 5000.0;
+          final acompte = double.tryParse(acompteController.text.trim()) ?? 0.0;
+          final primes = double.tryParse(primesController.text.trim()) ?? 0.0;
+          final totalBrut = (hours * rate) + primes;
+          final netPayable = (totalBrut - acompte) > 0 ? (totalBrut - acompte) : 0.0;
+
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1D447A).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.account_balance_wallet_rounded, color: Color(0xFF1D447A), size: 24),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Calculateur d\'Honoraires',
+                        style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700, color: const Color(0xFF1D447A)),
+                      ),
+                      Text(
+                        nomComplet,
+                        style: GoogleFonts.poppins(fontSize: 12, color: AppTheme.textSecondary),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            content: SizedBox(
+              width: 520,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Financial summary banner
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF1D447A), Color(0xFF0F172A)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'NET À VERSER (FCFA)',
+                                style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w600, color: const Color(0xFFD4AF37)),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                '${netPayable.toStringAsFixed(0)} FCFA',
+                                style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w800, color: Colors.white),
+                              ),
+                            ],
+                          ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                'Brut : ${totalBrut.toStringAsFixed(0)} F',
+                                style: GoogleFonts.poppins(fontSize: 11, color: Colors.white70),
+                              ),
+                              if (acompte > 0)
+                                Text(
+                                  'Acomptes : -${acompte.toStringAsFixed(0)} F',
+                                  style: GoogleFonts.poppins(fontSize: 11, color: const Color(0xFFFCA5A5)),
+                                ),
+                              Text(
+                                'Taux : ${rate.toStringAsFixed(0)} F/h',
+                                style: GoogleFonts.poppins(fontSize: 11, color: Colors.white70),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Inputs Row 1: Période
+                    TextField(
+                      controller: periodeController,
+                      decoration: const InputDecoration(
+                        labelText: 'Période de prestation *',
+                        prefixIcon: Icon(Icons.date_range_rounded, size: 18),
+                        border: OutlineInputBorder(),
+                        isDense: true,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Inputs Row 2: Heures & Taux
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: heuresController,
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(
+                              labelText: 'Heures effectuées *',
+                              suffixText: 'heures',
+                              prefixIcon: Icon(Icons.timer_outlined, size: 18),
+                              border: OutlineInputBorder(),
+                              isDense: true,
+                            ),
+                            onChanged: (_) => setModalState(() {}),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextField(
+                            controller: tauxController,
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(
+                              labelText: 'Taux Horaire (FCFA) *',
+                              suffixText: 'F/h',
+                              prefixIcon: Icon(Icons.monetization_on_outlined, size: 18),
+                              border: OutlineInputBorder(),
+                              isDense: true,
+                            ),
+                            onChanged: (_) => setModalState(() {}),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Inputs Row 3: Primes & Acomptes
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: primesController,
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(
+                              labelText: 'Primes / Bonus (FCFA)',
+                              prefixIcon: Icon(Icons.add_circle_outline_rounded, size: 18, color: Color(0xFF10B981)),
+                              border: OutlineInputBorder(),
+                              isDense: true,
+                            ),
+                            onChanged: (_) => setModalState(() {}),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextField(
+                            controller: acompteController,
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(
+                              labelText: 'Acomptes Déjà Versés (FCFA)',
+                              prefixIcon: Icon(Icons.remove_circle_outline_rounded, size: 18, color: Color(0xFFEF4444)),
+                              border: OutlineInputBorder(),
+                              isDense: true,
+                            ),
+                            onChanged: (_) => setModalState(() {}),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Note
+                    TextField(
+                      controller: noteController,
+                      decoration: const InputDecoration(
+                        labelText: 'Observations / Note interne (optionnel)',
+                        hintText: 'Ex. Règlements par virement Orange Money',
+                        prefixIcon: Icon(Icons.notes_rounded, size: 18),
+                        border: OutlineInputBorder(),
+                        isDense: true,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: isGenerating ? null : () => Navigator.pop(ctx),
+                child: const Text('Fermer'),
+              ),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFDC2626),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                icon: isGenerating
+                    ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : const Icon(Icons.picture_as_pdf_rounded, size: 16),
+                label: Text(
+                  isGenerating ? 'Génération...' : 'Générer Fiche d\'Honoraires PDF',
+                  style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w700),
+                ),
+                onPressed: isGenerating
+                    ? null
+                    : () async {
+                        setModalState(() => isGenerating = true);
+                        try {
+                          final pdfBytes = await PdfService().generateTrainerHonorariumSlipPdf(
+                            formateurNom: nomComplet,
+                            email: email,
+                            telephone: phone,
+                            matricule: matricule,
+                            specialite: specialite,
+                            periode: periodeController.text.trim(),
+                            tauxHoraire: rate,
+                            totalHeures: hours,
+                            acompteVerse: acompte,
+                            primesOuBonus: primes,
+                            modulesEnseignes: modulesBreakdown,
+                            note: noteController.text.trim(),
+                          );
+
+                          final safeName = nomComplet.replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_');
+                          await PdfService().printOrDownloadPdf(
+                            pdfBytes: pdfBytes,
+                            filename: 'Honoraires_${safeName}_${DateTime.now().millisecondsSinceEpoch}.pdf',
+                          );
+
+                          if (ctx.mounted) Navigator.pop(ctx);
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('📄 Bulletin d\'honoraires PDF généré avec succès !'),
+                                backgroundColor: AppTheme.success,
+                              ),
+                            );
+                          }
+                        } catch (e) {
+                          setModalState(() => isGenerating = false);
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Erreur génération honoraires : $e'),
+                                backgroundColor: AppTheme.error,
+                              ),
+                            );
+                          }
+                        }
+                      },
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  String _getCurrentMonthName() {
+    const months = [
+      'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+      'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
+    ];
+    return months[DateTime.now().month - 1];
   }
 }

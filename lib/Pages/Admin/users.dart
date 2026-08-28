@@ -1519,9 +1519,10 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
                 );
 
                 await AuthProvider().updateUser(updatedUser);
+                final adminUser = AuthProvider().currentUser;
                 LocalDataService().logAction(
-                  userNom: 'Administration',
-                  userRole: 'admin',
+                  userNom: adminUser?.nomComplet ?? 'Administration',
+                  userRole: adminUser?.role.name ?? 'admin',
                   action: 'Modification de rôle',
                   description: 'Rôle de ${user.nomComplet} modifié : ${_roleLabel(user.role)} -> ${_roleLabel(selectedRole)}',
                 );

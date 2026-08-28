@@ -4,6 +4,7 @@ import 'package:animate_do/animate_do.dart';
 import 'package:gestion_formations/Models/formation.dart';
 import 'package:gestion_formations/Models/user.dart';
 import 'package:gestion_formations/Services/db_services.dart';
+import 'package:gestion_formations/Services/pdf_service.dart';
 import 'package:gestion_formations/config/theme.dart';
 
 class FormateurSchedule extends StatefulWidget {
@@ -563,12 +564,16 @@ class _FormateurScheduleState extends State<FormateurSchedule>
               ),
             ),
 
-            // Bottom row: Modalité / Salle and Emargement Action
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            // Bottom row: Modalité / Salle and Emargement Actions
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 if (horaire.lieuOuLien != null && horaire.lieuOuLien!.isNotEmpty)
                   Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
                         horaire.modalite == 'En ligne' ? Icons.videocam_rounded : Icons.room_rounded,
@@ -576,28 +581,50 @@ class _FormateurScheduleState extends State<FormateurSchedule>
                         color: Colors.grey.shade600,
                       ),
                       const SizedBox(width: 4),
-                      Text(
-                        horaire.lieuOuLien!,
-                        style: GoogleFonts.poppins(fontSize: 12, color: Colors.black54),
+                      Flexible(
+                        child: Text(
+                          horaire.lieuOuLien!,
+                          style: GoogleFonts.poppins(fontSize: 12, color: Colors.black54),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ],
-                  )
-                else
-                  const SizedBox(),
-                ElevatedButton.icon(
-                  onPressed: () => _showEmargementDialog(formation.id, formation.titre, moduleName, students),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    elevation: 0,
                   ),
-                  icon: const Icon(Icons.how_to_reg_rounded, size: 16),
-                  label: Text(
-                    'Émargement',
-                    style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w700),
-                  ),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 6,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: () => _printAttendanceSheet(formation.titre, moduleName, students),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFFDC2626),
+                        side: const BorderSide(color: Color(0xFFDC2626)),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      icon: const Icon(Icons.picture_as_pdf_rounded, size: 15),
+                      label: Text(
+                        'Feuille PDF',
+                        style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                    ElevatedButton.icon(
+                      onPressed: () => _showEmargementDialog(formation.id, formation.titre, moduleName, students),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        elevation: 0,
+                      ),
+                      icon: const Icon(Icons.how_to_reg_rounded, size: 16),
+                      label: Text(
+                        'Émargement',
+                        style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -653,6 +680,17 @@ class _FormateurScheduleState extends State<FormateurSchedule>
                 ),
         ),
         actions: [
+          ElevatedButton.icon(
+            onPressed: () => _printAttendanceSheet(formationTitle, moduleName, students),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFDC2626),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            icon: const Icon(Icons.picture_as_pdf_rounded, size: 16),
+            label: Text('Feuille d\'émargement PDF', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600)),
+          ),
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Fermer')),
         ],
       ),
@@ -1074,6 +1112,46 @@ class _FormateurScheduleState extends State<FormateurSchedule>
         },
       ),
     );
+  }
+
+  Future<void> _printAttendanceSheet(String formationTitre, String moduleName, List<User> students) async {
+    try {
+      final studentsData = students.map((s) => {
+        'prenom': s.prenom,
+        'nom': s.nom,
+        'email': s.email,
+        'telephone': s.phone,
+      }).toList();
+
+      final pdfBytes = await PdfService().generateAttendanceSheetPdf(
+        formationTitre: formationTitre,
+        moduleTitre: moduleName,
+        formateurNom: widget.user.nomComplet,
+        apprenants: studentsData,
+        dateSeance: DateTime.now(),
+      );
+
+      final safeName = '${formationTitre}_$moduleName'.replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_');
+      await PdfService().printOrDownloadPdf(
+        pdfBytes: pdfBytes,
+        filename: 'Emargement_$safeName.pdf',
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('📄 Feuille d\'émargement PDF générée avec succès !'),
+            backgroundColor: AppTheme.success,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur génération émargement: $e'), backgroundColor: AppTheme.error),
+        );
+      }
+    }
   }
 }
 

@@ -85,7 +85,7 @@ class Seance {
       'heureFin': heureFin,
       'salleOuLien': salleOuLien,
       'modalite': modalite,
-      'statut': statut.toString(),
+      'statut': statut.name,
       'dateCreation': dateCreation.toIso8601String(),
       'datePublication': datePublication?.toIso8601String(),
     };

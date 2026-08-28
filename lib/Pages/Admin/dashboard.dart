@@ -71,6 +71,8 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
               SizedBox(height: gap),
               _buildQuickActionsGrid(isMobile),
               SizedBox(height: gap + 4),
+              _buildProfitabilitySection(isMobile),
+              SizedBox(height: gap + 4),
               _buildFinancialAndTrainingCharts(isMobile),
               SizedBox(height: gap + 4),
               _buildMonthlyInscriptionsCard(isMobile),
@@ -497,6 +499,298 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
           ),
         ),
       ),
+    );
+  }
+
+  // ========== 3.5 PROFITABILITY & PERFORMANCE SECTION ==========
+  Widget _buildProfitabilitySection(bool isMobile) {
+    final profitability = _db.getFormationsProfitability();
+    if (profitability.isEmpty) return const SizedBox.shrink();
+
+    final totalEncaisse = profitability.fold<double>(0.0, (sum, p) => sum + (p['totalEncaisse'] as double));
+    final totalCoutFormateurs = profitability.fold<double>(0.0, (sum, p) => sum + (p['coutFormateurs'] as double));
+    final margeNetteGlobale = totalEncaisse - totalCoutFormateurs;
+    final margeGlobalePct = totalEncaisse > 0 ? ((margeNetteGlobale / totalEncaisse) * 100).clamp(-100.0, 100.0) : 0.0;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: AppTheme.cardShadow,
+        border: Border.all(color: const Color(0xFF1D447A).withValues(alpha: 0.12)),
+      ),
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header : icon + titre + badge marge globale (responsive)
+          isMobile
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1D447A).withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.analytics_rounded, color: Color(0xFF1D447A), size: 20),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Rentabilité & Performance',
+                                style: GoogleFonts.poppins(fontSize: 13.5, fontWeight: FontWeight.w800, color: const Color(0xFF1D447A)),
+                              ),
+                              Text(
+                                'Recettes vs Masse salariale',
+                                style: GoogleFonts.poppins(fontSize: 10.5, color: AppTheme.textSecondary),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: (margeNetteGlobale >= 0 ? const Color(0xFF10B981) : const Color(0xFFEF4444)).withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            margeNetteGlobale >= 0 ? Icons.trending_up_rounded : Icons.trending_down_rounded,
+                            size: 14,
+                            color: margeNetteGlobale >= 0 ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${margeGlobalePct.toStringAsFixed(1)}% Marge globale',
+                            style: GoogleFonts.poppins(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: margeNetteGlobale >= 0 ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                )
+              : Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1D447A).withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.analytics_rounded, color: Color(0xFF1D447A), size: 22),
+                        ),
+                        const SizedBox(width: 10),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Rentabilité & Performance des Formations',
+                              style: GoogleFonts.poppins(fontSize: 14.5, fontWeight: FontWeight.w800, color: const Color(0xFF1D447A)),
+                            ),
+                            Text(
+                              'Recettes encaissées vs Masse salariale formateurs',
+                              style: GoogleFonts.poppins(fontSize: 11, color: AppTheme.textSecondary),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: (margeNetteGlobale >= 0 ? const Color(0xFF10B981) : const Color(0xFFEF4444)).withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            margeNetteGlobale >= 0 ? Icons.trending_up_rounded : Icons.trending_down_rounded,
+                            size: 14,
+                            color: margeNetteGlobale >= 0 ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${margeGlobalePct.toStringAsFixed(1)}% Marge',
+                            style: GoogleFonts.poppins(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: margeNetteGlobale >= 0 ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+          const SizedBox(height: 14),
+
+          // Mini KPI Summary Bar (responsive : column sur mobile)
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF1D447A), Color(0xFF0F172A)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: isMobile
+                ? Column(
+                    children: [
+                      _buildProfitKpiItem('CA Encaissé', '${totalEncaisse.toStringAsFixed(0)} F', const Color(0xFFD4AF37)),
+                      Container(margin: const EdgeInsets.symmetric(vertical: 6), height: 1, color: Colors.white24),
+                      _buildProfitKpiItem('Coût Formateurs', '${totalCoutFormateurs.toStringAsFixed(0)} F', const Color(0xFFFCA5A5)),
+                      Container(margin: const EdgeInsets.symmetric(vertical: 6), height: 1, color: Colors.white24),
+                      _buildProfitKpiItem('Marge Nette', '${margeNetteGlobale.toStringAsFixed(0)} F', const Color(0xFF86EFAC)),
+                    ],
+                  )
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _buildProfitKpiItem('Chiffre d\'Affaires Encaissé', '${totalEncaisse.toStringAsFixed(0)} F', const Color(0xFFD4AF37)),
+                      Container(height: 28, width: 1, color: Colors.white24),
+                      _buildProfitKpiItem('Coût Formateurs', '${totalCoutFormateurs.toStringAsFixed(0)} F', const Color(0xFFFCA5A5)),
+                      Container(height: 28, width: 1, color: Colors.white24),
+                      _buildProfitKpiItem('Marge Nette Globale', '${margeNetteGlobale.toStringAsFixed(0)} F', const Color(0xFF86EFAC)),
+                    ],
+                  ),
+          ),
+          const SizedBox(height: 14),
+
+          // Formation Profitability List
+          ...profitability.take(isMobile ? 3 : 5).map((p) {
+            final titre = p['formationTitre'] as String;
+            final nb = p['nbInscrits'] as int;
+            final encaisse = p['totalEncaisse'] as double;
+            final cout = p['coutFormateurs'] as double;
+            final marge = p['margeNette'] as double;
+            final pct = p['margePct'] as double;
+            final isProfitable = p['estRentable'] as bool;
+
+            final ratio = (encaisse > 0 && cout > 0) ? (cout / encaisse).clamp(0.0, 1.0) : 0.0;
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.grey.shade200),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Ligne 1 : titre + badge inscrits
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          titre,
+                          style: GoogleFonts.poppins(fontSize: 12.5, fontWeight: FontWeight.w700, color: Colors.black87),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primary.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          '$nb inscrit(s)',
+                          style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w600, color: AppTheme.primary),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  // Ligne 2 : badge marge (pleine largeur sur mobile)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: (isProfitable ? const Color(0xFF10B981) : const Color(0xFFEF4444)).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      'Marge : ${marge.toStringAsFixed(0)} F (${pct.toStringAsFixed(0)}%)',
+                      style: GoogleFonts.poppins(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: isProfitable ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  // Ligne 3 : recettes / coût (Wrap pour éviter overflow)
+                  Wrap(
+                    spacing: 8,
+                    children: [
+                      Text(
+                        'Recettes : ${encaisse.toStringAsFixed(0)} FCFA',
+                        style: GoogleFonts.poppins(fontSize: 11, color: AppTheme.textSecondary),
+                      ),
+                      Text('•', style: GoogleFonts.poppins(fontSize: 11, color: AppTheme.textSecondary)),
+                      Text(
+                        'Coût : ${cout.toStringAsFixed(0)} FCFA',
+                        style: GoogleFonts.poppins(fontSize: 11, color: AppTheme.textSecondary),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: isProfitable ? (1.0 - ratio).clamp(0.05, 1.0) : 0.05,
+                      backgroundColor: const Color(0xFFFCA5A5),
+                      valueColor: AlwaysStoppedAnimation<Color>(isProfitable ? const Color(0xFF10B981) : const Color(0xFFEF4444)),
+                      minHeight: 4,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProfitKpiItem(String title, String value, Color valueColor) {
+    return Column(
+      children: [
+        Text(
+          title,
+          style: GoogleFonts.poppins(fontSize: 9.5, color: Colors.white70, fontWeight: FontWeight.w500),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w800, color: valueColor),
+        ),
+      ],
     );
   }
 

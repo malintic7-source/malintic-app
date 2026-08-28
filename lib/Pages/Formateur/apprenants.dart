@@ -700,8 +700,11 @@ class _FormateurApprenantsState extends State<FormateurApprenants> with TickerPr
                 ],
               ),
               const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              Wrap(
+                spacing: 8,
+                runSpacing: 6,
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   OutlinedButton.icon(
                     onPressed: () => _showApprenantDetail(userId, data, commonFormations),
@@ -709,6 +712,7 @@ class _FormateurApprenantsState extends State<FormateurApprenants> with TickerPr
                     label: Text('Détails', style: GoogleFonts.poppins(fontSize: 12)),
                   ),
                   Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       if (phone.isNotEmpty)
                         IconButton(

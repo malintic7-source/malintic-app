@@ -7,6 +7,8 @@ import 'package:gestion_formations/Services/db_services.dart';
 import 'package:gestion_formations/config/theme.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:gestion_formations/Widgets/share_formation_dialog.dart';
+import 'package:gestion_formations/Services/pdf_service.dart';
+import 'package:gestion_formations/utils/file_saver.dart';
 
 class DiscoverFormationsPage extends StatefulWidget {
   final User user;
@@ -524,20 +526,71 @@ class _DiscoverFormationsPageState extends State<DiscoverFormationsPage> with Ti
                                     style: GoogleFonts.poppins(fontSize: 12, color: Colors.black54),
                                   ),
                                 ],
-                                SizedBox(height: 10),
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: OutlinedButton.icon(
-                                    onPressed: () => _showEnrollDialog(context, formation),
-                                    icon: Icon(Icons.app_registration_rounded, size: 16),
-                                    label: Text("S'inscrire"),
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor: AppTheme.primary,
-                                      side: BorderSide(color: AppTheme.primary.withValues(alpha: 0.35)),
-                                      padding: EdgeInsets.symmetric(vertical: 10),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                const SizedBox(height: 14),
+                                const Divider(height: 1, color: Color(0xFFE2E8F0)),
+                                const SizedBox(height: 12),
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  alignment: WrapAlignment.end,
+                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                  children: [
+                                    OutlinedButton.icon(
+                                      onPressed: () => _generateBrochurePdf(formation),
+                                      icon: const Icon(Icons.picture_as_pdf_rounded, size: 16, color: Color(0xFFDC2626)),
+                                      label: Text(
+                                        'Brochure PDF',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 11.5,
+                                          fontWeight: FontWeight.w600,
+                                          color: const Color(0xFFDC2626),
+                                        ),
+                                      ),
+                                      style: OutlinedButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                                        side: const BorderSide(color: Color(0xFFFCA5A5)),
+                                        backgroundColor: const Color(0xFFFEF2F2),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                      ),
                                     ),
-                                  ),
+                                    OutlinedButton.icon(
+                                      onPressed: () => _showFormationQrDialog(context, formation),
+                                      icon: const Icon(Icons.share_rounded, size: 16, color: AppTheme.primary),
+                                      label: Text(
+                                        'Partager',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 11.5,
+                                          fontWeight: FontWeight.w600,
+                                          color: AppTheme.primary,
+                                        ),
+                                      ),
+                                      style: OutlinedButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                                        side: BorderSide(color: AppTheme.primary.withValues(alpha: 0.3)),
+                                        backgroundColor: AppTheme.primary.withValues(alpha: 0.05),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                      ),
+                                    ),
+                                    ElevatedButton.icon(
+                                      onPressed: () => _showEnrollDialog(context, formation),
+                                      icon: const Icon(Icons.app_registration_rounded, size: 16, color: Colors.white),
+                                      label: Text(
+                                        "S'inscrire",
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w700,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: AppTheme.primary,
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                        elevation: 2,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
@@ -924,20 +977,30 @@ class _DiscoverFormationsPageState extends State<DiscoverFormationsPage> with Ti
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              label,
-              style: GoogleFonts.poppins(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: Colors.black54,
+            Expanded(
+              flex: 2,
+              child: Text(
+                label,
+                style: GoogleFonts.poppins(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black54,
+                ),
               ),
             ),
-            Text(
-              value,
-              style: GoogleFonts.poppins(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: Colors.black87,
+            const SizedBox(width: 8),
+            Expanded(
+              flex: 3,
+              child: Text(
+                value,
+                style: GoogleFonts.poppins(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black87,
+                ),
+                textAlign: TextAlign.end,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],
@@ -1026,5 +1089,25 @@ class _DiscoverFormationsPageState extends State<DiscoverFormationsPage> with Ti
     }
 
     return formations;
+  }
+
+  Future<void> _generateBrochurePdf(Formation formation) async {
+    try {
+      final pdfBytes = await PdfService().generateFormationBrochurePdf(formation);
+      final filename = 'Brochure_${formation.titre.replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_')}.pdf';
+      await saveFile(pdfBytes, filename);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('📄 Brochure PDF téléchargée avec succès !'),
+          backgroundColor: AppTheme.success,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur: $e'), backgroundColor: AppTheme.error),
+      );
+    }
   }
 }

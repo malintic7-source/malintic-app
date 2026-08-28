@@ -30,10 +30,12 @@ class NotificationsService {
         final audienceMatch = audienceLower.contains(emailLower) ||
             audienceLower.contains('all') ||
             audienceLower.contains('tous') ||
-            (normalizedRole == 'etudiant' &&
+            (normalizedRole == 'apprenant' &&
                 (audienceLower.contains('etudiants') || audienceLower.contains('user') || audienceLower.contains('apprenant'))) ||
             (normalizedRole == 'admin' && audienceLower.contains('admin')) ||
-            (normalizedRole == 'formateur' && audienceLower.contains('formateur'));
+            (normalizedRole == 'formateur' && audienceLower.contains('formateur')) ||
+            (normalizedRole == 'assistant' && audienceLower.contains('assistant')) ||
+            (normalizedRole == 'dg' && audienceLower.contains('dg'));
 
         final isTargeted = notification.targetRoles.isNotEmpty ||
             notification.targetUserIds.isNotEmpty ||

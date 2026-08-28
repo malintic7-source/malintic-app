@@ -104,7 +104,7 @@ class Inscription {
       'apprenantId': apprenantId,
       'etudiantId': apprenantId,
       'formationId': formationId,
-      'status': status.toString(),
+      'status': status.name,
       'dateInscription': dateInscription.toIso8601String(),
       'paiementId': paiementId,
       'paiementEffectue': paiementEffectue,

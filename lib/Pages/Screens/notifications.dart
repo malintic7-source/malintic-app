@@ -46,46 +46,88 @@ class _NotificationsPageState extends State<NotificationsPage> with TickerProvid
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Notifications',
-                        style: GoogleFonts.poppins(
-                          fontSize: 26,
-                          fontWeight: FontWeight.w800,
-                          color: AppTheme.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Restez informé des mises à jour, paiements et inscriptions',
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          color: AppTheme.textSecondary,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (_canBroadcast)
-                  ElevatedButton.icon(
-                    onPressed: _showBroadcastDialog,
-                    icon: const Icon(Icons.campaign_rounded, size: 18),
-                    label: const Text('Diffuser'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
-                  ),
-              ],
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final isMobile = constraints.maxWidth < 500;
+                return isMobile
+                    ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Notifications',
+                            style: GoogleFonts.poppins(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w800,
+                              color: AppTheme.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Restez informé des mises à jour, paiements et inscriptions',
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              color: AppTheme.textSecondary,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          if (_canBroadcast) ...[
+                            const SizedBox(height: 10),
+                            ElevatedButton.icon(
+                              onPressed: _showBroadcastDialog,
+                              icon: const Icon(Icons.campaign_rounded, size: 16),
+                              label: const Text('Diffuser un message'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppTheme.primary,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                            ),
+                          ],
+                        ],
+                      )
+                    : Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Notifications',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 26,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppTheme.textPrimary,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Restez informé des mises à jour, paiements et inscriptions',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 12,
+                                    color: AppTheme.textSecondary,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (_canBroadcast)
+                            ElevatedButton.icon(
+                              onPressed: _showBroadcastDialog,
+                              icon: const Icon(Icons.campaign_rounded, size: 18),
+                              label: const Text('Diffuser'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppTheme.primary,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                            ),
+                        ],
+                      );
+              },
             ),
             const SizedBox(height: 16),
             Row(
@@ -645,7 +687,7 @@ class _NotificationsPageState extends State<NotificationsPage> with TickerProvid
   Future<void> _showBroadcastDialog() async {
     final titleController = TextEditingController();
     final descController = TextEditingController();
-    String targetGroup = 'all'; // all, etudiant, formateur, admin
+    String targetGroup = 'all'; // all, apprenant, formateur, admin
 
     await showDialog(
       context: context,
@@ -695,7 +737,7 @@ class _NotificationsPageState extends State<NotificationsPage> with TickerProvid
                     decoration: const InputDecoration(prefixIcon: Icon(Icons.groups_rounded)),
                     items: const [
                       DropdownMenuItem(value: 'all', child: Text('Tous les utilisateurs')),
-                      DropdownMenuItem(value: 'etudiant', child: Text('Étudiants uniquement')),
+                      DropdownMenuItem(value: 'apprenant', child: Text('Apprenants / Stagiaires')),
                       DropdownMenuItem(value: 'formateur', child: Text('Formateurs uniquement')),
                       DropdownMenuItem(value: 'admin', child: Text('Administration uniquement')),
                     ],
