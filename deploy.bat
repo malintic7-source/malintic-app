@@ -125,7 +125,7 @@ echo       - Adresse IP Directe : http://!LOCAL_IP!:8080
 echo       - Local sur serveur  : http://localhost:8080
 echo.
 echo   [2] ACCES DISTANT (Internet / WhatsApp / Extranet) :
-echo       - Lien Public Securise : https://boil-prude-curry.ngrok-free.dev
+echo       - Lien Public Securise : https://malintic-app.vercel.app
 echo.
 echo ======================================================================
 echo.

@@ -14,7 +14,6 @@ services:
         value: admin@example.com
         sync: false
       - key: BOOTSTRAP_ADMIN_PASSWORD
-        value: ChangeMe123!
         sync: false
     disk:
       name: data

@@ -230,6 +230,8 @@ class _SignInPageState extends State<SignInPage> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            Center(child: _buildSecurityBadge()),
+            const SizedBox(height: 16),
             Text(
               'Connexion',
               textAlign: TextAlign.center,
@@ -309,6 +311,33 @@ class _SignInPageState extends State<SignInPage> {
         ),
       ),
       keyboardType: TextInputType.emailAddress,
+    );
+  }
+
+  Widget _buildSecurityBadge() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      decoration: BoxDecoration(
+        color: AppTheme.primary.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppTheme.primary.withValues(alpha: 0.16)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.verified_user_outlined, size: 15, color: AppTheme.primary),
+          const SizedBox(width: 6),
+          Text(
+            'ESPACE SÉCURISÉ',
+            style: GoogleFonts.poppins(
+              fontSize: 10,
+              letterSpacing: 0.7,
+              fontWeight: FontWeight.w700,
+              color: AppTheme.primary,
+            ),
+          ),
+        ],
+      ),
     );
   }
 

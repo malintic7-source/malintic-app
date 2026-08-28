@@ -157,30 +157,76 @@ class _AuthWrapperState extends State<AuthWrapper> {
             snapshot.data == null) {
           return Scaffold(
             backgroundColor: AppTheme.background,
-            body: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Image.asset(
-                    'images/logo.png',
-                    width: 120,
-                    errorBuilder: (context, error, stackTrace) => const Icon(
-                      Icons.school_rounded,
-                      size: 64,
-                      color: AppTheme.primary,
-                    ),
+            body: Stack(
+              children: [
+                Positioned(
+                  top: -110,
+                  right: -90,
+                  child: _SplashOrb(
+                    size: 250,
+                    color: AppTheme.primary.withValues(alpha: 0.08),
                   ),
-                  const SizedBox(height: 24),
-                  const SizedBox(
-                    width: 36,
-                    height: 36,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 3,
-                      valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primary),
-                    ),
+                ),
+                Positioned(
+                  bottom: -130,
+                  left: -100,
+                  child: _SplashOrb(
+                    size: 270,
+                    color: AppTheme.logoRed.withValues(alpha: 0.06),
                   ),
-                ],
-              ),
+                ),
+                Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 128,
+                        height: 128,
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: AppTheme.surface,
+                          borderRadius: BorderRadius.circular(28),
+                          boxShadow: AppTheme.cardShadow,
+                          border: Border.all(
+                            color: AppTheme.primary.withValues(alpha: 0.08),
+                          ),
+                        ),
+                        child: Image.asset(
+                          'images/logo.png',
+                          errorBuilder: (context, error, stackTrace) => const Icon(
+                            Icons.school_rounded,
+                            size: 64,
+                            color: AppTheme.primary,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 26),
+                      Text(
+                        'M@LI-NTIC',
+                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.4,
+                            ),
+                      ),
+                      const SizedBox(height: 20),
+                      const SizedBox(
+                        width: 156,
+                        child: LinearProgressIndicator(
+                          minHeight: 4,
+                          borderRadius: BorderRadius.all(Radius.circular(10)),
+                          color: AppTheme.primary,
+                          backgroundColor: AppTheme.divider,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      Text(
+                        'Initialisation sécurisée…',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           );
         }
@@ -189,6 +235,20 @@ class _AuthWrapperState extends State<AuthWrapper> {
       },
     );
   }
+}
+
+class _SplashOrb extends StatelessWidget {
+  final double size;
+  final Color color;
+
+  const _SplashOrb({required this.size, required this.color});
+
+  @override
+  Widget build(BuildContext context) => Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+      );
 }
 
 /// Écran intermédiaire qui force le changement de mot de passe lors de la

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gestion_formations/config/theme.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:gestion_formations/Pages/Login/sign_in.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -28,32 +29,32 @@ class PoleItem {
         title: 'Formations',
         description: 'Explorez nos programmes de formation en ligne & présentiel',
         icon: Icons.school_rounded,
-        gradientColors: [Color(0xFF2563EB), Color(0xFF1D4ED8)],
-        primaryColor: Color(0xFF2563EB),
+        gradientColors: [AppTheme.primary, AppTheme.primaryDark],
+        primaryColor: AppTheme.primary,
         isFormations: true,
       ),
       PoleItem(
         title: 'Prestations',
         description: 'Découvrez nos services professionnels sur-mesure',
         icon: Icons.handshake_rounded,
-        gradientColors: [Color(0xFFF97316), Color(0xFFEA580C)],
-        primaryColor: Color(0xFFF97316),
+        gradientColors: [AppTheme.orangeAccent, AppTheme.warningDark],
+        primaryColor: AppTheme.orangeAccent,
         url: 'https://m-ntic.ml/prestations',
       ),
       PoleItem(
         title: 'e-Commerce',
         description: 'Parcourez notre catalogue complet de matériel et logiciels',
         icon: Icons.shopping_cart_rounded,
-        gradientColors: [Color(0xFF6366F1), Color(0xFF4F46E5)],
-        primaryColor: Color(0xFF6366F1),
+        gradientColors: [AppTheme.primaryLight, AppTheme.primary],
+        primaryColor: AppTheme.primary,
         url: 'https://malintic.com',
       ),
       PoleItem(
         title: 'Incubator',
         description: 'Accompagnement et accélération de startups et projets innovants',
         icon: Icons.lightbulb_rounded,
-        gradientColors: [Color(0xFF10B981), Color(0xFF059669)],
-        primaryColor: Color(0xFF10B981),
+        gradientColors: [AppTheme.success, AppTheme.successDark],
+        primaryColor: AppTheme.success,
         url: 'https://m-ntic.ml/incubator',
       ),
     ];
@@ -73,7 +74,25 @@ class WelcomePage extends StatelessWidget {
     return Scaffold(
       backgroundColor: bg,
       body: SafeArea(
-        child: Center(
+        child: Stack(
+          children: [
+            Positioned(
+              top: -130,
+              left: -100,
+              child: _DecorativeOrb(
+                size: 310,
+                color: AppTheme.logoRed.withValues(alpha: isDark ? 0.08 : 0.05),
+              ),
+            ),
+            Positioned(
+              bottom: -170,
+              right: -100,
+              child: _DecorativeOrb(
+                size: 350,
+                color: AppTheme.primary.withValues(alpha: isDark ? 0.1 : 0.06),
+              ),
+            ),
+            Center(
           child: SingleChildScrollView(
             padding: EdgeInsets.symmetric(
               horizontal: isDesktop ? 64 : 20,
@@ -85,7 +104,9 @@ class WelcomePage extends StatelessWidget {
                   ? _buildDesktopLayout(context, isDark)
                   : _buildMobileLayout(context, isDark),
             ),
+            ),
           ),
+          ],
         ),
       ),
     );
@@ -103,12 +124,14 @@ class WelcomePage extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
+              _buildBrandPill(isDark),
+              const SizedBox(height: 20),
               _buildLogoCircle(260, isDark),
               const SizedBox(height: 36),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Text(
-                  'L’univers des technologies — 4 pôles à votre service',
+                  'Votre partenaire pour des solutions numériques utiles',
                   textAlign: TextAlign.center,
                   style: GoogleFonts.poppins(
                     fontSize: 26,
@@ -146,10 +169,12 @@ class WelcomePage extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
+        _buildBrandPill(isDark),
+        const SizedBox(height: 18),
         _buildLogoCircle(170, isDark),
         const SizedBox(height: 24),
         Text(
-          'L’univers des technologies — 4 pôles à votre service',
+          'Votre partenaire pour des solutions numériques utiles',
           textAlign: TextAlign.center,
           style: GoogleFonts.poppins(
             fontSize: 20,
@@ -165,6 +190,28 @@ class WelcomePage extends StatelessWidget {
               child: _PoleCard(pole: pole, isDark: isDark),
             )),
       ],
+    );
+  }
+
+  Widget _buildBrandPill(bool isDark) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      decoration: BoxDecoration(
+        color: AppTheme.primary.withValues(alpha: isDark ? 0.2 : 0.08),
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(
+          color: AppTheme.primary.withValues(alpha: isDark ? 0.35 : 0.16),
+        ),
+      ),
+      child: Text(
+        'M@LI-NTIC  •  UNIVERS NUMÉRIQUE',
+        style: GoogleFonts.poppins(
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.6,
+          color: isDark ? Colors.white : AppTheme.primary,
+        ),
+      ),
     );
   }
 
@@ -197,7 +244,7 @@ class WelcomePage extends StatelessWidget {
                 style: GoogleFonts.poppins(
                   fontSize: diameter * 0.12,
                   fontWeight: FontWeight.w900,
-                  color: const Color(0xFF2563EB),
+                  color: AppTheme.primary,
                 ),
               ),
             ),
@@ -206,6 +253,20 @@ class WelcomePage extends StatelessWidget {
       ),
     );
   }
+}
+
+class _DecorativeOrb extends StatelessWidget {
+  final double size;
+  final Color color;
+
+  const _DecorativeOrb({required this.size, required this.color});
+
+  @override
+  Widget build(BuildContext context) => Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+      );
 }
 
 class _PoleCard extends StatefulWidget {

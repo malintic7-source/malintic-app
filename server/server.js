@@ -591,7 +591,7 @@ function validateFormationAssignments(data, users) {
 
 app.get('/api/health', (_, res) => res.json({ status: 'ok' }));
 
-app.get('/api/system/network-info', (req, res) => {
+app.get('/api/system/network-info', requireAdministrator, (req, res) => {
   const os = require('os');
   const interfaces = os.networkInterfaces();
   const detectedIps = [];

@@ -28,8 +28,8 @@ echo      Lien : http://!LOCAL_IP!:8080
 echo      Lien : http://localhost:8080
 )
 echo.
-echo  [2] ACCES DISTANT (Internet / Extranet hors bureau)
-echo      Lien : https://boil-prude-curry.ngrok-free.dev
+echo  [2] ACCES PUBLIC (Internet / Extranet hors bureau)
+echo      Lien : https://malintic-app.vercel.app
 echo.
 echo  [3] Afficher les informations de connexion pour d'autres appareils
 echo.
@@ -47,7 +47,7 @@ if "%CHOIX%"=="1" (
     goto end
 )
 if "%CHOIX%"=="2" (
-    start https://boil-prude-curry.ngrok-free.dev
+    start https://malintic-app.vercel.app
     goto end
 )
 if "%CHOIX%"=="3" (
