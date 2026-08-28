@@ -46,7 +46,7 @@ class PoleItem {
         icon: Icons.shopping_cart_rounded,
         gradientColors: [Color(0xFF6366F1), Color(0xFF4F46E5)],
         primaryColor: Color(0xFF6366F1),
-        url: 'https://m-ntic.ml/ecommerce',
+        url: 'https://malintic.com',
       ),
       PoleItem(
         title: 'Incubator',
@@ -234,6 +234,8 @@ class _PoleCardState extends State<_PoleCard> {
   }
 
   void _showComingSoonDialog(BuildContext context, PoleItem pole) {
+    final isEcommerce = pole.title == 'e-Commerce';
+    final isServices = pole.title == 'Prestations';
     final isDark = widget.isDark;
     final dialogBg = isDark ? const Color(0xFF1E293B) : Colors.white;
     final textColor = isDark ? Colors.white : const Color(0xFF0F172A);
@@ -241,17 +243,27 @@ class _PoleCardState extends State<_PoleCard> {
 
     String detailMessage = '';
     String poleSubtitle = '';
+    const serviceCatalog = [
+      'Promotion d’entreprises & outils numériques',
+      'Maintenance informatique',
+      'Administration réseaux & systèmes',
+      'Installation de vidéosurveillance',
+      'Installation de contrôle d’accès',
+      'Élaboration de projets numériques (IMITECH)',
+      'Installation d’antennes paraboliques',
+      'Autres services sur demande',
+    ];
 
     if (pole.title == 'Prestations') {
       poleSubtitle = 'Audit, Conseil & Solutions Numériques';
       detailMessage =
-          'Le portail des prestations professionnelles M@LI-NTIC (développement sur-mesure, maintenance de systèmes, audit informatique et cybersécurité) est actuellement en cours de préparation pour la production.\n\n'
-          'En attendant son ouverture sur la plateforme, notre équipe technique et commerciale reste à votre disposition pour étudier vos besoins et établir vos devis personnalisés.';
+          'Découvrez notre catalogue de prestations pour accompagner la transformation numérique, la sécurité et la performance de votre organisation.\n\n'
+          'Notre équipe technique et commerciale reste à votre disposition pour étudier vos besoins et établir un devis personnalisé.';
     } else if (pole.title == 'e-Commerce') {
       poleSubtitle = 'Équipements, Logiciels & Accessoires';
       detailMessage =
-          'La boutique en ligne M@LI-NTIC prépare l’intégration de son catalogue officiel d’équipements informatiques, ordinateurs de pointe, licences et accessoires certifiés.\n\n'
-          'Le module de commande et de paiement en ligne sera ouvert très prochainement. Pour toute acquisition institutionnelle urgente, contactez notre service commercial.';
+          'Notre boutique e-commerce est accessible dès maintenant sur malintic.com. Découvrez nos équipements informatiques, ordinateurs, licences et accessoires.\n\n'
+          'Le nouveau site M@LI-NTIC est en préparation. En attendant, nous vous invitons à consulter notre boutique en ligne.';
     } else if (pole.title == 'Incubator') {
       poleSubtitle = 'Accompagnement & Accélération de Startups';
       detailMessage =
@@ -269,8 +281,9 @@ class _PoleCardState extends State<_PoleCard> {
         backgroundColor: Colors.transparent,
         insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 480),
-          child: Container(
+          constraints: const BoxConstraints(maxWidth: 480, maxHeight: 720),
+          child: SingleChildScrollView(
+            child: Container(
             decoration: BoxDecoration(
               color: dialogBg,
               borderRadius: BorderRadius.circular(24),
@@ -371,7 +384,11 @@ class _PoleCardState extends State<_PoleCard> {
                       const SizedBox(width: 8),
                       Flexible(
                         child: Text(
-                          'Déploiement en cours • Bientôt disponible',
+                          isEcommerce
+                              ? 'Boutique en ligne disponible'
+                              : isServices
+                                  ? 'Catalogue de services disponible'
+                                  : 'Déploiement en cours • Bientôt disponible',
                           style: GoogleFonts.poppins(
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
@@ -394,13 +411,56 @@ class _PoleCardState extends State<_PoleCard> {
                     fontWeight: FontWeight.w400,
                   ),
                 ),
+                if (isServices) ...[
+                  const SizedBox(height: 18),
+                  Text(
+                    'Nos domaines d’intervention',
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: textColor,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: serviceCatalog
+                        .map(
+                          (service) => Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 7,
+                            ),
+                            decoration: BoxDecoration(
+                              color: pole.primaryColor.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: pole.primaryColor.withValues(alpha: 0.22),
+                              ),
+                            ),
+                            child: Text(
+                              service,
+                              style: GoogleFonts.poppins(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w500,
+                                color: isDark
+                                    ? const Color(0xFFF1F5F9)
+                                    : const Color(0xFF475569),
+                              ),
+                            ),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                ],
                 const SizedBox(height: 24),
 
                 // Action Buttons
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Primary CTA: Go to Formations (Production ready)
+                    // Primary CTA: e-commerce website, service quote, or Formations portal.
                     ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF2563EB),
@@ -411,16 +471,43 @@ class _PoleCardState extends State<_PoleCard> {
                         ),
                         elevation: 2,
                       ),
-                      icon: const Icon(Icons.school_rounded, size: 20),
+                      icon: Icon(
+                        isEcommerce
+                            ? Icons.open_in_new_rounded
+                            : isServices
+                                ? Icons.request_quote_rounded
+                                : Icons.school_rounded,
+                        size: 20,
+                      ),
                       label: Text(
-                        'Accéder aux Formations (Actif)',
+                        isEcommerce
+                            ? 'Accéder à la boutique malintic.com'
+                            : isServices
+                                ? 'Demander un devis personnalisé'
+                                : 'Accéder aux Formations (Actif)',
                         style: GoogleFonts.poppins(
                           fontWeight: FontWeight.w700,
                           fontSize: 14,
                         ),
                       ),
-                      onPressed: () {
+                      onPressed: () async {
                         Navigator.of(ctx).pop();
+                        if (isEcommerce) {
+                          final uri = Uri.parse(pole.url ?? 'https://malintic.com');
+                          try {
+                            await launchUrl(uri, mode: LaunchMode.externalApplication);
+                          } catch (_) {}
+                          return;
+                        }
+                        if (isServices) {
+                          final uri = Uri.parse(
+                            'mailto:contact@m-ntic.ml?subject=Demande%20de%20devis%20-%20Prestations',
+                          );
+                          try {
+                            await launchUrl(uri, mode: LaunchMode.externalApplication);
+                          } catch (_) {}
+                          return;
+                        }
                         Navigator.of(context).push(
                           MaterialPageRoute(
                             builder: (context) => const SignInPage(poleName: 'Formations'),
@@ -428,10 +515,10 @@ class _PoleCardState extends State<_PoleCard> {
                         );
                       },
                     ),
-                    const SizedBox(height: 10),
+                    if (!isServices) const SizedBox(height: 10),
 
                     // Secondary CTA: Contact / Assistance
-                    OutlinedButton.icon(
+                    if (!isServices) OutlinedButton.icon(
                       style: OutlinedButton.styleFrom(
                         foregroundColor: textColor,
                         side: BorderSide(
@@ -461,6 +548,7 @@ class _PoleCardState extends State<_PoleCard> {
                   ],
                 ),
               ],
+            ),
             ),
           ),
         ),
