@@ -898,7 +898,7 @@ app.get('/api/:collection/:id', (req, res) => {
   res.json(publicDocument(collection, item));
 });
 
-app.put('/api/:collection/:id', (req, res) => {
+function handleCollectionPut(req, res) {
   const { collection, id } = req.params;
   if (!isCollection(collection)) return res.status(404).json({ error: 'Collection inconnue' });
   const session = sessionFromRequest(req);
@@ -973,6 +973,13 @@ app.put('/api/:collection/:id', (req, res) => {
   else list.push(data);
   writeState(state);
   res.json(publicDocument(collection, data));
+}
+
+app.put('/api/:collection/:id', handleCollectionPut);
+app.post('/api/:collection/:id', handleCollectionPut);
+app.post('/api/:collection', (req, res) => {
+  req.params.id = req.body?.id || `${req.params.collection}_${Date.now()}`;
+  return handleCollectionPut(req, res);
 });
 
 app.delete('/api/audit_logs/clear', requireAdministrator, (req, res) => {
