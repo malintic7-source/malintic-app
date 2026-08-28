@@ -201,6 +201,7 @@ class _HomeScreenState extends State<HomeScreen> {
       case 'Stagiaires / Apprenants':
         return const AdminApprenants();
       case 'Paiements':
+      case 'Paiements & Caisse':
         return const AdminPaiements();
       case 'Utilisateurs & Rôles':
         return const AdminUsers();

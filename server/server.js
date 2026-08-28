@@ -512,6 +512,17 @@ function enqueueSyncDocument(collection, doc, deleted = false) {
 // ─── Snapshot des IDs précédents pour sync différentielle ────────────────────
 const _prevIds = { formations: new Set(), users: new Set(), inscriptions: new Set(), payments: new Set() };
 const _syncTables = ['formations', 'users', 'inscriptions', 'payments'];
+let _lastSyncHash = '';
+let _lastSyncTime = 0;
+const SYNC_THROTTLE_MS = 30_000; // sync Supabase max toutes les 30 secondes
+
+function _stateHash(state) {
+  // Hash léger basé sur les IDs + versions des documents
+  const parts = _syncTables.map(t =>
+    (state[t] || []).map(r => `${r.id}:${r.dateModification || r.dateCreation || ''}`).join(',')
+  );
+  return parts.join('|');
+}
 
 function writeState(state) {
   const temporary = `${dataFile}.tmp`;
@@ -522,9 +533,20 @@ function writeState(state) {
   _stateCacheDirty = false;
   _stateVersion = Date.now().toString();
 
-  // Sync différentielle vers Supabase (ne bloque pas la réponse HTTP)
+  // Sync différentielle vers Supabase avec throttle (ne bloque pas la réponse HTTP)
+  const now = Date.now();
+  const hash = _stateHash(state);
+  const hasChanged = hash !== _lastSyncHash;
+  const canSync = (now - _lastSyncTime) >= SYNC_THROTTLE_MS;
+
+  if (!hasChanged) return; // Rien n'a changé, pas besoin de sync
+  if (!canSync && _lastSyncTime > 0) return; // Throttle actif
+
+  _lastSyncHash = hash;
+  _lastSyncTime = now;
+
   const mappers = { formations: _mapFormation, users: _mapUser, inscriptions: _mapInscription, payments: _mapPayment };
-  const snap = {}; // snapshot des IDs actuels
+  const snap = {};
   for (const t of _syncTables) snap[t] = new Set((state[t] || []).map(r => r.id));
 
   _syncQueue.push(async () => {
