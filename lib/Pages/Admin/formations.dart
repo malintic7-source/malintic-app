@@ -1315,7 +1315,7 @@ class _AdminFormationsState extends State<AdminFormations>
                               ),
                               _buildInfoRowCompact(
                                 'Places',
-                                '${formation.nombreInscrits ?? 0}/${formation.capaciteMax ?? 0}',
+                                '${_db.getStudentsForFormation(formation.id).length}/${formation.capaciteMax ?? 0}',
                               ),
                             ],
                           ),

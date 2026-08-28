@@ -77,6 +77,7 @@ class _AdminPlanningState extends State<AdminPlanning>
         // Extract all session items with metadata
         final allSessions = <_SessionEntry>[];
         for (final formation in formations) {
+          final totalFormationStudents = _db.getStudentsForFormation(formation.id).length;
           for (int i = 0; i < formation.horaires.length; i++) {
             final horaire = formation.horaires[i];
             final enrolledStudents = _db.getStudentsForFormationModule(
@@ -116,6 +117,7 @@ class _AdminPlanningState extends State<AdminPlanning>
                 formateurId: formateurId,
                 formateurNom: formateurNom,
                 enrolledStudents: enrolledStudents,
+                totalFormationStudents: totalFormationStudents,
                 conflicts: sessionConflicts,
               ),
             );
@@ -1534,15 +1536,28 @@ class _AdminPlanningState extends State<AdminPlanning>
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
-                        color: AppTheme.success.withValues(alpha: 0.1),
+                        color: (students.isNotEmpty
+                                ? AppTheme.success
+                                : (entry.totalFormationStudents > 0
+                                    ? Colors.amber.shade700
+                                    : Colors.grey))
+                            .withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
-                        '${students.length} apprenant${students.length > 1 ? 's' : ''}',
+                        students.isNotEmpty
+                            ? '${students.length} apprenant${students.length > 1 ? 's' : ''}'
+                            : (entry.totalFormationStudents > 0
+                                ? '0 sur ${entry.totalFormationStudents} inscrit${entry.totalFormationStudents > 1 ? 's' : ''}'
+                                : '0 apprenant'),
                         style: GoogleFonts.poppins(
                           fontSize: 10,
                           fontWeight: FontWeight.w600,
-                          color: AppTheme.success,
+                          color: students.isNotEmpty
+                              ? AppTheme.success
+                              : (entry.totalFormationStudents > 0
+                                  ? Colors.amber.shade900
+                                  : Colors.grey.shade600),
                         ),
                       ),
                     ),
@@ -1866,8 +1881,12 @@ class _AdminPlanningState extends State<AdminPlanning>
                             borderRadius: BorderRadius.circular(8),
                             child: _buildChip(
                               Icons.groups_rounded,
-                              '$groupName (${students.length} inscrit${students.length > 1 ? 's' : ''})',
-                              Colors.indigo,
+                              students.isNotEmpty
+                                  ? '$groupName (${students.length} inscrit${students.length > 1 ? 's' : ''})'
+                                  : (entry.totalFormationStudents > 0
+                                      ? '$groupName (0 sur ${entry.totalFormationStudents} inscrit${entry.totalFormationStudents > 1 ? 's' : ''})'
+                                      : '$groupName (0 inscrit)'),
+                              students.isNotEmpty ? Colors.indigo : (entry.totalFormationStudents > 0 ? Colors.amber.shade900 : Colors.grey),
                               isClickable: true,
                             ),
                           ),
@@ -2080,17 +2099,102 @@ class _AdminPlanningState extends State<AdminPlanning>
           ],
         ),
         content: SizedBox(
-          width: 500,
+          width: 520,
           child: students.isEmpty
-              ? Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 24),
-                  child: Center(
-                    child: Text(
-                      'Aucun apprenant n\'est encore inscrit à ce module.',
-                      style: GoogleFonts.poppins(color: AppTheme.textSecondary),
-                    ),
-                  ),
-                )
+              ? (entry.totalFormationStudents > 0
+                  ? Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: Colors.amber.shade300),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(Icons.info_outline_rounded, size: 18, color: Colors.amber.shade900),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      '0 apprenant inscrit à ce module spécifique',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 12.5,
+                                        fontWeight: FontWeight.w700,
+                                        color: Colors.amber.shade900,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                'Aucun apprenant n\'a sélectionné le module « ${entry.horaire.module ?? 'Tronc commun'} ».\nLa formation « ${entry.formation.titre} » compte au total ${entry.totalFormationStudents} apprenant${entry.totalFormationStudents > 1 ? 's' : ''} inscrit${entry.totalFormationStudents > 1 ? 's' : ''} (liste ci-dessous) :',
+                                style: GoogleFonts.poppins(fontSize: 11.5, color: Colors.brown.shade800),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Tous les apprenants inscrits à « ${entry.formation.titre} » :',
+                          style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(height: 8),
+                        Flexible(
+                          child: ListView.separated(
+                            shrinkWrap: true,
+                            itemCount: _db.getStudentsForFormation(entry.formation.id).length,
+                            separatorBuilder: (ctx, i) => const Divider(height: 1),
+                            itemBuilder: (ctx, i) {
+                              final s = _db.getStudentsForFormation(entry.formation.id)[i];
+                              final assignment = s.assignedFormations.firstWhere(
+                                (a) => a['formationId'] == entry.formation.id,
+                                orElse: () => <String, dynamic>{},
+                              );
+                              final rawMods = (assignment['modules'] as List<dynamic>? ?? [])
+                                  .map((m) => m is Map ? m['title']?.toString() ?? '' : m.toString())
+                                  .where((m) => m.isNotEmpty)
+                                  .join(', ');
+
+                              return ListTile(
+                                dense: true,
+                                contentPadding: EdgeInsets.zero,
+                                leading: CircleAvatar(
+                                  radius: 16,
+                                  backgroundColor: AppTheme.primary.withValues(alpha: 0.12),
+                                  child: Text(
+                                    s.prenom.isNotEmpty ? s.prenom[0].toUpperCase() : '?',
+                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppTheme.primary),
+                                  ),
+                                ),
+                                title: Text(s.nomComplet, style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 12.5)),
+                                subtitle: Text(
+                                  rawMods.isNotEmpty ? 'Modules choisis : $rawMods' : s.email,
+                                  style: GoogleFonts.poppins(fontSize: 10.5, color: AppTheme.textSecondary),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    )
+                  : Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 24),
+                      child: Center(
+                        child: Text(
+                          'Aucun apprenant n\'est encore inscrit à cette formation.',
+                          style: GoogleFonts.poppins(color: AppTheme.textSecondary),
+                        ),
+                      ),
+                    ))
               : ListView.separated(
                   shrinkWrap: true,
                   itemCount: students.length,
@@ -2491,25 +2595,26 @@ class _AdminPlanningState extends State<AdminPlanning>
 
                     // Module selector (if available)
                     if (currentFormation.modules.isNotEmpty) ...[
-                      DropdownButtonFormField<String>(
-                        initialValue:
-                            currentFormation.modules.contains(selectedModule)
-                            ? selectedModule
-                            : currentFormation.modules.first,
+                      DropdownButtonFormField<String?>(
+                        initialValue: currentFormation.modules.contains(selectedModule) ? selectedModule : null,
                         decoration: const InputDecoration(
                           labelText: 'Module concerné *',
                           border: OutlineInputBorder(),
                           isDense: true,
                         ),
                         isExpanded: true,
-                        items: currentFormation.modules
-                            .map(
-                              (m) => DropdownMenuItem(
-                                value: m,
-                                child: Text(m, overflow: TextOverflow.ellipsis),
-                              ),
-                            )
-                            .toList(),
+                        items: [
+                          const DropdownMenuItem<String?>(
+                            value: null,
+                            child: Text('Tous les modules (Tronc commun - Tous les apprenants)', style: TextStyle(fontWeight: FontWeight.bold)),
+                          ),
+                          ...currentFormation.modules.map(
+                            (m) => DropdownMenuItem<String?>(
+                              value: m,
+                              child: Text(m, overflow: TextOverflow.ellipsis),
+                            ),
+                          ),
+                        ],
                         onChanged: (val) {
                           setDialogState(() {
                             selectedModule = val;
@@ -2520,89 +2625,103 @@ class _AdminPlanningState extends State<AdminPlanning>
                     ],
 
                     // AUTOMATIC GROUP BADGE & STUDENTS PREVIEW
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primary.withValues(alpha: 0.06),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: AppTheme.primary.withValues(alpha: 0.2),
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.groups_rounded,
-                                size: 18,
-                                color: AppTheme.primary,
-                              ),
-                              const SizedBox(width: 6),
-                              Expanded(
-                                child: Text(
-                                  'Groupe constitué automatiquement :',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w700,
-                                    color: AppTheme.primary,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            customGroupController.text.trim().isNotEmpty
-                                ? customGroupController.text.trim()
-                                : autoGroupName,
-                            style: GoogleFonts.poppins(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.black87,
+                    Builder(
+                      builder: (context) {
+                        final totalInFormation = _db.getStudentsForFormation(currentFormation.id).length;
+                        return Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: AppTheme.primary.withValues(alpha: 0.06),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: AppTheme.primary.withValues(alpha: 0.2),
                             ),
                           ),
-                          const SizedBox(height: 6),
-                          Row(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 3,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.green.withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  '${enrolledStudents.length} apprenant${enrolledStudents.length > 1 ? 's' : ''} inscrit${enrolledStudents.length > 1 ? 's' : ''}',
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.green,
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.groups_rounded,
+                                    size: 18,
+                                    color: AppTheme.primary,
                                   ),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      'Groupe constitué automatiquement :',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppTheme.primary,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                customGroupController.text.trim().isNotEmpty
+                                    ? customGroupController.text.trim()
+                                    : autoGroupName,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black87,
                                 ),
                               ),
-                              if (trainerUser != null) ...[
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    '👨‍🏫 ${trainerUser.nomComplet}',
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 11,
-                                      color: Colors.teal,
-                                      fontWeight: FontWeight.w600,
+                              const SizedBox(height: 6),
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 3,
                                     ),
-                                    overflow: TextOverflow.ellipsis,
+                                    decoration: BoxDecoration(
+                                      color: (enrolledStudents.isNotEmpty
+                                              ? Colors.green
+                                              : (totalInFormation > 0 ? Colors.amber.shade700 : Colors.grey))
+                                          .withValues(alpha: 0.15),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      enrolledStudents.isNotEmpty
+                                          ? '${enrolledStudents.length} apprenant${enrolledStudents.length > 1 ? 's' : ''} inscrit${enrolledStudents.length > 1 ? 's' : ''}'
+                                          : (totalInFormation > 0
+                                              ? '0 sur $totalInFormation inscrit${totalInFormation > 1 ? 's' : ''} à la formation'
+                                              : '0 apprenant inscrit'),
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: enrolledStudents.isNotEmpty
+                                            ? Colors.green.shade800
+                                            : (totalInFormation > 0 ? Colors.amber.shade900 : Colors.grey.shade700),
+                                      ),
+                                    ),
                                   ),
-                                ),
-                              ],
+                                  if (trainerUser != null) ...[
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        '👨‍🏫 ${trainerUser.nomComplet}',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 11,
+                                          color: Colors.teal,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
                             ],
                           ),
-                        ],
-                      ),
+                        );
+                      },
                     ),
                     const SizedBox(height: 14),
 
@@ -3107,6 +3226,7 @@ class _SessionEntry {
   final String? formateurId;
   final String? formateurNom;
   final List<User> enrolledStudents;
+  final int totalFormationStudents;
   final List<String> conflicts;
 
   _SessionEntry({
@@ -3116,6 +3236,7 @@ class _SessionEntry {
     this.formateurId,
     this.formateurNom,
     required this.enrolledStudents,
+    this.totalFormationStudents = 0,
     this.conflicts = const [],
   });
 
