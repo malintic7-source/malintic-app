@@ -3032,105 +3032,124 @@ class _AdminApprenantsState extends State<AdminApprenants>
                       );
                     },
                   ),
+                  // ── Planning de la semaine ──────────────────────────
+                  const Divider(height: 28),
+                  // ── Boutons actions pleine-largeur ──────────────────
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.description_rounded, size: 16),
+                    label: const Text('Fiche Dossier PDF'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppTheme.primary,
+                      side: const BorderSide(color: AppTheme.primary),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    onPressed: () => _generateStudentDossierPdf(userId, data),
+                  ),
+                  const SizedBox(height: 8),
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.badge_rounded, size: 16),
+                    label: const Text('Carte Étudiant'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppTheme.primary,
+                      side: const BorderSide(color: AppTheme.primary),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    onPressed: () async {
+                      try {
+                        final pdfBytes = await PdfService().generateStudentCardPdf(
+                          prenom: data['prenom'] ?? '',
+                          nom: data['nom'] ?? '',
+                          email: data['email'] ?? '',
+                          telephone: data['phone'] ?? data['telephone'] ?? 'N/A',
+                          matricule: data['matricule'],
+                        );
+                        await PdfService().printOrDownloadPdf(
+                          pdfBytes: pdfBytes,
+                          filename: 'carte_${data['nom'] ?? 'etudiant'}.pdf',
+                        );
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: $e')));
+                        }
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.verified_rounded, size: 16, color: Color(0xFF0D9488)),
+                    label: const Text('Fin de formation'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF0D9488),
+                      side: const BorderSide(color: Color(0xFF0D9488)),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _showStudentFormationCompletionDialog(userId, data);
+                    },
+                  ),
+                  if (_isStudentEligibleForAttestation(userId, data)) ...[
+                    const SizedBox(height: 8),
+                    ElevatedButton.icon(
+                      icon: const Icon(Icons.workspace_premium_rounded, size: 16, color: Color(0xFFFBBF24)),
+                      label: const Text('Télécharger Attestation'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF1E3A8A),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      onPressed: () async {
+                        try {
+                          final email = (data['email'] ?? '').toString();
+                          final userInscriptions = _db.getInscriptions().where((ins) =>
+                              (ins.email?.toLowerCase() == email.toLowerCase() || ins.etudiantId == userId) &&
+                              ins.status == InscriptionStatus.acceptee).toList();
+                          final firstValid = userInscriptions.firstWhere(
+                            (ins) => _db.isStudentFormationCompleted(studentId: userId, formationId: ins.formationId) && _db.getInscriptionBalance(ins.id) <= 0,
+                            orElse: () => userInscriptions.first,
+                          );
+                          final formation = _db.getFormationById(firstValid.formationId) ??
+                              Formation(
+                                id: firstValid.formationId,
+                                titre: 'Formation Professionnelle',
+                                description: '',
+                                modules: [],
+                                prix: 0,
+                                type: FormationType.presentielle,
+                                status: FormationStatus.terminee,
+                                dureeSemaines: 12,
+                                horaires: const [],
+                                dateCreation: DateTime.now(),
+                                formateurIds: const [],
+                              );
+                          final pdfBytes = await PdfService().generateAttestationPdf(
+                            inscription: firstValid,
+                            formation: formation,
+                          );
+                          await PdfService().printOrDownloadPdf(
+                            pdfBytes: pdfBytes,
+                            filename: 'Attestation_${data['prenom'] ?? ''}_${data['nom'] ?? 'etudiant'}_${formation.titre}.pdf',
+                          );
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: $e')));
+                          }
+                        }
+                      },
+                    ),
+                  ],
+                  const SizedBox(height: 4),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: Text('Fermer', style: GoogleFonts.poppins(color: AppTheme.textSecondary)),
+                  ),
                 ],
               ),
             ),
-            actions: [
-              OutlinedButton.icon(
-                icon: const Icon(Icons.description_rounded, size: 16, color: Color(0xFF1D447A)),
-                label: const Text('Fiche Dossier PDF'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF1D447A),
-                  side: const BorderSide(color: Color(0xFF1D447A)),
-                ),
-                onPressed: () => _generateStudentDossierPdf(userId, data),
-              ),
-              OutlinedButton.icon(
-                icon: const Icon(Icons.badge_rounded, size: 16),
-                label: const Text('Carte Étudiant'),
-                onPressed: () async {
-                  try {
-                    final pdfBytes = await PdfService().generateStudentCardPdf(
-                      prenom: data['prenom'] ?? '',
-                      nom: data['nom'] ?? '',
-                      email: data['email'] ?? '',
-                      telephone: data['phone'] ?? data['telephone'] ?? 'N/A',
-                      matricule: data['matricule'],
-                    );
-                    await PdfService().printOrDownloadPdf(
-                      pdfBytes: pdfBytes,
-                      filename: 'carte_${data['nom'] ?? 'etudiant'}.pdf',
-                    );
-                  } catch (e) {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: $e')));
-                    }
-                  }
-                },
-              ),
-              OutlinedButton.icon(
-                icon: const Icon(Icons.verified_rounded, size: 16, color: Color(0xFF0D9488)),
-                label: const Text('Fin de formation'),
-                onPressed: () {
-                  Navigator.pop(context);
-                  _showStudentFormationCompletionDialog(userId, data);
-                },
-              ),
-              if (_isStudentEligibleForAttestation(userId, data))
-                ElevatedButton.icon(
-                  icon: const Icon(Icons.workspace_premium_rounded, size: 16, color: Color(0xFFFBBF24)),
-                  label: const Text('Télécharger Attestation'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF1E3A8A),
-                    foregroundColor: Colors.white,
-                  ),
-                  onPressed: () async {
-                    try {
-                      final email = (data['email'] ?? '').toString();
-                      final userInscriptions = _db.getInscriptions().where((ins) =>
-                          (ins.email?.toLowerCase() == email.toLowerCase() || ins.etudiantId == userId) &&
-                          ins.status == InscriptionStatus.acceptee).toList();
-                      
-                      final firstValid = userInscriptions.firstWhere(
-                        (ins) => _db.isStudentFormationCompleted(studentId: userId, formationId: ins.formationId) && _db.getInscriptionBalance(ins.id) <= 0,
-                        orElse: () => userInscriptions.first,
-                      );
-
-                      final formation = _db.getFormationById(firstValid.formationId) ??
-                          Formation(
-                            id: firstValid.formationId,
-                            titre: 'Formation Professionnelle',
-                            description: '',
-                            modules: [],
-                            prix: 0,
-                            type: FormationType.presentielle,
-                            status: FormationStatus.terminee,
-                            dureeSemaines: 12,
-                            horaires: const [],
-                            dateCreation: DateTime.now(),
-                            formateurIds: const [],
-                          );
-
-                      final pdfBytes = await PdfService().generateAttestationPdf(
-                        inscription: firstValid,
-                        formation: formation,
-                      );
-                      await PdfService().printOrDownloadPdf(
-                        pdfBytes: pdfBytes,
-                        filename: 'Attestation_${data['prenom'] ?? ''}_${data['nom'] ?? 'etudiant'}_${formation.titre}.pdf',
-                      );
-                    } catch (e) {
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: $e')));
-                      }
-                    }
-                  },
-                ),
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Fermer'),
-              ),
-            ],
           ),
         );
       },
