@@ -221,61 +221,247 @@ class _PoleCard extends StatefulWidget {
 class _PoleCardState extends State<_PoleCard> {
   bool _isHovered = false;
 
-  void _onTap(BuildContext context) async {
+  void _onTap(BuildContext context) {
     if (widget.pole.isFormations) {
       Navigator.of(context).push(
         MaterialPageRoute(
           builder: (context) => const SignInPage(poleName: 'Formations'),
         ),
       );
-    } else if (widget.pole.url != null && widget.pole.url!.isNotEmpty) {
-      final uri = Uri.parse(widget.pole.url!);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } else {
-        if (!context.mounted) return;
-        _showInfoDialog(context);
-      }
     } else {
-      _showInfoDialog(context);
+      _showComingSoonDialog(context, widget.pole);
     }
   }
 
-  void _showInfoDialog(BuildContext context) {
+  void _showComingSoonDialog(BuildContext context, PoleItem pole) {
+    final isDark = widget.isDark;
+    final dialogBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final textColor = isDark ? Colors.white : const Color(0xFF0F172A);
+    final subtitleColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+
+    String detailMessage = '';
+    String poleSubtitle = '';
+
+    if (pole.title == 'Prestations') {
+      poleSubtitle = 'Audit, Conseil & Solutions Numériques';
+      detailMessage =
+          'Le portail des prestations professionnelles M@LI-NTIC (développement sur-mesure, maintenance de systèmes, audit informatique et cybersécurité) est actuellement en cours de préparation pour la production.\n\n'
+          'En attendant son ouverture sur la plateforme, notre équipe technique et commerciale reste à votre disposition pour étudier vos besoins et établir vos devis personnalisés.';
+    } else if (pole.title == 'e-Commerce') {
+      poleSubtitle = 'Équipements, Logiciels & Accessoires';
+      detailMessage =
+          'La boutique en ligne M@LI-NTIC prépare l’intégration de son catalogue officiel d’équipements informatiques, ordinateurs de pointe, licences et accessoires certifiés.\n\n'
+          'Le module de commande et de paiement en ligne sera ouvert très prochainement. Pour toute acquisition institutionnelle urgente, contactez notre service commercial.';
+    } else if (pole.title == 'Incubator') {
+      poleSubtitle = 'Accompagnement & Accélération de Startups';
+      detailMessage =
+          'L’espace Incubateur & Accélérateur M@LI-NTIC structure ses prochains programmes d’immersion, mentorat technologique et accélération pour les porteurs de projets innovants.\n\n'
+          'Les inscriptions pour la prochaine session seront ouvertes sous peu. N’hésitez pas à vous rapprocher de la direction pour toute information préalable.';
+    } else {
+      poleSubtitle = 'Module en cours de finalisation';
+      detailMessage =
+          'Ce service est actuellement en cours de finalisation par nos équipes d’ingénierie et sera déployé prochainement sur la plateforme.';
+    }
+
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(colors: widget.pole.gradientColors),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(widget.pole.icon, color: Colors.white, size: 22),
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 480),
+          child: Container(
+            decoration: BoxDecoration(
+              color: dialogBg,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: isDark ? 0.4 : 0.15),
+                  blurRadius: 30,
+                  offset: const Offset(0, 10),
+                ),
+              ],
             ),
-            const SizedBox(width: 14),
-            Text(
-              widget.pole.title,
-              style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 18),
-            ),
-          ],
-        ),
-        content: Text(
-          widget.pole.description,
-          style: GoogleFonts.poppins(fontSize: 14, height: 1.5),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(
-              'Fermer',
-              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header with Badge and Close Icon
+                Row(
+                  children: [
+                    Container(
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: pole.gradientColors,
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: [
+                          BoxShadow(
+                            color: pole.gradientColors.first.withValues(alpha: 0.3),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Center(
+                        child: Icon(pole.icon, color: Colors.white, size: 26),
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            pole.title,
+                            style: GoogleFonts.poppins(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 19,
+                              color: textColor,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            poleSubtitle,
+                            style: GoogleFonts.poppins(
+                              fontWeight: FontWeight.w500,
+                              fontSize: 12,
+                              color: pole.primaryColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.of(ctx).pop(),
+                      icon: Icon(Icons.close_rounded, color: subtitleColor),
+                      splashRadius: 20,
+                      tooltip: 'Fermer',
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // Status Badge
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: pole.primaryColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: pole.primaryColor.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: pole.primaryColor,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Déploiement en cours • Bientôt disponible',
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: pole.primaryColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Professional Message Body
+                Text(
+                  detailMessage,
+                  style: GoogleFonts.poppins(
+                    fontSize: 13.5,
+                    height: 1.55,
+                    color: subtitleColor,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Action Buttons
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Primary CTA: Go to Formations (Production ready)
+                    ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF2563EB),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        elevation: 2,
+                      ),
+                      icon: const Icon(Icons.school_rounded, size: 20),
+                      label: Text(
+                        'Accéder aux Formations (Actif)',
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                        ),
+                      ),
+                      onPressed: () {
+                        Navigator.of(ctx).pop();
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const SignInPage(poleName: 'Formations'),
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 10),
+
+                    // Secondary CTA: Contact / Assistance
+                    OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: textColor,
+                        side: BorderSide(
+                          color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      icon: const Icon(Icons.support_agent_rounded, size: 18),
+                      label: Text(
+                        'Contacter la Direction / Support',
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        ),
+                      ),
+                      onPressed: () async {
+                        Navigator.of(ctx).pop();
+                        final uri = Uri.parse('mailto:contact@m-ntic.ml?subject=Demande%20d%27information%20-%20P%C3%B4le%20${Uri.encodeComponent(pole.title)}');
+                        try {
+                          await launchUrl(uri, mode: LaunchMode.externalApplication);
+                        } catch (_) {}
+                      },
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
