@@ -69,13 +69,16 @@ if "%CHOIX%"=="3" (
     echo.
     echo   1. Connectez l'autre appareil (PC, Tablette, Telephone) au meme Wi-Fi.
     echo   2. Ouvrez le navigateur (Chrome, Edge, Safari).
-    echo   3. Entrez directement l'adresse suivante (SANS :8080) :
+    echo   3. Entrez directement l'une des adresses suivantes :
     echo.
     if defined LOCAL_IP (
         echo      👉 http://!LOCAL_IP!
+        echo      👉 http://!LOCAL_IP!:8000
     ) else (
         echo      👉 http://%COMPUTERNAME%
     )
+    echo.
+    echo   (Note : Ne pas utiliser le port 8080 qui est reserve a XAMPP)
     echo.
     echo ======================================================================
     pause
