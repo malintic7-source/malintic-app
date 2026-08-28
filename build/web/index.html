@@ -236,8 +236,8 @@
     // Auto-update Service Worker on iOS & Android to prevent stale cache
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.addEventListener('controllerchange', function() {
-        // When new service worker activates, refresh smoothly if needed
-        console.log('[M@LINTIC] Nouveau Service Worker activé.');
+        console.log('[M@LINTIC] Nouveau Service Worker activé, rechargement...');
+        window.location.reload();
       });
       navigator.serviceWorker.getRegistrations().then(function(registrations) {
         for (let registration of registrations) {
@@ -251,6 +251,14 @@
       setTimeout(hideLoadingScreen, 1500);
     });
   </script>
-  <script src="flutter_bootstrap.js" async></script>
+  <script>
+    // Dynamic bootstrap loader with cache buster to guarantee latest build on mobile
+    (function() {
+      var s = document.createElement('script');
+      s.src = 'flutter_bootstrap.js?v=' + Date.now();
+      s.async = true;
+      document.body.appendChild(s);
+    })();
+  </script>
 </body>
 </html>
