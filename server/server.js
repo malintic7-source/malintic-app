@@ -509,6 +509,10 @@ function enqueueSyncDocument(collection, doc, deleted = false) {
   setImmediate(_drainSyncQueue);
 }
 
+// ─── Snapshot des IDs précédents pour sync différentielle ────────────────────
+const _prevIds = { formations: new Set(), users: new Set(), inscriptions: new Set(), payments: new Set() };
+const _syncTables = ['formations', 'users', 'inscriptions', 'payments'];
+
 function writeState(state) {
   const temporary = `${dataFile}.tmp`;
   fs.writeFileSync(temporary, JSON.stringify(state, null, 2));
@@ -517,8 +521,27 @@ function writeState(state) {
   _stateCache = state;
   _stateCacheDirty = false;
   _stateVersion = Date.now().toString();
-  // Synchronisation asynchrone vers Supabase (ne bloque pas la réponse HTTP)
-  enqueueSyncState(state);
+
+  // Sync différentielle vers Supabase (ne bloque pas la réponse HTTP)
+  const mappers = { formations: _mapFormation, users: _mapUser, inscriptions: _mapInscription, payments: _mapPayment };
+  const snap = {}; // snapshot des IDs actuels
+  for (const t of _syncTables) snap[t] = new Set((state[t] || []).map(r => r.id));
+
+  _syncQueue.push(async () => {
+    for (const t of _syncTables) {
+      const mapper = mappers[t];
+      const rows = state[t] || [];
+      // 1. Upsert tous les documents actuels
+      for (const row of rows) await _supabaseUpsert(t, mapper(row));
+      // 2. Supprimer dans Supabase les IDs qui n'existent plus dans Docker
+      for (const oldId of _prevIds[t]) {
+        if (!snap[t].has(oldId)) await _supabaseDelete(t, oldId);
+      }
+      // 3. Mettre à jour le snapshot des IDs connus
+      _prevIds[t] = snap[t];
+    }
+  });
+  setImmediate(_drainSyncQueue);
 }
 
 function isCollection(name) { return collections.includes(name); }
