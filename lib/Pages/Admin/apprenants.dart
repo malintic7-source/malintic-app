@@ -111,64 +111,63 @@ class _AdminApprenantsState extends State<AdminApprenants>
     return FadeTransition(
       opacity: _fadeController,
       child: isMobile
-          ? Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+          ? Row(
               children: [
-                Text(
-                  'Gérez les apprenants de votre plateforme',
-                  style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    color: AppTheme.textSecondary,
-                    fontWeight: FontWeight.w400,
-                    height: 1.3,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    IconButton(
-                      tooltip: _tableView ? 'Vue carte' : 'Vue tableau',
-                      onPressed: () => setState(() => _tableView = !_tableView),
-                      icon: Icon(
-                        _tableView ? Icons.view_agenda_rounded : Icons.grid_view_rounded,
-                      ),
-                      color: AppTheme.primary,
-                      iconSize: 22,
-                    ),
-                    const Spacer(),
-                    Container(
-                      decoration: BoxDecoration(
-                        gradient: AppTheme.heroGradient,
-                        borderRadius: BorderRadius.circular(10),
-                        boxShadow: AppTheme.heroShadow,
-                      ),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: () => _showCreateApprenantDialog(),
-                          borderRadius: BorderRadius.circular(10),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.add_rounded, color: Colors.white, size: 18),
-                                const SizedBox(width: 4),
-                                Text(
-                                  'Ajouter',
-                                  style: GoogleFonts.poppins(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Apprenants',
+                        style: GoogleFonts.poppins(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.black87,
                         ),
                       ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Gérez les apprenants de la plateforme',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          color: Colors.black54,
+                          fontWeight: FontWeight.w400,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 6),
+                IconButton(
+                  tooltip: _tableView ? 'Vue carte' : 'Vue tableau',
+                  onPressed: () => setState(() => _tableView = !_tableView),
+                  icon: Icon(
+                    _tableView ? Icons.view_agenda_rounded : Icons.grid_view_rounded,
+                  ),
+                  color: AppTheme.primary,
+                  iconSize: 22,
+                ),
+                const SizedBox(width: 4),
+                ElevatedButton.icon(
+                  onPressed: () => _showCreateApprenantDialog(),
+                  icon: const Icon(Icons.add_rounded, color: Colors.white, size: 18),
+                  label: Text(
+                    'Ajouter',
+                    style: GoogleFonts.poppins(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 12,
                     ),
-                  ],
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primary,
+                    foregroundColor: Colors.white,
+                    elevation: 2,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
                 ),
               ],
             )
@@ -208,36 +207,24 @@ class _AdminApprenantsState extends State<AdminApprenants>
                   color: AppTheme.primary,
                   iconSize: 24,
                 ),
-                Container(
-                  decoration: BoxDecoration(
-                    gradient: AppTheme.heroGradient,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: AppTheme.heroShadow,
-                  ),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: () => _showCreateApprenantDialog(),
-                      borderRadius: BorderRadius.circular(12),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.add_rounded, color: Colors.white, size: 20),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Ajouter',
-                              style: GoogleFonts.poppins(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                const SizedBox(width: 8),
+                ElevatedButton.icon(
+                  onPressed: () => _showCreateApprenantDialog(),
+                  icon: const Icon(Icons.add_rounded, color: Colors.white, size: 20),
+                  label: Text(
+                    'Ajouter Apprenant',
+                    style: GoogleFonts.poppins(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
                     ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primary,
+                    foregroundColor: Colors.white,
+                    elevation: 2,
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
               ],
@@ -261,17 +248,18 @@ class _AdminApprenantsState extends State<AdminApprenants>
       final color = col ?? AppTheme.primary;
       return AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
         decoration: BoxDecoration(
           color: active ? color.withValues(alpha: 0.1) : Colors.white,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(8),
           border: Border.all(color: active ? color : Colors.black12, width: active ? 1.5 : 1.0),
         ),
         child: DropdownButtonHideUnderline(
           child: DropdownButton<String>(
             value: val,
-            icon: Icon(Icons.arrow_drop_down_rounded, size: 20, color: active ? color : Colors.black54),
-            style: GoogleFonts.poppins(fontSize: 12, fontWeight: active ? FontWeight.w700 : FontWeight.w600, color: active ? color : Colors.black87),
+            isDense: true,
+            icon: Icon(Icons.arrow_drop_down_rounded, size: 18, color: active ? color : Colors.black54),
+            style: GoogleFonts.poppins(fontSize: 11.5, fontWeight: active ? FontWeight.w700 : FontWeight.w600, color: active ? color : Colors.black87),
             items: items,
             onChanged: cb,
           ),
@@ -282,111 +270,105 @@ class _AdminApprenantsState extends State<AdminApprenants>
     final filterBar = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Rangée 1 — filtres de base
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            buildFilterDd(
-              _selectedSexeFilter,
-              const [
-                DropdownMenuItem(value: 'Tous', child: Text('👤 Sexe: Tous')),
-                DropdownMenuItem(value: 'Homme', child: Text('♂ Homme')),
-                DropdownMenuItem(value: 'Femme', child: Text('♀ Femme')),
-              ],
-              (val) { if (val != null) { setState(() => _selectedSexeFilter = val); _applyFilter(); } },
-              active: _selectedSexeFilter != 'Tous', col: AppTheme.primary,
-            ),
-            buildFilterDd(
-              _selectedStatutFilter,
-              const [
-                DropdownMenuItem(value: 'Tous', child: Text('🔘 Statut: Tous')),
-                DropdownMenuItem(value: 'Actif', child: Text('✅ Actif')),
-                DropdownMenuItem(value: 'Inactif', child: Text('🚫 Bloqué')),
-              ],
-              (val) { if (val != null) { setState(() => _selectedStatutFilter = val); _applyFilter(); } },
-              active: _selectedStatutFilter != 'Tous', col: AppTheme.success,
-            ),
-            buildFilterDd(
-              _selectedFormationFilter,
-              [
-                const DropdownMenuItem(value: 'Toutes', child: Text('🎓 Formation: Toutes')),
-                ...formations.map((f) => DropdownMenuItem(value: f.id, child: Text(f.titre, overflow: TextOverflow.ellipsis))),
-              ],
-              (val) { if (val != null) { setState(() => _selectedFormationFilter = val); _applyFilter(); } },
-              active: _selectedFormationFilter != 'Toutes', col: AppTheme.accent,
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        // Rangée 2 — filtres avancés
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            buildFilterDd(
-              _selectedPeriodeFilter,
-              const [
-                DropdownMenuItem(value: 'Toutes', child: Text('📅 Période: Toutes')),
-                DropdownMenuItem(value: 'Ce mois', child: Text('Ce mois-ci')),
-                DropdownMenuItem(value: '3 mois', child: Text('3 derniers mois')),
-                DropdownMenuItem(value: '6 mois', child: Text('6 derniers mois')),
-                DropdownMenuItem(value: 'Cette année', child: Text('Cette année')),
-              ],
-              (val) { if (val != null) { setState(() => _selectedPeriodeFilter = val); _applyFilter(); } },
-              active: _selectedPeriodeFilter != 'Toutes', col: const Color(0xFF7C3AED),
-            ),
-            buildFilterDd(
-              _selectedPaiementFilter,
-              const [
-                DropdownMenuItem(value: 'Tous', child: Text('💳 Paiement: Tous')),
-                DropdownMenuItem(value: 'Paiement Complet', child: Text('✅ Payé (Complet)')),
-                DropdownMenuItem(value: 'Reste à payer', child: Text('⚠️ Reste à payer')),
-                DropdownMenuItem(value: 'Non payé', child: Text('❌ Non payé')),
-                DropdownMenuItem(value: 'Sans frais', child: Text('ℹ️ Sans frais')),
-              ],
-              (val) { if (val != null) { setState(() => _selectedPaiementFilter = val); _applyFilter(); } },
-              active: _selectedPaiementFilter != 'Tous', col: AppTheme.warningDark,
-            ),
-            buildFilterDd(
-              _selectedCompletionFilter,
-              const [
-                DropdownMenuItem(value: 'Tous', child: Text('🏁 Complétion: Tous')),
-                DropdownMenuItem(value: 'Au moins une terminée', child: Text('✅ Au moins terminée')),
-                DropdownMenuItem(value: 'En cours', child: Text('🔄 En cours')),
-                DropdownMenuItem(value: 'Aucune terminée', child: Text('⏳ Aucune terminée')),
-              ],
-              (val) { if (val != null) { setState(() => _selectedCompletionFilter = val); _applyFilter(); } },
-              active: _selectedCompletionFilter != 'Tous', col: const Color(0xFF0D9488),
-            ),
-            if (hasActiveFilters)
-              TextButton.icon(
-                onPressed: () {
-                  setState(() {
-                    _selectedSexeFilter = 'Tous';
-                    _selectedStatutFilter = 'Tous';
-                    _selectedFormationFilter = 'Toutes';
-                    _selectedPeriodeFilter = 'Toutes';
-                    _selectedPaiementFilter = 'Tous';
-                    _selectedCompletionFilter = 'Tous';
-                    searchController.clear();
-                  });
-                  _applyFilter();
-                },
-                icon: const Icon(Icons.filter_alt_off_rounded, size: 16, color: AppTheme.error),
-                label: Text('Réinitialiser', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.error)),
-                style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  backgroundColor: AppTheme.error.withValues(alpha: 0.08),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                ),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              buildFilterDd(
+                _selectedSexeFilter,
+                const [
+                  DropdownMenuItem(value: 'Tous', child: Text('👤 Sexe: Tous')),
+                  DropdownMenuItem(value: 'Homme', child: Text('♂ Homme')),
+                  DropdownMenuItem(value: 'Femme', child: Text('♀ Femme')),
+                ],
+                (val) { if (val != null) { setState(() => _selectedSexeFilter = val); _applyFilter(); } },
+                active: _selectedSexeFilter != 'Tous', col: AppTheme.primary,
               ),
-          ],
+              const SizedBox(width: 6),
+              buildFilterDd(
+                _selectedStatutFilter,
+                const [
+                  DropdownMenuItem(value: 'Tous', child: Text('🔘 Statut: Tous')),
+                  DropdownMenuItem(value: 'Actif', child: Text('✅ Actif')),
+                  DropdownMenuItem(value: 'Inactif', child: Text('🚫 Bloqué')),
+                ],
+                (val) { if (val != null) { setState(() => _selectedStatutFilter = val); _applyFilter(); } },
+                active: _selectedStatutFilter != 'Tous', col: AppTheme.success,
+              ),
+              const SizedBox(width: 6),
+              buildFilterDd(
+                _selectedFormationFilter,
+                [
+                  const DropdownMenuItem(value: 'Toutes', child: Text('🎓 Formation: Toutes')),
+                  ...formations.map((f) => DropdownMenuItem(value: f.id, child: Text(f.titre, overflow: TextOverflow.ellipsis))),
+                ],
+                (val) { if (val != null) { setState(() => _selectedFormationFilter = val); _applyFilter(); } },
+                active: _selectedFormationFilter != 'Toutes', col: AppTheme.primaryDark,
+              ),
+              const SizedBox(width: 6),
+              buildFilterDd(
+                _selectedPaiementFilter,
+                const [
+                  DropdownMenuItem(value: 'Tous', child: Text('💳 Paiement: Tous')),
+                  DropdownMenuItem(value: 'Paiement Complet', child: Text('✅ Payé')),
+                  DropdownMenuItem(value: 'Reste à payer', child: Text('⚠️ Reste')),
+                  DropdownMenuItem(value: 'Non payé', child: Text('❌ Non payé')),
+                ],
+                (val) { if (val != null) { setState(() => _selectedPaiementFilter = val); _applyFilter(); } },
+                active: _selectedPaiementFilter != 'Tous', col: const Color(0xFFD97706),
+              ),
+              const SizedBox(width: 6),
+              buildFilterDd(
+                _selectedPeriodeFilter,
+                const [
+                  DropdownMenuItem(value: 'Toutes', child: Text('📅 Période: Toutes')),
+                  DropdownMenuItem(value: 'Ce mois', child: Text('Ce mois-ci')),
+                  DropdownMenuItem(value: '3 mois', child: Text('3 derniers mois')),
+                  DropdownMenuItem(value: 'Cette année', child: Text('Cette année')),
+                ],
+                (val) { if (val != null) { setState(() => _selectedPeriodeFilter = val); _applyFilter(); } },
+                active: _selectedPeriodeFilter != 'Toutes', col: const Color(0xFF7C3AED),
+              ),
+              const SizedBox(width: 6),
+              buildFilterDd(
+                _selectedCompletionFilter,
+                const [
+                  DropdownMenuItem(value: 'Tous', child: Text('🏁 Complétion: Tous')),
+                  DropdownMenuItem(value: 'Au moins une terminée', child: Text('✅ Terminée')),
+                  DropdownMenuItem(value: 'En cours', child: Text('🔄 En cours')),
+                ],
+                (val) { if (val != null) { setState(() => _selectedCompletionFilter = val); _applyFilter(); } },
+                active: _selectedCompletionFilter != 'Tous', col: const Color(0xFF0D9488),
+              ),
+              if (hasActiveFilters) ...[
+                const SizedBox(width: 6),
+                TextButton.icon(
+                  onPressed: () {
+                    setState(() {
+                      _selectedSexeFilter = 'Tous';
+                      _selectedStatutFilter = 'Tous';
+                      _selectedFormationFilter = 'Toutes';
+                      _selectedPeriodeFilter = 'Toutes';
+                      _selectedPaiementFilter = 'Tous';
+                      _selectedCompletionFilter = 'Tous';
+                      searchController.clear();
+                    });
+                    _applyFilter();
+                  },
+                  icon: const Icon(Icons.filter_alt_off_rounded, size: 14, color: AppTheme.error),
+                  label: Text('Effacer', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: AppTheme.error)),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    backgroundColor: AppTheme.error.withValues(alpha: 0.08),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                ),
+              ],
+            ],
+          ),
         ),
         const SizedBox(height: 8),
-        // Compteur résultats
+        // Compteur résultats & bouton export
         Row(
           children: [
             Container(
@@ -396,14 +378,38 @@ class _AdminApprenantsState extends State<AdminApprenants>
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
-                '${_filteredUsers.length} apprenant${_filteredUsers.length != 1 ? "s" : ""} trouvé${_filteredUsers.length != 1 ? "s" : ""}',
+                '${_filteredUsers.length} apprenant${_filteredUsers.length != 1 ? "s" : ""}',
                 style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w700, color: AppTheme.primary),
               ),
             ),
             if (hasActiveFilters) ...[
-              const SizedBox(width: 8),
-              Text('(filtres actifs)', style: GoogleFonts.poppins(fontSize: 11, color: AppTheme.textMuted, fontStyle: FontStyle.italic)),
+              const SizedBox(width: 6),
+              Text('(filtré)', style: GoogleFonts.poppins(fontSize: 11, color: AppTheme.textMuted, fontStyle: FontStyle.italic)),
             ],
+            const Spacer(),
+            InkWell(
+              onTap: _exportApprenantsCSV,
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppTheme.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppTheme.primary.withValues(alpha: 0.2)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.file_download_rounded, size: 14, color: AppTheme.primary),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Export CSV',
+                      style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w700, color: AppTheme.primary),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       ],
@@ -434,7 +440,7 @@ class _AdminApprenantsState extends State<AdminApprenants>
               decoration: InputDecoration(
                 filled: true,
                 fillColor: Colors.white,
-                hintText: 'Rechercher...',
+                hintText: 'Rechercher par nom, email...',
                 hintStyle: GoogleFonts.poppins(
                   fontSize: 13,
                   color: Colors.black38,
@@ -456,23 +462,8 @@ class _AdminApprenantsState extends State<AdminApprenants>
               onChanged: (value) => _applyFilter(),
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           filterBar,
-          const SizedBox(height: 10),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: _exportApprenantsCSV,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primary,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              icon: const Icon(Icons.file_download_rounded, size: 18),
-              label: Text('Exporter CSV', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13)),
-            ),
-          ),
         ],
       );
     }

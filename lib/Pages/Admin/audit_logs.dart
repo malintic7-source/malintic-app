@@ -82,17 +82,15 @@ class _AdminAuditLogsState extends State<AdminAuditLogs> with TickerProviderStat
       opacity: _fadeController,
       child: Container(
         decoration: BoxDecoration(
-          gradient: AppTheme.heroGradient,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: AppTheme.primary.withValues(alpha: 0.25),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
+          gradient: const LinearGradient(
+            colors: [Color(0xFF003882), Color(0xFF0066CC)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(isMobile ? 14 : 16),
+          boxShadow: AppTheme.heroShadow,
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
+        padding: EdgeInsets.symmetric(horizontal: isMobile ? 14 : 22, vertical: isMobile ? 12 : 16),
         child: Row(
           children: [
             Expanded(
@@ -102,26 +100,32 @@ class _AdminAuditLogsState extends State<AdminAuditLogs> with TickerProviderStat
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.security_rounded, color: Colors.white, size: 22),
+                      const Icon(Icons.security_rounded, color: Colors.white, size: 20),
                       const SizedBox(width: 8),
-                      Text(
-                        'Journal d\'Audit & Traçabilité Système',
-                        style: GoogleFonts.poppins(
-                          fontSize: 18,
-                          color: Colors.white,
-                          fontWeight: FontWeight.w800,
+                      Expanded(
+                        child: Text(
+                          'Journal d\'Audit & Traçabilité',
+                          style: GoogleFonts.poppins(
+                            fontSize: isMobile ? 15 : 18,
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 3),
                   Text(
-                    'Suivi en temps réel de toutes les actions : qui a fait quoi, quand et sur quel élément.',
+                    'Suivi en temps réel de toutes les actions système.',
                     style: GoogleFonts.poppins(
-                      fontSize: 12,
+                      fontSize: isMobile ? 11 : 12,
                       color: Colors.white.withValues(alpha: 0.9),
                       fontWeight: FontWeight.w400,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
@@ -189,14 +193,15 @@ class _AdminAuditLogsState extends State<AdminAuditLogs> with TickerProviderStat
             final isCompact = constraints.maxWidth < 600;
 
             if (isCompact) {
+              final w = (constraints.maxWidth - 8) / 2;
               return Wrap(
-                spacing: 10,
-                runSpacing: 10,
+                spacing: 8,
+                runSpacing: 8,
                 children: [
-                  _buildKpiCard('Total des Logs', '${logs.length}', Icons.history_rounded, AppTheme.primary, (constraints.maxWidth - 10) / 2),
-                  _buildKpiCard('Aujourd\'hui', '$todayLogs', Icons.bolt_rounded, AppTheme.success, (constraints.maxWidth - 10) / 2),
-                  _buildKpiCard('Finances', '$financeLogs', Icons.payments_rounded, const Color(0xFFD97706), (constraints.maxWidth - 10) / 2),
-                  _buildKpiCard('Alertes/Suppr.', '$deleteLogs', Icons.warning_amber_rounded, AppTheme.error, (constraints.maxWidth - 10) / 2),
+                  _buildKpiCard('Total des Logs', '${logs.length}', Icons.history_rounded, AppTheme.primary, w),
+                  _buildKpiCard('Aujourd\'hui', '$todayLogs', Icons.bolt_rounded, AppTheme.success, w),
+                  _buildKpiCard('Finances', '$financeLogs', Icons.payments_rounded, const Color(0xFFD97706), w),
+                  _buildKpiCard('Alertes/Suppr.', '$deleteLogs', Icons.warning_amber_rounded, AppTheme.error, w),
                 ],
               );
             }
@@ -219,50 +224,63 @@ class _AdminAuditLogsState extends State<AdminAuditLogs> with TickerProviderStat
   }
 
   Widget _buildKpiCard(String label, String value, IconData icon, Color color, double width) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(10),
+    return SizedBox(
+      width: width,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
-            child: Icon(icon, color: color, size: 20),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  value,
-                  style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w800, color: Colors.black87),
-                ),
-                Text(
-                  label,
-                  style: GoogleFonts.poppins(fontSize: 11, color: Colors.black54, fontWeight: FontWeight.w500),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(7),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, color: color, size: 18),
             ),
-          ),
-        ],
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    value,
+                    style: GoogleFonts.poppins(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.black87,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    label,
+                    style: GoogleFonts.poppins(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.black54,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -584,7 +602,7 @@ class _AdminAuditLogsState extends State<AdminAuditLogs> with TickerProviderStat
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: Text(
-                                  log.userRole.toUpperCase(),
+                                  _formatRoleBadge(log.userRole),
                                   style: GoogleFonts.poppins(fontSize: 9, fontWeight: FontWeight.w800, color: AppTheme.primary),
                                 ),
                               ),
@@ -738,6 +756,31 @@ class _AdminAuditLogsState extends State<AdminAuditLogs> with TickerProviderStat
         ),
       );
       setState(() {});
+    }
+  }
+
+  String _formatRoleBadge(String role) {
+    final clean = role.replaceAll('UserRole.', '').toLowerCase().trim();
+    switch (clean) {
+      case 'admin':
+        return 'ADMIN';
+      case 'formateur':
+        return 'FORMATEUR';
+      case 'apprenant':
+      case 'etudiant':
+        return 'APPRENANT';
+      case 'dg':
+        return 'DG';
+      case 'daf':
+        return 'DAF';
+      case 'comptable':
+        return 'COMPTABLE';
+      case 'assistant':
+        return 'ASSISTANT';
+      case 'it':
+        return 'IT';
+      default:
+        return clean.isNotEmpty ? clean.toUpperCase() : 'SYSTÈME';
     }
   }
 }

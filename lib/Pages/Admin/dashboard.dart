@@ -395,6 +395,45 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
 
   // ========== 3. QUICK ACTIONS GRID ==========
   Widget _buildQuickActionsGrid(bool isMobile) {
+    final actions = [
+      {
+        'label': 'Nouveau Versement',
+        'icon': Icons.add_card_rounded,
+        'color': AppTheme.success,
+        'bg': const Color(0xFFECFDF5),
+        'onTap': () => _showQuickPaymentModal(context),
+      },
+      {
+        'label': 'Nouveau Stagiaire',
+        'icon': Icons.person_add_alt_1_rounded,
+        'color': AppTheme.primary,
+        'bg': const Color(0xFFEFF6FF),
+        'onTap': () => _showQuickAddStudentModal(context),
+      },
+      {
+        'label': 'Demandes à Valider',
+        'icon': Icons.fact_check_rounded,
+        'color': const Color(0xFFD97706),
+        'bg': const Color(0xFFFFFBEB),
+        'onTap': () {
+          if (widget.onNavigateTab != null) {
+            widget.onNavigateTab!(3);
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Accédez à l\'onglet Inscriptions dans le menu.')),
+            );
+          }
+        },
+      },
+      {
+        'label': 'Rapport Financier PDF',
+        'icon': Icons.picture_as_pdf_rounded,
+        'color': const Color(0xFFDC2626),
+        'bg': const Color(0xFFFEF2F2),
+        'onTap': _exportFinancialSummaryPdf,
+      },
+    ];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -413,92 +452,111 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
           ],
         ),
         const SizedBox(height: 10),
-        Wrap(
-          spacing: 10,
-          runSpacing: 8,
-          children: [
-            _buildQuickActionButton(
-              label: 'Nouveau Versement',
-              icon: Icons.add_card_rounded,
-              color: AppTheme.success,
-              onTap: () => _showQuickPaymentModal(context),
+        if (isMobile)
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 8,
+              mainAxisSpacing: 8,
+              childAspectRatio: 2.5,
             ),
-            _buildQuickActionButton(
-              label: 'Nouveau Stagiaire',
-              icon: Icons.person_add_alt_1_rounded,
-              color: AppTheme.primary,
-              onTap: () => _showQuickAddStudentModal(context),
-            ),
-            _buildQuickActionButton(
-              label: 'Demandes à Valider',
-              icon: Icons.fact_check_rounded,
-              color: AppTheme.warningDark,
-              onTap: () {
-                if (widget.onNavigateTab != null) {
-                  widget.onNavigateTab!(3);
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Accédez à l\'onglet Inscriptions dans le menu.')),
-                  );
-                }
-              },
-            ),
-            _buildQuickActionButton(
-              label: 'Rapport Financier PDF',
-              icon: Icons.picture_as_pdf_rounded,
-              color: const Color(0xFFE11D48),
-              onTap: _exportFinancialSummaryPdf,
-            ),
-          ],
-        ),
+            itemCount: actions.length,
+            itemBuilder: (context, index) {
+              final a = actions[index];
+              final col = a['color'] as Color;
+              final bg = a['bg'] as Color;
+              return Material(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                child: InkWell(
+                  onTap: a['onTap'] as VoidCallback,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: col.withValues(alpha: 0.2)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.02),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: bg,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(a['icon'] as IconData, color: col, size: 16),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            a['label'] as String,
+                            style: GoogleFonts.poppins(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: AppTheme.textPrimary,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          )
+        else
+          Wrap(
+            spacing: 10,
+            runSpacing: 8,
+            children: actions.map((a) {
+              final col = a['color'] as Color;
+              return Material(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
+                child: InkWell(
+                  onTap: a['onTap'] as VoidCallback,
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: col.withValues(alpha: 0.3)),
+                      color: (a['bg'] as Color).withValues(alpha: 0.6),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(a['icon'] as IconData, size: 18, color: col),
+                        const SizedBox(width: 8),
+                        Text(
+                          a['label'] as String,
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: col,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
       ],
-    );
-  }
-
-  Widget _buildQuickActionButton({
-    required String label,
-    required IconData icon,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(8),
-      elevation: 0,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: color.withValues(alpha: 0.35)),
-            color: color.withValues(alpha: 0.06),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(5),
-                decoration: BoxDecoration(
-                  color: color,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Icon(icon, color: Colors.white, size: 14),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                label,
-                style: GoogleFonts.poppins(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w600,
-                  color: color.withValues(alpha: 0.95),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 

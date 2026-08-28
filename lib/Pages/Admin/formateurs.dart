@@ -89,52 +89,52 @@ class _AdminFormateursState extends State<AdminFormateurs> with TickerProviderSt
     return FadeTransition(
       opacity: _fadeController,
       child: isMobile
-          ? Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+          ? Row(
               children: [
-                Text(
-                  'Gérez les formateurs et les affectations manuelles',
-                  style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    color: AppTheme.textSecondary,
-                    fontWeight: FontWeight.w400,
-                    height: 1.3,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      gradient: AppTheme.heroGradient,
-                      borderRadius: BorderRadius.circular(10),
-                      boxShadow: AppTheme.heroShadow,
-                    ),
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: () => _showAddFormateurDialog(),
-                        borderRadius: BorderRadius.circular(10),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.add_rounded, color: Colors.white, size: 18),
-                              const SizedBox(width: 6),
-                              Text(
-                                'Nouveau Formateur',
-                                style: GoogleFonts.poppins(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Formateurs',
+                        style: GoogleFonts.poppins(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.black87,
                         ),
                       ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Gérez les formateurs et les affectations',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          color: Colors.black54,
+                          fontWeight: FontWeight.w400,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton.icon(
+                  onPressed: () => _showAddFormateurDialog(),
+                  icon: const Icon(Icons.add_rounded, color: Colors.white, size: 18),
+                  label: Text(
+                    'Nouveau',
+                    style: GoogleFonts.poppins(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 12,
                     ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primary,
+                    foregroundColor: Colors.white,
+                    elevation: 2,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
                 ),
               ],
@@ -164,35 +164,23 @@ class _AdminFormateursState extends State<AdminFormateurs> with TickerProviderSt
                     ),
                   ],
                 ),
-                Container(
-                  decoration: BoxDecoration(
-                    gradient: AppTheme.heroGradient,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: AppTheme.heroShadow,
-                  ),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: () => _showAddFormateurDialog(),
-                      borderRadius: BorderRadius.circular(12),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.add_rounded, color: Colors.white, size: 20),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Ajouter',
-                              style: GoogleFonts.poppins(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                ElevatedButton.icon(
+                  onPressed: () => _showAddFormateurDialog(),
+                  icon: const Icon(Icons.add_rounded, color: Colors.white, size: 20),
+                  label: Text(
+                    'Nouveau Formateur',
+                    style: GoogleFonts.poppins(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
                     ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primary,
+                    foregroundColor: Colors.white,
+                    elevation: 2,
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
               ],
@@ -624,56 +612,132 @@ class _AdminFormateursState extends State<AdminFormateurs> with TickerProviderSt
                     const SizedBox(height: 12),
                     const Divider(height: 1, color: Color(0xFFE2E8F0)),
                     const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      alignment: WrapAlignment.end,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        OutlinedButton.icon(
-                          onPressed: () => _showFormateurDetail(userId, data),
-                          icon: const Icon(Icons.visibility_outlined, size: 14),
-                          label: Text('Détails', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600)),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                          ),
-                        ),
-                        OutlinedButton.icon(
-                          onPressed: () => _showHonorairesDialog(userId, data),
-                          icon: const Icon(Icons.account_balance_wallet_rounded, size: 14, color: Color(0xFFD97706)),
-                          label: Text('Honoraires', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFFD97706))),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                            side: const BorderSide(color: Color(0xFFFDE68A)),
-                            backgroundColor: const Color(0xFFFFFBEB),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                          ),
-                        ),
-                        OutlinedButton.icon(
-                          onPressed: () => _scheduleDialog(userId, data),
-                          icon: const Icon(Icons.calendar_month_rounded, size: 14, color: Color(0xFF0D9488)),
-                          label: Text('Planning', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFF0D9488))),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                            side: const BorderSide(color: Color(0xFF99F6E4)),
-                            backgroundColor: const Color(0xFFF0FDFA),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                          ),
-                        ),
-                        ElevatedButton.icon(
-                          onPressed: () => _assignFormationDialog(userId),
-                          icon: const Icon(Icons.assignment_turned_in_rounded, size: 14, color: Colors.white),
-                          label: Text('Affectations', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white)),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.primary,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                            elevation: 1,
-                          ),
-                        ),
-                      ],
+                    Builder(
+                      builder: (context) {
+                        final isMob = MediaQuery.of(context).size.width < 768;
+                        if (isMob) {
+                          return Column(
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: OutlinedButton.icon(
+                                      onPressed: () => _showFormateurDetail(userId, data),
+                                      icon: const Icon(Icons.visibility_outlined, size: 14),
+                                      label: Text('Détails', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600)),
+                                      style: OutlinedButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(vertical: 8),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                        side: const BorderSide(color: AppTheme.primary),
+                                        foregroundColor: AppTheme.primary,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: OutlinedButton.icon(
+                                      onPressed: () => _showHonorairesDialog(userId, data),
+                                      icon: const Icon(Icons.account_balance_wallet_rounded, size: 14, color: Color(0xFFD97706)),
+                                      label: Text('Honoraires', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFFD97706))),
+                                      style: OutlinedButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(vertical: 8),
+                                        side: const BorderSide(color: Color(0xFFFDE68A)),
+                                        backgroundColor: const Color(0xFFFFFBEB),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: OutlinedButton.icon(
+                                      onPressed: () => _scheduleDialog(userId, data),
+                                      icon: const Icon(Icons.calendar_month_rounded, size: 14, color: Color(0xFF0D9488)),
+                                      label: Text('Planning', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFF0D9488))),
+                                      style: OutlinedButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(vertical: 8),
+                                        side: const BorderSide(color: Color(0xFF99F6E4)),
+                                        backgroundColor: const Color(0xFFF0FDFA),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: ElevatedButton.icon(
+                                      onPressed: () => _assignFormationDialog(userId),
+                                      icon: const Icon(Icons.assignment_turned_in_rounded, size: 14, color: Colors.white),
+                                      label: Text('Affectations', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white)),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: AppTheme.primary,
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(vertical: 8),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                        elevation: 1,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          );
+                        }
+
+                        return Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          alignment: WrapAlignment.end,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            OutlinedButton.icon(
+                              onPressed: () => _showFormateurDetail(userId, data),
+                              icon: const Icon(Icons.visibility_outlined, size: 14),
+                              label: Text('Détails', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600)),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
+                            ),
+                            OutlinedButton.icon(
+                              onPressed: () => _showHonorairesDialog(userId, data),
+                              icon: const Icon(Icons.account_balance_wallet_rounded, size: 14, color: Color(0xFFD97706)),
+                              label: Text('Honoraires', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFFD97706))),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                side: const BorderSide(color: Color(0xFFFDE68A)),
+                                backgroundColor: const Color(0xFFFFFBEB),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
+                            ),
+                            OutlinedButton.icon(
+                              onPressed: () => _scheduleDialog(userId, data),
+                              icon: const Icon(Icons.calendar_month_rounded, size: 14, color: Color(0xFF0D9488)),
+                              label: Text('Planning', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFF0D9488))),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                side: const BorderSide(color: Color(0xFF99F6E4)),
+                                backgroundColor: const Color(0xFFF0FDFA),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
+                            ),
+                            ElevatedButton.icon(
+                              onPressed: () => _assignFormationDialog(userId),
+                              icon: const Icon(Icons.assignment_turned_in_rounded, size: 14, color: Colors.white),
+                              label: Text('Affectations', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white)),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppTheme.primary,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                elevation: 1,
+                              ),
+                            ),
+                          ],
+                        );
+                      },
                     ),
                   ],
                 ),

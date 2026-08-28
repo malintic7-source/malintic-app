@@ -232,7 +232,13 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(10),
-          gradient: isSelected ? AppTheme.heroGradient : null,
+          gradient: isSelected
+              ? const LinearGradient(
+                  colors: [AppTheme.primary, AppTheme.primaryDark],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+              : null,
           color: isSelected ? null : Colors.white,
           boxShadow: [
             BoxShadow(
@@ -477,6 +483,10 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
               ),
               const SizedBox(width: 8),
               PopupMenuButton<String>(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                color: Colors.white,
+                elevation: 6,
+                shadowColor: Colors.black.withValues(alpha: 0.15),
                 onSelected: (value) {
                   if (value == 'assign_role') {
                     _showAssignRoleDialog(context, user);
@@ -504,23 +514,23 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
                   }
                 },
                 itemBuilder: (context) => [
-                  const PopupMenuItem(
+                  PopupMenuItem(
                     value: 'assign_role',
                     child: Row(
                       children: [
-                        Icon(Icons.manage_accounts_rounded, size: 18, color: AppTheme.primary),
-                        SizedBox(width: 8),
-                        Text('Affecter / Changer Rôle', style: TextStyle(fontWeight: FontWeight.w600)),
+                        const Icon(Icons.manage_accounts_rounded, size: 18, color: AppTheme.primary),
+                        const SizedBox(width: 8),
+                        Text('Affecter / Changer Rôle', style: GoogleFonts.poppins(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
                       ],
                     ),
                   ),
-                  const PopupMenuItem(
+                  PopupMenuItem(
                     value: 'modifier',
                     child: Row(
                       children: [
-                        Icon(Icons.edit_rounded, size: 18),
-                        SizedBox(width: 8),
-                        Text('Modifier'),
+                        const Icon(Icons.edit_rounded, size: 18, color: Color(0xFF0D9488)),
+                        const SizedBox(width: 8),
+                        Text('Modifier', style: GoogleFonts.poppins(fontSize: 12.5, fontWeight: FontWeight.w500, color: AppTheme.textPrimary)),
                       ],
                     ),
                   ),
@@ -533,29 +543,31 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
                               ? Icons.block_rounded
                               : Icons.check_circle_rounded,
                           size: 18,
+                          color: user.estActif ? const Color(0xFFD97706) : AppTheme.success,
                         ),
                         const SizedBox(width: 8),
-                        Text(user.estActif ? 'Désactiver' : 'Activer'),
+                        Text(user.estActif ? 'Désactiver' : 'Activer', style: GoogleFonts.poppins(fontSize: 12.5, fontWeight: FontWeight.w500, color: AppTheme.textPrimary)),
                       ],
                     ),
                   ),
-                  const PopupMenuItem(
+                  PopupMenuItem(
                     value: 'reset_password',
                     child: Row(
                       children: [
-                        Icon(Icons.key_rounded, size: 18, color: AppTheme.primary),
-                        SizedBox(width: 8),
-                        Text('Modifier / Réinitialiser mot de passe', style: TextStyle(fontWeight: FontWeight.w600)),
+                        const Icon(Icons.key_rounded, size: 18, color: AppTheme.primary),
+                        const SizedBox(width: 8),
+                        Text('Modifier mot de passe', style: GoogleFonts.poppins(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
                       ],
                     ),
                   ),
-                  const PopupMenuItem(
+                  const PopupMenuDivider(),
+                  PopupMenuItem(
                     value: 'delete',
                     child: Row(
                       children: [
-                        Icon(Icons.delete_forever_rounded, color: Color(0xFFEF4444), size: 18),
-                        SizedBox(width: 8),
-                        Text('Supprimer', style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.w600)),
+                        const Icon(Icons.delete_forever_rounded, color: Color(0xFFEF4444), size: 18),
+                        const SizedBox(width: 8),
+                        Text('Supprimer', style: GoogleFonts.poppins(fontSize: 12.5, color: const Color(0xFFEF4444), fontWeight: FontWeight.w700)),
                       ],
                     ),
                   ),
@@ -568,8 +580,8 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
                   ),
                   child: const Icon(
                     Icons.more_vert_rounded,
-                    size: 18,
                     color: Colors.black54,
+                    size: 20,
                   ),
                 ),
               ),
