@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:gestion_formations/Models/user.dart';
@@ -35,6 +37,13 @@ class MainLayout extends StatefulWidget {
 class _MainLayoutState extends State<MainLayout> with TickerProviderStateMixin {
   late int _selectedIndex;
   late AnimationController _notificationAnimationController;
+  Timer? _announcementTimer;
+  int _announcementIndex = 0;
+  static const _announcements = [
+    'Bienvenue sur M@LI-NTIC — votre espace numérique de formation.',
+    'Découvrez nos nouvelles formations et développez vos compétences.',
+    'Besoin d’aide ? Notre équipe reste disponible pour vous accompagner.',
+  ];
 
   @override
   void initState() {
@@ -44,6 +53,12 @@ class _MainLayoutState extends State<MainLayout> with TickerProviderStateMixin {
       duration: const Duration(milliseconds: 800),
       vsync: this,
     )..repeat();
+    _announcementTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (!mounted) return;
+      setState(() {
+        _announcementIndex = (_announcementIndex + 1) % _announcements.length;
+      });
+    });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final user = widget.user ?? AuthProvider().currentUser;
@@ -56,7 +71,8 @@ class _MainLayoutState extends State<MainLayout> with TickerProviderStateMixin {
   @override
   void didUpdateWidget(covariant MainLayout oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.selectedIndex != null && widget.selectedIndex != _selectedIndex) {
+    if (widget.selectedIndex != null &&
+        widget.selectedIndex != _selectedIndex) {
       setState(() => _selectedIndex = widget.selectedIndex!);
     }
     final user = widget.user ?? AuthProvider().currentUser;
@@ -68,12 +84,21 @@ class _MainLayoutState extends State<MainLayout> with TickerProviderStateMixin {
   @override
   void dispose() {
     _notificationAnimationController.dispose();
+    _announcementTimer?.cancel();
     super.dispose();
   }
 
   // Bottom nav items for mobile: 3 priority tabs + drawer "Plus"
-  static const _adminBottomNavIndices = [0, 1, 3]; // Dashboard, Formations, Inscriptions
-  static const _adminBottomNavLabels = ['Accueil', 'Formations', 'Inscriptions'];
+  static const _adminBottomNavIndices = [
+    0,
+    1,
+    3,
+  ]; // Dashboard, Formations, Inscriptions
+  static const _adminBottomNavLabels = [
+    'Accueil',
+    'Formations',
+    'Inscriptions',
+  ];
   static const _adminBottomNavIcons = [
     Icons.dashboard_rounded,
     Icons.school_rounded,
@@ -112,24 +137,41 @@ class _MainLayoutState extends State<MainLayout> with TickerProviderStateMixin {
             Expanded(
               child: Padding(
                 padding: EdgeInsets.only(
-                  left: isMobile ? 8 : isSmallTablet ? 10 : 16,
-                  right: isMobile ? 8 : isSmallTablet ? 10 : 16,
+                  left: isMobile
+                      ? 8
+                      : isSmallTablet
+                      ? 10
+                      : 16,
+                  right: isMobile
+                      ? 8
+                      : isSmallTablet
+                      ? 10
+                      : 16,
                   top: isMobile ? 8 : 12,
                   bottom: isMobile ? 4 : 16,
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    _buildAnnouncementTicker(),
                     if (isMobileOrSmall) _buildMobileTopBar(context, isMobile),
-                    if (widget.showPageHeader) _buildPageHeader(isMobileOrSmall),
+                    if (widget.showPageHeader)
+                      _buildPageHeader(isMobileOrSmall),
                     Expanded(
                       child: Container(
                         decoration: BoxDecoration(
-                          color: isMobile ? Colors.transparent : AppTheme.surface,
-                          borderRadius: BorderRadius.circular(isMobile ? 12 : 24),
+                          color: isMobile
+                              ? Colors.transparent
+                              : AppTheme.surface,
+                          borderRadius: BorderRadius.circular(
+                            isMobile ? 12 : 24,
+                          ),
                           border: isMobile
                               ? null
-                              : Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
+                              : Border.all(
+                                  color: const Color(0xFFF1F5F9),
+                                  width: 1.5,
+                                ),
                           boxShadow: isMobile ? null : AppTheme.cardShadow,
                         ),
                         clipBehavior: Clip.hardEdge,
@@ -142,6 +184,50 @@ class _MainLayoutState extends State<MainLayout> with TickerProviderStateMixin {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildAnnouncementTicker() {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+      decoration: BoxDecoration(
+        gradient: AppTheme.heroGradient,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: AppTheme.heroShadow,
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.campaign_rounded, color: Colors.white, size: 18),
+          const SizedBox(width: 10),
+          Expanded(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 550),
+              transitionBuilder: (child, animation) {
+                final slide = Tween<Offset>(
+                  begin: const Offset(0, 0.8),
+                  end: Offset.zero,
+                ).animate(animation);
+                return ClipRect(
+                  child: SlideTransition(position: slide, child: child),
+                );
+              },
+              child: Text(
+                _announcements[_announcementIndex],
+                key: ValueKey(_announcementIndex),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.poppins(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -161,7 +247,11 @@ class _MainLayoutState extends State<MainLayout> with TickerProviderStateMixin {
                   color: AppTheme.primary.withValues(alpha: 0.10),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.menu_rounded, color: AppTheme.primary, size: 22),
+                child: const Icon(
+                  Icons.menu_rounded,
+                  color: AppTheme.primary,
+                  size: 22,
+                ),
               ),
             ),
             const SizedBox(width: 10),
@@ -234,17 +324,24 @@ class _MainLayoutState extends State<MainLayout> with TickerProviderStateMixin {
                       children: [
                         AnimatedContainer(
                           duration: const Duration(milliseconds: 200),
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 3),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 3,
+                          ),
                           decoration: isSelected
                               ? BoxDecoration(
-                                  color: AppTheme.primary.withValues(alpha: 0.12),
+                                  color: AppTheme.primary.withValues(
+                                    alpha: 0.12,
+                                  ),
                                   borderRadius: BorderRadius.circular(10),
                                 )
                               : null,
                           child: Icon(
                             _adminBottomNavIcons[i],
                             size: 20,
-                            color: isSelected ? AppTheme.primary : AppTheme.textSecondary,
+                            color: isSelected
+                                ? AppTheme.primary
+                                : AppTheme.textSecondary,
                           ),
                         ),
                         const SizedBox(height: 2),
@@ -252,8 +349,12 @@ class _MainLayoutState extends State<MainLayout> with TickerProviderStateMixin {
                           _adminBottomNavLabels[i],
                           style: GoogleFonts.poppins(
                             fontSize: 10,
-                            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                            color: isSelected ? AppTheme.primary : AppTheme.textSecondary,
+                            fontWeight: isSelected
+                                ? FontWeight.w700
+                                : FontWeight.w500,
+                            color: isSelected
+                                ? AppTheme.primary
+                                : AppTheme.textSecondary,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -272,17 +373,24 @@ class _MainLayoutState extends State<MainLayout> with TickerProviderStateMixin {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 3),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 3,
+                          ),
                           decoration: selected == null
                               ? BoxDecoration(
-                                  color: AppTheme.primary.withValues(alpha: 0.12),
+                                  color: AppTheme.primary.withValues(
+                                    alpha: 0.12,
+                                  ),
                                   borderRadius: BorderRadius.circular(10),
                                 )
                               : null,
                           child: Icon(
                             Icons.more_horiz_rounded,
                             size: 20,
-                            color: selected == null ? AppTheme.primary : AppTheme.textSecondary,
+                            color: selected == null
+                                ? AppTheme.primary
+                                : AppTheme.textSecondary,
                           ),
                         ),
                         const SizedBox(height: 2),
@@ -290,8 +398,12 @@ class _MainLayoutState extends State<MainLayout> with TickerProviderStateMixin {
                           'Plus',
                           style: GoogleFonts.poppins(
                             fontSize: 10,
-                            fontWeight: selected == null ? FontWeight.w700 : FontWeight.w500,
-                            color: selected == null ? AppTheme.primary : AppTheme.textSecondary,
+                            fontWeight: selected == null
+                                ? FontWeight.w700
+                                : FontWeight.w500,
+                            color: selected == null
+                                ? AppTheme.primary
+                                : AppTheme.textSecondary,
                           ),
                           maxLines: 1,
                         ),
@@ -328,14 +440,19 @@ class _MainLayoutState extends State<MainLayout> with TickerProviderStateMixin {
                 Container(
                   padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.7), width: 2),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.7),
+                      width: 2,
+                    ),
                     borderRadius: BorderRadius.circular(28),
                   ),
                   child: CircleAvatar(
                     radius: 30,
                     backgroundColor: Colors.white,
                     child: Text(
-                      widget.user?.nomComplet.isNotEmpty == true ? widget.user!.nomComplet[0].toUpperCase() : 'U',
+                      widget.user?.nomComplet.isNotEmpty == true
+                          ? widget.user!.nomComplet[0].toUpperCase()
+                          : 'U',
                       style: GoogleFonts.poppins(
                         fontSize: 28,
                         fontWeight: FontWeight.w800,
@@ -358,13 +475,21 @@ class _MainLayoutState extends State<MainLayout> with TickerProviderStateMixin {
                 ),
                 const SizedBox(height: 6),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 5,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.18),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
-                    widget.user?.role.toString().split('.').last.toUpperCase() ?? 'ROLE',
+                    widget.user?.role
+                            .toString()
+                            .split('.')
+                            .last
+                            .toUpperCase() ??
+                        'ROLE',
                     style: GoogleFonts.poppins(
                       color: Colors.white,
                       fontSize: 12,
@@ -386,7 +511,10 @@ class _MainLayoutState extends State<MainLayout> with TickerProviderStateMixin {
                 final isSelected = _selectedIndex == index;
 
                 return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 4,
+                  ),
                   child: Ink(
                     decoration: isSelected
                         ? BoxDecoration(
@@ -402,21 +530,36 @@ class _MainLayoutState extends State<MainLayout> with TickerProviderStateMixin {
                     child: Material(
                       color: Colors.transparent,
                       child: ListTile(
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         dense: true,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
-                        tileColor: isSelected ? AppTheme.surface.withValues(alpha: 0.08) : null,
-                        selectedTileColor: AppTheme.primary.withValues(alpha: 0.1),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 2,
+                        ),
+                        tileColor: isSelected
+                            ? AppTheme.surface.withValues(alpha: 0.08)
+                            : null,
+                        selectedTileColor: AppTheme.primary.withValues(
+                          alpha: 0.1,
+                        ),
                         leading: Icon(
                           item.icon,
-                          color: isSelected ? AppTheme.primary : AppTheme.textSecondary,
+                          color: isSelected
+                              ? AppTheme.primary
+                              : AppTheme.textSecondary,
                           size: 22,
                         ),
                         title: Text(
                           item.label,
                           style: GoogleFonts.poppins(
-                            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                            color: isSelected ? AppTheme.primary : AppTheme.textPrimary,
+                            fontWeight: isSelected
+                                ? FontWeight.w700
+                                : FontWeight.w500,
+                            color: isSelected
+                                ? AppTheme.primary
+                                : AppTheme.textPrimary,
                             fontSize: 14,
                           ),
                         ),
@@ -445,12 +588,18 @@ class _MainLayoutState extends State<MainLayout> with TickerProviderStateMixin {
                   await AuthProvider().logout();
                   if (!mounted) return;
                   nav.pushAndRemoveUntil(
-                    MaterialPageRoute(builder: (context) => const WelcomePage()),
+                    MaterialPageRoute(
+                      builder: (context) => const WelcomePage(),
+                    ),
                     (route) => false,
                   );
                 },
                 child: ListTile(
-                  leading: const Icon(Icons.logout_rounded, color: AppTheme.error, size: 22),
+                  leading: const Icon(
+                    Icons.logout_rounded,
+                    color: AppTheme.error,
+                    size: 22,
+                  ),
                   title: Text(
                     'Déconnexion',
                     style: GoogleFonts.poppins(
@@ -459,7 +608,9 @@ class _MainLayoutState extends State<MainLayout> with TickerProviderStateMixin {
                       fontSize: 14,
                     ),
                   ),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
             ),
@@ -553,11 +704,16 @@ class _MainLayoutState extends State<MainLayout> with TickerProviderStateMixin {
                         appBar: AppBar(
                           title: Text(
                             'Centre de notifications',
-                            style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16),
+                            style: GoogleFonts.poppins(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 16,
+                            ),
                           ),
                           backgroundColor: AppTheme.surface,
                           elevation: 0,
-                          iconTheme: const IconThemeData(color: AppTheme.textPrimary),
+                          iconTheme: const IconThemeData(
+                            color: AppTheme.textPrimary,
+                          ),
                         ),
                         body: NotificationsPage(user: widget.user!),
                       ),
@@ -573,7 +729,9 @@ class _MainLayoutState extends State<MainLayout> with TickerProviderStateMixin {
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
-                    unreadCount > 0 ? Icons.notifications_active_rounded : Icons.notifications_none_rounded,
+                    unreadCount > 0
+                        ? Icons.notifications_active_rounded
+                        : Icons.notifications_none_rounded,
                     color: unreadCount > 0 ? AppTheme.primary : Colors.black54,
                     size: 20,
                   ),
@@ -585,13 +743,19 @@ class _MainLayoutState extends State<MainLayout> with TickerProviderStateMixin {
                 right: -2,
                 top: -2,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 5,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFEF4444),
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(color: Colors.white, width: 1.5),
                   ),
-                  constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                  constraints: const BoxConstraints(
+                    minWidth: 16,
+                    minHeight: 16,
+                  ),
                   child: Text(
                     unreadCount > 9 ? '9+' : '$unreadCount',
                     style: const TextStyle(
@@ -612,15 +776,17 @@ class _MainLayoutState extends State<MainLayout> with TickerProviderStateMixin {
 
   Widget _buildSidebar(BuildContext context, {required bool isTablet}) {
     final width = MediaQuery.of(context).size.width;
-    final sidebarWidth = width < 900 ? 72.0 : width < 1150 ? 80.0 : 230.0;
+    final sidebarWidth = width < 900
+        ? 72.0
+        : width < 1150
+        ? 80.0
+        : 230.0;
     final showLabel = sidebarWidth >= 180;
     final showUserInfo = sidebarWidth >= 180;
 
     return Container(
       width: sidebarWidth,
-      decoration: BoxDecoration(
-        gradient: AppTheme.heroGradient,
-      ),
+      decoration: BoxDecoration(gradient: AppTheme.heroGradient),
       child: Column(
         children: [
           Container(
@@ -642,22 +808,27 @@ class _MainLayoutState extends State<MainLayout> with TickerProviderStateMixin {
                   ),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(showLabel ? 10 : 8),
-                    child: Image.asset(
-                      'images/logo.png',
-                      fit: BoxFit.contain,
-                    ),
+                    child: Image.asset('images/logo.png', fit: BoxFit.contain),
                   ),
                 ),
                 if (showUserInfo) ...[
                   const SizedBox(height: 6),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
-                      widget.user?.role.toString().split('.').last.toUpperCase() ?? 'ROLE',
+                      widget.user?.role
+                              .toString()
+                              .split('.')
+                              .last
+                              .toUpperCase() ??
+                          'ROLE',
                       style: GoogleFonts.poppins(
                         color: Colors.white,
                         fontSize: 9,
@@ -685,35 +856,46 @@ class _MainLayoutState extends State<MainLayout> with TickerProviderStateMixin {
                   child: Tooltip(
                     message: item.label,
                     child: Ink(
-                        decoration: isSelected
-                            ? BoxDecoration(
-                                gradient: AppTheme.accentGradient,
-                                borderRadius: BorderRadius.circular(12),
-                              )
-                            : null,
-                        child: ListTile(
+                      decoration: isSelected
+                          ? BoxDecoration(
+                              gradient: AppTheme.accentGradient,
+                              borderRadius: BorderRadius.circular(12),
+                            )
+                          : null,
+                      child: ListTile(
                         dense: true,
                         contentPadding: showLabel
-                            ? const EdgeInsets.symmetric(horizontal: 10, vertical: 2)
+                            ? const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 2,
+                              )
                             : const EdgeInsets.symmetric(horizontal: 8),
                         minLeadingWidth: 0,
-                                leading: Icon(
-                                  item.icon,
-                                  color: isSelected ? Colors.white : Colors.white.withValues(alpha: 0.8),
-                                  size: showLabel ? 18 : 22,
-                                ),
+                        leading: Icon(
+                          item.icon,
+                          color: isSelected
+                              ? Colors.white
+                              : Colors.white.withValues(alpha: 0.8),
+                          size: showLabel ? 18 : 22,
+                        ),
                         title: showLabel
                             ? Text(
                                 item.label,
                                 style: GoogleFonts.poppins(
-                                  fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
-                                  color: isSelected ? Colors.white : Colors.white.withValues(alpha: 0.8),
+                                  fontWeight: isSelected
+                                      ? FontWeight.w800
+                                      : FontWeight.w500,
+                                  color: isSelected
+                                      ? Colors.white
+                                      : Colors.white.withValues(alpha: 0.8),
                                   fontSize: 12,
                                 ),
                               )
                             : null,
                         selected: isSelected,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         onTap: () {
                           setState(() => _selectedIndex = index);
                           widget.onNavigationChanged?.call(index);
@@ -739,15 +921,23 @@ class _MainLayoutState extends State<MainLayout> with TickerProviderStateMixin {
                     await AuthProvider().logout();
                     if (!mounted) return;
                     nav.pushAndRemoveUntil(
-                      MaterialPageRoute(builder: (context) => const WelcomePage()),
+                      MaterialPageRoute(
+                        builder: (context) => const WelcomePage(),
+                      ),
                       (route) => false,
                     );
                   },
                   child: ListTile(
                     dense: true,
-                    contentPadding: showLabel ? const EdgeInsets.symmetric(horizontal: 10) : const EdgeInsets.symmetric(horizontal: 8),
+                    contentPadding: showLabel
+                        ? const EdgeInsets.symmetric(horizontal: 10)
+                        : const EdgeInsets.symmetric(horizontal: 8),
                     minLeadingWidth: 0,
-                    leading: Icon(Icons.logout_rounded, color: AppTheme.error, size: showLabel ? 20 : 22),
+                    leading: Icon(
+                      Icons.logout_rounded,
+                      color: AppTheme.error,
+                      size: showLabel ? 20 : 22,
+                    ),
                     title: showLabel
                         ? Text(
                             'Déconnexion',
@@ -758,7 +948,9 @@ class _MainLayoutState extends State<MainLayout> with TickerProviderStateMixin {
                             ),
                           )
                         : null,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 ),
               ),
@@ -776,4 +968,3 @@ class NavigationItem {
 
   NavigationItem({required this.label, required this.icon});
 }
-
