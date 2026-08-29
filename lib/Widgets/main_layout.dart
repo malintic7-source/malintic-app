@@ -37,8 +37,7 @@ class MainLayout extends StatefulWidget {
 class _MainLayoutState extends State<MainLayout> with TickerProviderStateMixin {
   late int _selectedIndex;
   late AnimationController _notificationAnimationController;
-  Timer? _announcementTimer;
-  int _announcementIndex = 0;
+  late AnimationController _announcementAnimationController;
   static const _announcements = [
     'Bienvenue sur M@LI-NTIC — votre espace numérique de formation.',
     'Découvrez nos nouvelles formations et développez vos compétences.',
@@ -53,12 +52,10 @@ class _MainLayoutState extends State<MainLayout> with TickerProviderStateMixin {
       duration: const Duration(milliseconds: 800),
       vsync: this,
     )..repeat();
-    _announcementTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-      if (!mounted) return;
-      setState(() {
-        _announcementIndex = (_announcementIndex + 1) % _announcements.length;
-      });
-    });
+    _announcementAnimationController = AnimationController(
+      duration: const Duration(seconds: 18),
+      vsync: this,
+    )..repeat();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final user = widget.user ?? AuthProvider().currentUser;
@@ -84,7 +81,7 @@ class _MainLayoutState extends State<MainLayout> with TickerProviderStateMixin {
   @override
   void dispose() {
     _notificationAnimationController.dispose();
-    _announcementTimer?.cancel();
+    _announcementAnimationController.dispose();
     super.dispose();
   }
 
@@ -203,27 +200,52 @@ class _MainLayoutState extends State<MainLayout> with TickerProviderStateMixin {
           const Icon(Icons.campaign_rounded, color: Colors.white, size: 18),
           const SizedBox(width: 10),
           Expanded(
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 550),
-              transitionBuilder: (child, animation) {
-                final slide = Tween<Offset>(
-                  begin: const Offset(0, 0.8),
-                  end: Offset.zero,
-                ).animate(animation);
-                return ClipRect(
-                  child: SlideTransition(position: slide, child: child),
-                );
-              },
-              child: Text(
-                _announcements[_announcementIndex],
-                key: ValueKey(_announcementIndex),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.poppins(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                ),
+            child: ClipRect(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final message = _announcements.join('   •   ');
+                  final textStyle = GoogleFonts.poppins(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  );
+                  return AnimatedBuilder(
+                    animation: _announcementAnimationController,
+                    builder: (context, child) {
+                      final distance = constraints.maxWidth;
+                      return Transform.translate(
+                        offset: Offset(
+                          distance -
+                              (distance *
+                                  2 *
+                                  _announcementAnimationController.value),
+                          0,
+                        ),
+                        child: SizedBox(
+                          width: distance * 2,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                message,
+                                maxLines: 1,
+                                softWrap: false,
+                                style: textStyle,
+                              ),
+                              const SizedBox(width: 56),
+                              Text(
+                                message,
+                                maxLines: 1,
+                                softWrap: false,
+                                style: textStyle,
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                },
               ),
             ),
           ),
