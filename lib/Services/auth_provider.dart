@@ -44,7 +44,10 @@ class AuthProvider {
     // 2. L'onglet actuel possède une session active (ex: rafraîchissement F5 dans le même onglet)
     try {
       final map = jsonDecode(sessionUserJson) as Map<String, dynamic>;
-      final user = User.fromMap(map, sessionUserId ?? map['id']?.toString() ?? '');
+      final user = User.fromMap(
+        map,
+        sessionUserId ?? map['id']?.toString() ?? '',
+      );
       _currentUser = user;
       TabSessionLifecycle.activate();
       _authController.add(user);
@@ -118,27 +121,37 @@ class AuthProvider {
       final userMatricule = (user.matricule ?? '').trim().toLowerCase();
       final emailPrefix = userEmail.split('@').first;
 
-      final isMatch = userEmail == rawInput ||
+      final isMatch =
+          userEmail == rawInput ||
           emailPrefix == rawInput ||
           (userMatricule.isNotEmpty && userMatricule == rawInput) ||
-          (cleanInputPhone.length >= 8 && userPhone.contains(cleanInputPhone)) ||
+          (cleanInputPhone.length >= 8 &&
+              userPhone.contains(cleanInputPhone)) ||
           userEmail == '$rawInput@mntic.ml' ||
           userEmail == '$rawInput@malintic.ml';
 
       if (isMatch) {
         if (!user.estActif) {
-          throw Exception('Ce compte est désactivé. Veuillez contacter un administrateur.');
+          throw Exception(
+            'Ce compte est désactivé. Veuillez contacter un administrateur.',
+          );
         }
 
-        final savedOfflinePw = _localStorage.getItem('user_pw_${user.id}')?.trim();
-        final effectivePw = (savedOfflinePw != null && savedOfflinePw.isNotEmpty)
+        final savedOfflinePw = _localStorage
+            .getItem('user_pw_${user.id}')
+            ?.trim();
+        final effectivePw =
+            (savedOfflinePw != null && savedOfflinePw.isNotEmpty)
             ? savedOfflinePw
             : (user.password.isNotEmpty ? user.password : null);
 
-        if (effectivePw != null && effectivePw.isNotEmpty && effectivePw != '00000000') {
+        if (effectivePw != null &&
+            effectivePw.isNotEmpty &&
+            effectivePw != '00000000') {
           // Ce compte a un mot de passe personnalisé : 00000000 est STRICTEMENT EXPIRÉ ET REJETÉ
           if (cleanPassword == '00000000') return null;
-          if (cleanPassword == effectivePw) return user.copyWith(doitChangerMotDePasse: false);
+          if (cleanPassword == effectivePw)
+            return user.copyWith(doitChangerMotDePasse: false);
           return null;
         } else {
           // Première connexion uniquement : 00000000 est temporairement accepté
@@ -152,7 +165,11 @@ class AuthProvider {
 
     String? adminId;
     User? fallbackAdmin;
-    if (rawInput == 'mamadou@malintic.ml' || rawInput == 'mamadou@mntic.ml' || rawInput == 'mamadou' || rawInput == 'adm-2026-001' || rawInput == 'ADM-2026-001') {
+    if (rawInput == 'mamadou@malintic.ml' ||
+        rawInput == 'mamadou@mntic.ml' ||
+        rawInput == 'mamadou' ||
+        rawInput == 'adm-2026-001' ||
+        rawInput == 'ADM-2026-001') {
       adminId = 'admin_mamadou';
       fallbackAdmin = User(
         id: 'admin_mamadou',
@@ -163,7 +180,10 @@ class AuthProvider {
         role: UserRole.admin,
         matricule: 'ADM-2026-001',
       );
-    } else if (rawInput == 'soulbico@malintic.ml' || rawInput == 'soulbico@mntic.ml' || rawInput == 'soulbico' || rawInput == 'souleymane') {
+    } else if (rawInput == 'soulbico@malintic.ml' ||
+        rawInput == 'soulbico@mntic.ml' ||
+        rawInput == 'soulbico' ||
+        rawInput == 'souleymane') {
       adminId = 'dg_souleymane';
       fallbackAdmin = User(
         id: 'dg_souleymane',
@@ -190,12 +210,17 @@ class AuthProvider {
       final dbUser = _db.getUserById(adminId);
       final effectiveAdminPw = (savedPw != null && savedPw.isNotEmpty)
           ? savedPw
-          : (dbUser != null && dbUser.password.isNotEmpty ? dbUser.password : null);
+          : (dbUser != null && dbUser.password.isNotEmpty
+                ? dbUser.password
+                : null);
 
-      if (effectiveAdminPw != null && effectiveAdminPw.isNotEmpty && effectiveAdminPw != '00000000') {
+      if (effectiveAdminPw != null &&
+          effectiveAdminPw.isNotEmpty &&
+          effectiveAdminPw != '00000000') {
         // Après validation de changement de mot de passe, 00000000 est STRICTEMENT EXPIRÉ ET REJETÉ
         if (cleanPassword == '00000000') return null;
-        if (cleanPassword == effectiveAdminPw) return fallbackAdmin.copyWith(doitChangerMotDePasse: false);
+        if (cleanPassword == effectiveAdminPw)
+          return fallbackAdmin.copyWith(doitChangerMotDePasse: false);
         return null;
       } else {
         // Première connexion uniquement
@@ -263,7 +288,10 @@ class AuthProvider {
       TabSessionLifecycle.activate();
       _authController.add(_currentUser);
       _localStorage.setSessionItem('currentUserId', offlineUser.id);
-      _localStorage.setSessionItem('currentUserJson', jsonEncode(offlineUser.toMap()));
+      _localStorage.setSessionItem(
+        'currentUserJson',
+        jsonEncode(offlineUser.toMap()),
+      );
       return offlineUser;
     }
 
@@ -273,7 +301,10 @@ class AuthProvider {
   Future<void> logout() async {
     if (_currentUser != null) {
       _db.logAction(
-        userNom: '${_currentUser!.prenom} ${_currentUser!.nom}'.trim().isNotEmpty ? '${_currentUser!.prenom} ${_currentUser!.nom}'.trim() : 'Utilisateur',
+        userNom:
+            '${_currentUser!.prenom} ${_currentUser!.nom}'.trim().isNotEmpty
+            ? '${_currentUser!.prenom} ${_currentUser!.nom}'.trim()
+            : 'Utilisateur',
         userRole: _currentUser!.role.name,
         action: 'Déconnexion',
         description: 'Déconnexion de la session (${_currentUser!.email})',
@@ -393,26 +424,30 @@ class AuthProvider {
     }
 
     if (newPassword.trim().length < 8) {
-      throw Exception('Le nouveau mot de passe doit contenir au moins 8 caractères.');
+      throw Exception(
+        'Le nouveau mot de passe doit contenir au moins 8 caractères.',
+      );
     }
 
     try {
-      final response = await http.post(
-        Uri.base.resolve('/api/auth/change-password'),
-        headers: const {
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true',
-        },
-        body: jsonEncode({
-          'userId': _currentUser!.id,
-          'email': _currentUser!.email,
-          'identifier': _currentUser!.email,
-          if (currentPassword != null && currentPassword.isNotEmpty)
-            'currentPassword': currentPassword,
-          'newPassword': newPassword.trim(),
-          'isFirstLogin': isFirstLogin,
-        }),
-      ).timeout(const Duration(seconds: 4));
+      final response = await http
+          .post(
+            Uri.base.resolve('/api/auth/change-password'),
+            headers: const {
+              'Content-Type': 'application/json',
+              'ngrok-skip-browser-warning': 'true',
+            },
+            body: jsonEncode({
+              'userId': _currentUser!.id,
+              'email': _currentUser!.email,
+              'identifier': _currentUser!.email,
+              if (currentPassword != null && currentPassword.isNotEmpty)
+                'currentPassword': currentPassword,
+              'newPassword': newPassword.trim(),
+              'isFirstLogin': isFirstLogin,
+            }),
+          )
+          .timeout(const Duration(seconds: 4));
 
       if (response.statusCode != 200) {
         String serverMessage = 'Impossible de modifier le mot de passe.';
@@ -423,14 +458,10 @@ class AuthProvider {
         throw Exception(serverMessage);
       }
     } catch (e) {
-      if (e is Exception &&
-          (e.toString().contains('Impossible') ||
-              e.toString().contains('Ancien mot de passe') ||
-              e.toString().contains('mot de passe') ||
-              e.toString().contains('caractères'))) {
+      if (e is! TimeoutException && e is! http.ClientException) {
         rethrow;
       }
-      // The local cache remains usable when the API is temporarily offline.
+      // The local cache remains usable only when the API is unreachable.
     }
 
     User updatedUser = _currentUser!.copyWith(
@@ -439,16 +470,21 @@ class AuthProvider {
     );
     _currentUser = updatedUser;
     _authController.add(_currentUser);
-    _localStorage.setSessionItem('currentUserJson', jsonEncode(_currentUser!.toMap()));
+    _localStorage.setSessionItem(
+      'currentUserJson',
+      jsonEncode(_currentUser!.toMap()),
+    );
     _localStorage.setItem('user_pw_${_currentUser!.id}', newPassword.trim());
     _localStorage.setItem('user_pw_changed_${_currentUser!.id}', 'true');
 
     final localUser = _db.getUserById(updatedUser.id);
     if (localUser != null) {
-      await _db.addUser(localUser.copyWith(
-        doitChangerMotDePasse: false,
-        dateModification: DateTime.now(),
-      ));
+      await _db.addUser(
+        localUser.copyWith(
+          doitChangerMotDePasse: false,
+          dateModification: DateTime.now(),
+        ),
+      );
     }
 
     return updatedUser;
@@ -506,7 +542,10 @@ class AuthProvider {
     );
 
     _localStorage.setItem('user_pw_$userId', effectivePassword);
-    _localStorage.setItem('user_pw_changed_$userId', (!doitChangerMotDePasse).toString());
+    _localStorage.setItem(
+      'user_pw_changed_$userId',
+      (!doitChangerMotDePasse).toString(),
+    );
     await _db.addUser(newUser);
     return newUser;
   }
@@ -522,17 +561,19 @@ class AuthProvider {
     }
 
     try {
-      await http.post(
-        Uri.base.resolve('/api/admin/users/$userId/password'),
-        headers: const {
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true',
-        },
-        body: jsonEncode({
-          'newPassword': cleanPassword,
-          'mustChangePassword': mustChangePassword,
-        }),
-      ).timeout(const Duration(seconds: 4));
+      await http
+          .post(
+            Uri.base.resolve('/api/admin/users/$userId/password'),
+            headers: const {
+              'Content-Type': 'application/json',
+              'ngrok-skip-browser-warning': 'true',
+            },
+            body: jsonEncode({
+              'newPassword': cleanPassword,
+              'mustChangePassword': mustChangePassword,
+            }),
+          )
+          .timeout(const Duration(seconds: 4));
     } catch (_) {}
 
     // Mise à jour locale en mémoire et synchronisation
@@ -559,14 +600,18 @@ class AuthProvider {
       await _db.addUser(updated);
     }
     _localStorage.setItem('user_pw_$userId', cleanPassword);
-    _localStorage.setItem('user_pw_changed_$userId', (!mustChangePassword).toString());
+    _localStorage.setItem(
+      'user_pw_changed_$userId',
+      (!mustChangePassword).toString(),
+    );
     await _db.refreshFromServer();
     return cleanPassword;
   }
 
   Future<String> resetUserPassword(
     String userId, {
-    String? password, // null = génère un mot de passe temporaire aléatoire sécurisé
+    String?
+    password, // null = génère un mot de passe temporaire aléatoire sécurisé
     bool doitChangerMotDePasse = true,
   }) async {
     final newPassword = (password != null && password.isNotEmpty)
