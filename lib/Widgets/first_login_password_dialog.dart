@@ -454,10 +454,12 @@ class _FirstLoginPasswordDialogState extends State<FirstLoginPasswordDialog> {
                       ),
                     ),
                     validator: (val) {
-                      if (val == null || val.isEmpty)
+                      if (val == null || val.isEmpty) {
                         return 'Veuillez saisir un mot de passe';
-                      if (val.length < 8)
+                      }
+                      if (val.length < 8) {
                         return 'Le mot de passe doit contenir au moins 8 caractères';
+                      }
                       return null;
                     },
                   ),
@@ -530,10 +532,12 @@ class _FirstLoginPasswordDialogState extends State<FirstLoginPasswordDialog> {
                       ),
                     ),
                     validator: (val) {
-                      if (val == null || val.isEmpty)
+                      if (val == null || val.isEmpty) {
                         return 'Veuillez confirmer votre mot de passe';
-                      if (val != _newPasswordController.text)
+                      }
+                      if (val != _newPasswordController.text) {
                         return 'Les mots de passe ne correspondent pas';
+                      }
                       return null;
                     },
                   ),
