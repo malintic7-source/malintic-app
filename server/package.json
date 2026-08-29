@@ -2,6 +2,6 @@
   "name": "malintic-app-api",
   "version": "2.0.0",
   "private": true,
-  "scripts": { "start": "node server.js" },
+  "scripts": { "start": "node server.js", "check": "node --check server.js" },
   "dependencies": { "express": "^4.18.2" }
 }

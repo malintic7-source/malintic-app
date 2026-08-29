@@ -14,6 +14,8 @@ class AuthProvider {
     _loadFromStorage();
   }
 
+  static const _rememberedIdentifierKey = 'malintic_remembered_identifier';
+
   // Load persisted user if any (sessionStorage preserves F5 refresh, clears on tab close)
   Future<User?> _loadFromStorage() async {
     // Nettoyage de sécurité de tout résidu persistant dans localStorage
@@ -87,6 +89,8 @@ class AuthProvider {
   User? _currentUser;
 
   User? get currentUser => _currentUser;
+  String? get rememberedIdentifier =>
+      _localStorage.getItem(_rememberedIdentifierKey);
   bool get isAuthenticated => _currentUser != null;
   UserRole? get userRole => _currentUser?.role;
   bool get isAdmin => _currentUser?.role == UserRole.admin;
@@ -236,6 +240,7 @@ class AuthProvider {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         final serverUser = User.fromMap(data, data['id']?.toString() ?? '');
         _currentUser = serverUser;
+        _localStorage.setItem(_rememberedIdentifierKey, rawInput);
         TabSessionLifecycle.activate();
         _authController.add(_currentUser);
         _localStorage.setSessionItem('currentUserId', serverUser.id);
@@ -254,6 +259,7 @@ class AuthProvider {
     final offlineUser = _fallbackOfflineLogin(rawInput, cleanPassword);
     if (offlineUser != null) {
       _currentUser = offlineUser;
+      _localStorage.setItem(_rememberedIdentifierKey, rawInput);
       TabSessionLifecycle.activate();
       _authController.add(_currentUser);
       _localStorage.setSessionItem('currentUserId', offlineUser.id);

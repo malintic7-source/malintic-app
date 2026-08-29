@@ -1197,6 +1197,9 @@
     </div>
 
     <script type="module">
+        const SUPABASE_REST_URL = 'https://mzixlwnrsqoxolzafmjb.supabase.co/rest/v1';
+        const SUPABASE_ANON_KEY = 'sb_publishable_X9Srmcc9dIppUO8Hl0EDAw_C-giTCqt';
+
         async function submitInscriptionToBackend(inscriptionData) {
             const inscId = inscriptionData.id || `insc_web_${Date.now()}`;
             inscriptionData.id = inscId;
@@ -1204,8 +1207,11 @@
             inscriptionData.statut = 'en_attente';
             inscriptionData.dateInscription = new Date().toISOString();
 
+            let transmitted = false;
+
+            // 1. Tenter l'envoi vers l'API locale
             try {
-                const resp = await fetch(`/api/inscriptions/${encodeURIComponent(inscId)}`, {
+                const resp = await fetchWithTimeout(`/api/inscriptions/${encodeURIComponent(inscId)}`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1218,16 +1224,60 @@
                         paiementEffectue: false,
                         source: 'web'
                     }),
-                });
-                if (resp.ok) {
+                }, 4000);
+                if (resp && resp.ok) {
                     console.log('Inscription transmise à l’API locale');
-                    return { success: true, id: inscId };
+                    transmitted = true;
                 }
             } catch (e) {
                 console.warn('API locale indisponible :', e);
             }
+
+            // 2. Envoi direct vers Supabase Cloud (garantit l'arrivée même si Ngrok ou le serveur local est inaccessible)
+            try {
+                const supaRow = {
+                    id: inscId,
+                    formation_id: inscriptionData.formationId,
+                    formationId: inscriptionData.formationId,
+                    prenom: inscriptionData.prenom,
+                    nom: inscriptionData.nom,
+                    email: inscriptionData.email,
+                    telephone: inscriptionData.telephone,
+                    modules: inscriptionData.modules || [],
+                    montant: Number(inscriptionData.montant || 0),
+                    description: inscriptionData.description || '',
+                    status: 'enAttente',
+                    statut: 'en_attente',
+                    source: 'web',
+                    type_formation: inscriptionData.typeFormation || 'presentiel',
+                    typeFormation: inscriptionData.typeFormation || 'presentiel',
+                    date_inscription: new Date().toISOString(),
+                    dateInscription: new Date().toISOString(),
+                    paiement_effectue: false,
+                    paiementEffectue: false
+                };
+
+                const supaResp = await fetch(`${SUPABASE_REST_URL}/inscriptions`, {
+                    method: 'POST',
+                    headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'resolution=merge-duplicates'
+                    },
+                    body: JSON.stringify([supaRow])
+                });
+
+                if (supaResp && (supaResp.ok || supaResp.status === 201 || supaResp.status === 200)) {
+                    console.log('Inscription enregistrée sur Supabase Cloud avec succès');
+                    transmitted = true;
+                }
+            } catch (e) {
+                console.warn('Supabase indisponible :', e);
+            }
+
             saveLocalInscription(inscriptionData);
-            return { success: true, local: true };
+            return { success: true, transmitted: transmitted };
         }
 
         const urlParams = new URLSearchParams(window.location.search);
@@ -1380,6 +1430,30 @@
                 }
             } catch (e) {
                 console.warn('Lecture catalogue formations indisponible :', e);
+            }
+
+            // Fallback Supabase Cloud direct
+            try {
+                const supaResp = await fetchWithTimeout(`${SUPABASE_REST_URL}/formations?select=*`, {
+                    headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Accept': 'application/json'
+                    }
+                }, 5000);
+                if (supaResp && supaResp.ok) {
+                    const list = await supaResp.json();
+                    if (Array.isArray(list) && list.length > 0) {
+                        if (id) {
+                            const found = list.find(f => f.id === id);
+                            if (found) return found;
+                        } else {
+                            return list[0];
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn('Lecture Supabase indisponible :', e);
             }
 
             if (id) {

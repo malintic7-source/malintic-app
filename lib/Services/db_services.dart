@@ -12,6 +12,7 @@ import 'package:gestion_formations/Models/seance.dart';
 import 'package:gestion_formations/Services/local_storage.dart';
 import 'package:gestion_formations/Services/supabase_config.dart';
 import 'package:gestion_formations/Services/supabase_mapper.dart';
+import 'package:gestion_formations/Services/polling_config.dart';
 
 class LocalDataService {
   static final LocalDataService _instance = LocalDataService._internal();
@@ -20,13 +21,34 @@ class LocalDataService {
   factory LocalDataService() => _instance;
 
   LocalDataService._internal() {
+    // Initialiser la configuration de polling (development par défaut)
+    _pollingConfig = _determinePollingConfig();
+    _pollingController = PollingController(_pollingConfig);
+    
     _invalidateObsoleteCache();
     _initInitialData();
     _loadFromStorage();
     _initLocalApiSync();
   }
+  
+  /// Déterminer la configuration de polling selon l'environnement
+  PollingConfig _determinePollingConfig() {
+    if (kDebugMode) {
+      return PollingConfig.development();
+    } else {
+      return PollingConfig.production();
+    }
+  }
+  
+  /// Obtenir le contrôleur de polling (pour tests/monitoring)
+  PollingController getPollingController() => _pollingController;
+  
+  /// Obtenir la configuration de polling
+  PollingConfig getPollingConfig() => _pollingConfig;
 
   final LocalStorage _localStorage = LocalStorage();
+  late final PollingController _pollingController;
+  late final PollingConfig _pollingConfig;
 
 
 
@@ -64,11 +86,24 @@ class LocalDataService {
     final isTestRuntime = Uri.base.scheme == 'file';
     if (isTestRuntime) return;
     if (!_hasLocalApi && !SupabaseConfig.isEnabled) return;
+    
     _syncFromLocalApi();
-    _apiPollingTimer = Timer.periodic(
-      const Duration(seconds: 2),
-      (_) => _syncFromLocalApi(),
-    );
+    
+    // Lancer le polling avec l'intervalle initial
+    _scheduleNextSync();
+  }
+  
+  /// Planifier le prochain sync avec l'intervalle actuel
+  void _scheduleNextSync() {
+    _apiPollingTimer?.cancel();
+    
+    final interval = _pollingController.getCurrentInterval();
+    
+    _apiPollingTimer = Timer(interval, () {
+      _syncFromLocalApi();
+      // Toujours replanifier après sync
+      _scheduleNextSync();
+    });
   }
 
   Set<String> _getDeletedDocs(String collection) {
@@ -186,13 +221,19 @@ class LocalDataService {
 
       final response = await http
           .get(_apiUri('state'), headers: headers)
-          .timeout(const Duration(seconds: 15));
+          .timeout(_pollingConfig.requestTimeout);
 
       if (response.statusCode == 304) {
         // État inchangé côté serveur, aucune désérialisation nécessaire (optimisation latence)
+        // ✅ C'est un succès: la requête s'est bien déroulée
+        _pollingController.recordSuccess();
+        _scheduleNextSync();
         return;
       }
       if (response.statusCode != 200) {
+        // ❌ Erreur API
+        _pollingController.recordError();
+        _scheduleNextSync();
         if (SupabaseConfig.isEnabled) {
           await _syncFromSupabase();
         }
@@ -389,8 +430,17 @@ class LocalDataService {
         _saveSeancesToStorage();
         _seancesController.add(List.unmodifiable(_seances));
       }
+      
+      // ✅ Sync successful - record success for backoff optimization
+      _pollingController.recordSuccess();
+      _scheduleNextSync();
     } catch (e) {
       debugPrint('[Malintic] Erreur sync API: $e');
+      
+      // ❌ Sync failed - record error for exponential backoff
+      _pollingController.recordError();
+      _scheduleNextSync();
+      
       if (SupabaseConfig.isEnabled) {
         try {
           await _syncFromSupabase();

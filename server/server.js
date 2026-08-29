@@ -6,6 +6,52 @@ const zlib = require('zlib');
 
 const app = express();
 app.disable('x-powered-by');
+const isProduction = process.env.NODE_ENV === 'production';
+const allowedOrigins = new Set(
+  String(process.env.CORS_ALLOWED_ORIGINS || '')
+    .split(',')
+    .map((origin) => origin.trim().replace(/\/$/, ''))
+    .filter(Boolean),
+);
+for (const origin of [process.env.PUBLIC_URL, process.env.NGROK_DOMAIN && `https://${process.env.NGROK_DOMAIN}`]) {
+  if (origin) allowedOrigins.add(origin.replace(/\/$/, ''));
+}
+
+async function _supabaseGet(table) {
+  const fetchFn = globalThis.fetch;
+  if (!fetchFn) throw new Error('fetch indisponible dans cette version de Node.js');
+  const res = await fetchFn(`${SUPABASE_URL}/rest/v1/${table}?select=*`, {
+    headers: {
+      apikey: SUPABASE_KEY,
+      Authorization: `Bearer ${SUPABASE_KEY}`,
+      Accept: 'application/json',
+    },
+    signal: AbortSignal.timeout ? AbortSignal.timeout(8000) : undefined,
+  });
+  if (!res.ok) throw new Error(`${table} GET ${res.status}: ${(await res.text()).slice(0, 200)}`);
+  return res.json();
+}
+
+let _remotePullRunning = false;
+async function pullSharedState() {
+  if (_remotePullRunning || _syncRunning || _syncQueue.length > 0 || !SUPABASE_KEY) return;
+  _remotePullRunning = true;
+  try {
+    const entries = await Promise.all(
+      Object.entries(_remoteTables).map(async ([table, config]) => [table, await _supabaseGet(table), config]),
+    );
+    const current = readState();
+    const next = { ...current };
+    for (const [table, rows, config] of entries) {
+      next[table] = rows.map(config.unmapper);
+    }
+    writeState(next);
+  } catch (error) {
+    console.error(`[Supabase] pull partagé impossible: ${error.message}`);
+  } finally {
+    _remotePullRunning = false;
+  }
+}
 
 // Response compression for ngrok and LAN speed optimization
 app.use((req, res, next) => {
@@ -34,9 +80,14 @@ app.use((req, res, next) => {
 
 app.use(express.json({ limit: '15mb' }));
 app.use((req, res, next) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, ngrok-skip-browser-warning');
+  const origin = String(req.headers.origin || '').replace(/\/$/, '');
+  if (origin && allowedOrigins.has(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, ngrok-skip-browser-warning');
+  }
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
@@ -324,8 +375,13 @@ function readState() {
 }
 
 // ─── Synchronisation Supabase ─────────────────────────────────────────────────
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://mzixlwnrsqoxolzafmjb.supabase.co';
-const SUPABASE_KEY = process.env.SUPABASE_KEY || 'sb_publishable_X9Srmcc9dIppUO8Hl0EDAw_C-giTCqt';
+const SUPABASE_URL = String(process.env.SUPABASE_URL || '').replace(/\/$/, '');
+const SUPABASE_KEY = String(
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+    || process.env.SUPABASE_KEY
+    || process.env.SUPABASE_ANON_KEY
+    || '',
+);
 const _syncQueue = []; // queue de documents à synchroniser
 let _syncRunning = false;
 
@@ -375,6 +431,7 @@ function _mapUser(u) {
     sexe: u.sexe || 'Homme',
     est_actif: u.estActif !== false,
     assigned_formations: u.assignedFormations || u.assigned_formations || [],
+    must_change_password: u.doitChangerMotDePasse === true || u.must_change_password === true,
     date_creation: _ts(u.dateCreation || u.date_creation),
     date_modification: _ts(u.dateModification || u.date_modification),
   };
@@ -422,6 +479,133 @@ function _mapPayment(p) {
     date_creation: _ts(p.dateCreation || p.date_creation),
   };
 }
+
+function _unmapFormation(row) {
+  return {
+    ...row,
+    formateurIds: row.formateur_ids || [],
+    moduleFormateurIds: row.module_formateur_ids || {},
+    dureeSemaines: row.duree_semaines || 0,
+    dureeHeures: row.duree_heures,
+    photoUrl: row.photo_url,
+    estStage: row.est_stage === true,
+    maxModulesParEtudiant: row.max_modules_par_etudiant,
+    nombreInscrits: row.nombre_inscrits || 0,
+    dateCreation: row.date_creation,
+    prixEnLigne: row.prix_en_ligne,
+    capaciteMax: row.capacite_max,
+    dateDebut: row.date_debut,
+    dateFin: row.date_fin,
+    modulesBonus: row.modules_bonus || [],
+    modulePrices: row.module_prices || {},
+  };
+}
+
+function _unmapUser(row) {
+  return {
+    ...row,
+    passwordHash: row.password_hash,
+    photoUrl: row.photo_url,
+    estActif: row.est_actif !== false,
+    assignedFormations: row.assigned_formations || [],
+    doitChangerMotDePasse: row.must_change_password === true,
+    dateCreation: row.date_creation,
+    dateModification: row.date_modification,
+  };
+}
+
+function _unmapInscription(row) {
+  return {
+    ...row,
+    etudiantId: row.etudiant_id,
+    formationId: row.formation_id,
+    paiementEffectue: row.paiement_effectue === true,
+    paiementId: row.paiement_id,
+    motifRejet: row.motif_rejet,
+    dateInscription: row.date_inscription,
+    dateAcceptation: row.date_acceptation,
+    selectedModules: row.modules || [],
+    typeFormation: row.type_formation,
+  };
+}
+
+function _unmapPayment(row) {
+  return {
+    ...row,
+    inscriptionId: row.inscription_id,
+    etudiantId: row.etudiant_id,
+    formationId: row.formation_id,
+    trancheNumero: row.tranche_numero,
+    nombreTranches: row.nombre_tranches,
+    recuPar: row.recu_par,
+    moduleId: row.module_id,
+    datePaiement: row.date_paiement,
+    dateCreation: row.date_creation,
+  };
+}
+
+function _unmapSeance(row) {
+  return {
+    ...row,
+    formationId: row.formation_id,
+    formateurId: row.formateur_id,
+    moduleTitle: row.module_title,
+    dateDebut: row.date_debut,
+    dateFin: row.date_fin,
+    dateCreation: row.date_creation,
+  };
+}
+
+function _mapSeance(s) {
+  return {
+    id: s.id,
+    formation_id: s.formationId || s.formation_id || null,
+    formateur_id: s.formateurId || s.formateur_id || null,
+    titre: s.titre || '',
+    module_title: s.moduleTitle || s.module_title || null,
+    description: s.description || null,
+    date_debut: _ts(s.dateDebut || s.date_debut),
+    date_fin: _ts(s.dateFin || s.date_fin),
+    statut: s.statut || 'brouillon',
+    contenu: s.contenu || [],
+    presences: s.presences || [],
+    date_creation: _ts(s.dateCreation || s.date_creation),
+  };
+}
+
+function _unmapAuditLog(row) {
+  return {
+    ...row,
+    userNom: row.user_nom,
+    userRole: row.user_role,
+    targetId: row.target_id,
+    targetType: row.target_type,
+  };
+}
+
+function _mapAuditLog(log) {
+  return {
+    id: log.id,
+    user_nom: log.userNom || log.user_nom || null,
+    user_role: log.userRole || log.user_role || null,
+    action: log.action || '',
+    description: log.description || null,
+    timestamp: _ts(log.timestamp),
+    target_id: log.targetId || log.target_id || null,
+    target_type: log.targetType || log.target_type || null,
+    severity: log.severity || 'info',
+  };
+}
+
+const _remoteTables = {
+  formations: { mapper: _mapFormation, unmapper: _unmapFormation },
+  users: { mapper: _mapUser, unmapper: _unmapUser },
+  inscriptions: { mapper: _mapInscription, unmapper: _unmapInscription },
+  payments: { mapper: _mapPayment, unmapper: _unmapPayment },
+  seances: { mapper: _mapSeance, unmapper: _unmapSeance },
+  audit_logs: { mapper: _mapAuditLog, unmapper: _unmapAuditLog },
+  notifications: { mapper: (row) => row, unmapper: (row) => row },
+};
 
 async function _supabaseUpsert(table, row, retries = 2) {
   const fetchFn = globalThis.fetch;
@@ -483,12 +667,12 @@ async function _drainSyncQueue() {
 
 function enqueueSyncState(state) {
   _syncQueue.push(async () => {
-    const tableMap = {
-      formations: { rows: state.formations || [], mapper: _mapFormation },
-      users: { rows: state.users || [], mapper: _mapUser },
-      inscriptions: { rows: state.inscriptions || [], mapper: _mapInscription },
-      payments: { rows: state.payments || [], mapper: _mapPayment },
-    };
+    const tableMap = Object.fromEntries(
+      Object.entries(_remoteTables).map(([table, config]) => [
+        table,
+        { rows: state[table] || [], mapper: config.mapper },
+      ]),
+    );
     for (const [table, { rows, mapper }] of Object.entries(tableMap)) {
       for (const row of rows) {
         await _supabaseUpsert(table, mapper(row));
@@ -499,8 +683,7 @@ function enqueueSyncState(state) {
 }
 
 function enqueueSyncDocument(collection, doc, deleted = false) {
-  const mappers = { formations: _mapFormation, users: _mapUser, inscriptions: _mapInscription, payments: _mapPayment };
-  const mapper = mappers[collection];
+  const mapper = _remoteTables[collection]?.mapper;
   if (!mapper) return;
   _syncQueue.push(async () => {
     if (deleted) await _supabaseDelete(collection, doc.id);
@@ -511,10 +694,10 @@ function enqueueSyncDocument(collection, doc, deleted = false) {
 
 // ─── Snapshot des IDs précédents pour sync différentielle ────────────────────
 const _prevIds = { formations: new Set(), users: new Set(), inscriptions: new Set(), payments: new Set() };
-const _syncTables = ['formations', 'users', 'inscriptions', 'payments'];
+const _syncTables = ['formations', 'users', 'inscriptions', 'payments', 'seances', 'audit_logs', 'notifications'];
 let _lastSyncHash = '';
 let _lastSyncTime = 0;
-const SYNC_THROTTLE_MS = 30_000; // sync Supabase max toutes les 30 secondes
+const SYNC_THROTTLE_MS = 1_000; // propagate local writes quickly while protecting the queue
 
 function _stateHash(state) {
   // Hash léger basé sur les IDs + versions des documents
@@ -545,7 +728,9 @@ function writeState(state) {
   _lastSyncHash = hash;
   _lastSyncTime = now;
 
-  const mappers = { formations: _mapFormation, users: _mapUser, inscriptions: _mapInscription, payments: _mapPayment };
+  const mappers = Object.fromEntries(
+    Object.entries(_remoteTables).map(([table, config]) => [table, config.mapper]),
+  );
   const snap = {};
   for (const t of _syncTables) snap[t] = new Set((state[t] || []).map(r => r.id));
 
@@ -609,7 +794,9 @@ app.get('/api/system/network-info', requireAdministrator, (req, res) => {
   const forwardedHost = String(req.headers['x-forwarded-host'] || '').trim();
   const activeHost = forwardedHost || hostHeader;
 
-  const ngrokDomain = process.env.NGROK_DOMAIN || 'boil-prude-curry.ngrok-free.dev';
+  // ⚠️ NGROK_DOMAIN doit être défini en variable d'environnement (voir .env.example)
+  // Ne pas utiliser de fallback hardcodé
+  const ngrokDomain = process.env.NGROK_DOMAIN || null;
   const publicUrl = process.env.PUBLIC_URL || (ngrokDomain ? `https://${ngrokDomain}` : null);
 
   res.json({
@@ -685,7 +872,7 @@ app.post('/api/auth/login', (req, res) => {
   sessions.set(token, { userId: user.id, role: user.role, createdAt: Date.now() });
   saveSessions();
   // Cookie de session sans Max-Age (automatiquement détruit à la fermeture du navigateur)
-  res.setHeader('Set-Cookie', `malintic_session=${token}; Path=/; HttpOnly; SameSite=Lax`);
+  res.setHeader('Set-Cookie', `malintic_session=${token}; Path=/; HttpOnly; SameSite=Lax${isProduction ? '; Secure' : ''}`);
   res.json(publicUser(user));
 });
 
@@ -722,10 +909,9 @@ app.get('/api/auth/session', requireSession, (req, res) => {
   res.json(publicUser(user));
 });
 
-app.post('/api/auth/change-password', (req, res) => {
-  const session = sessionFromRequest(req);
-  const userId = req.body?.userId || req.body?.id || session?.userId;
-  const email = String(req.body?.email || req.body?.identifier || '').trim().toLowerCase();
+app.post('/api/auth/change-password', requireSession, (req, res) => {
+  const session = req.session;
+  const userId = session.userId;
   const currentPassword = String(req.body?.currentPassword || '');
   const newPassword = String(req.body?.newPassword || '').trim();
   const isFirstLogin = Boolean(req.body?.isFirstLogin);
@@ -735,12 +921,7 @@ app.post('/api/auth/change-password', (req, res) => {
   }
 
   const state = readState();
-  const user = state.users.find((item) => {
-    if (userId && String(item.id) === String(userId)) return true;
-    const itemEmail = String(item.email || '').trim().toLowerCase();
-    if (email && itemEmail === email) return true;
-    return false;
-  });
+  const user = state.users.find((item) => String(item.id) === String(userId));
 
   if (!user) return res.status(404).json({ error: 'Utilisateur introuvable.' });
 
@@ -750,7 +931,7 @@ app.post('/api/auth/change-password', (req, res) => {
     if (!matches) {
       return res.status(401).json({ error: 'Ancien mot de passe incorrect.' });
     }
-  } else if (!user.doitChangerMotDePasse && !isFirstLogin) {
+  } else if (!user.doitChangerMotDePasse) {
     return res.status(400).json({ error: 'Veuillez saisir votre mot de passe actuel.' });
   }
 
@@ -777,16 +958,9 @@ app.post('/api/auth/change-password', (req, res) => {
   res.json(publicUser(user));
 });
 
-app.post('/api/admin/users/:id/password', (req, res) => {
-  const session = sessionFromRequest(req);
-  const adminId = req.headers['x-admin-id'] || req.body?.adminId;
+app.post('/api/admin/users/:id/password', requireAdministrator, (req, res) => {
+  const session = req.session;
   const state = readState();
-  const isAdminRequest = isAdministrator(session) ||
-      (adminId && state.users.some(u => String(u.id) === String(adminId) && ['admin', 'dg', 'it'].includes(String(u.role || '').toLowerCase().replace('userrole.', ''))));
-
-  if (!isAdminRequest && session) {
-    return res.status(403).json({ error: "Accès réservé à l'administration" });
-  }
 
   const { newPassword, mustChangePassword = true } = req.body || {};
   const password = String(newPassword || '').trim();
@@ -803,7 +977,7 @@ app.post('/api/admin/users/:id/password', (req, res) => {
   user.dateModification = new Date().toISOString();
 
   // Log in audit trail
-  const adminUser = state.users.find((u) => u.id === (session?.userId || adminId));
+  const adminUser = state.users.find((u) => u.id === session.userId);
   const adminNom = adminUser ? `${adminUser.prenom} ${adminUser.nom}`.trim() : 'Administration';
   const targetNom = `${user.prenom} ${user.nom}`.trim();
 
@@ -814,7 +988,7 @@ app.post('/api/admin/users/:id/password', (req, res) => {
     description: `Mot de passe de ${targetNom} (${user.email}) modifié par ${adminNom} (Forcer changement 1ère connexion: ${mustChangePassword ? 'Oui' : 'Non'})`,
     targetId: user.id,
     targetType: 'user',
-    userId: session?.userId || adminId,
+    userId: session.userId,
     userEmail: adminUser?.email,
     severity: 'warning',
   });
@@ -989,7 +1163,7 @@ app.delete('/api/audit_logs/clear', requireAdministrator, (req, res) => {
   res.status(200).json({ success: true, message: 'Logs vidés avec succès.' });
 });
 
-app.delete('/api/:collection/:id', (req, res) => {
+app.delete('/api/:collection/:id', requireEmployee, (req, res) => {
   const { collection, id } = req.params;
   if (collection === 'audit_logs' && id === 'clear') {
     const state = readState();
@@ -999,13 +1173,12 @@ app.delete('/api/:collection/:id', (req, res) => {
   }
   if (!isCollection(collection)) return res.status(404).json({ error: 'Collection inconnue' });
   const state = readState();
-  const session = sessionFromRequest(req);
-  const callerId = req.headers['x-admin-id'] || req.headers['x-user-id'];
-  const callerUser = callerId ? state.users.find(u => String(u.id) === String(callerId)) : null;
-  const effectiveRole = session ? roleOf(session) : (callerUser ? roleOf({ role: callerUser.role }) : 'admin');
-
-  if (session && !isEmployee(session) && !callerUser) {
-    return res.status(403).json({ error: 'Accès réservé au personnel' });
+  const session = req.session;
+  if (collection === 'users' && !isAdministrator(session)) {
+    return res.status(403).json({ error: "La gestion des comptes est réservée à l'administration." });
+  }
+  if (!canWriteCollection(session, collection)) {
+    return res.status(403).json({ error: 'Vous ne disposez pas des droits nécessaires pour cette action.' });
   }
   state[collection] = state[collection].filter((item) => String(item.id) !== id);
   if (collection === 'users') {
@@ -1015,4 +1188,16 @@ app.delete('/api/:collection/:id', (req, res) => {
   res.status(204).end();
 });
 
-app.listen(5001, () => console.log('API Malintic disponible sur le port 5001'));
+const port = Number(process.env.PORT || 5001);
+app.listen(port, () => {
+  console.log(`API Malintic disponible sur le port ${port}`);
+  if (!SUPABASE_URL || !SUPABASE_KEY) {
+    console.warn('[Supabase] synchronisation désactivée: SUPABASE_URL et une clé backend sont requises');
+    return;
+  }
+
+  const localState = readState();
+  enqueueSyncState(localState);
+  setTimeout(() => pullSharedState(), 2_000);
+  setInterval(() => pullSharedState(), 5_000);
+});

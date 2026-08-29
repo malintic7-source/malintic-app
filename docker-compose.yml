@@ -7,7 +7,7 @@ services:
     ports:
       - "80:80"
       - "8000:80"
-    restart: always
+    restart: unless-stopped
     init: true
     stop_grace_period: 15s
     environment:
@@ -30,7 +30,7 @@ services:
       context: ./server
       dockerfile: Dockerfile
     container_name: malintic_api
-    restart: always
+    restart: unless-stopped
     init: true
     env_file:
       - .env
@@ -38,6 +38,10 @@ services:
       - NODE_ENV=production
       - PORT=5001
       - DATA_DIR=/data
+      - SUPABASE_URL=${SUPABASE_URL:-}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY:-}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY:-}
+      - SUPABASE_KEY=${SUPABASE_KEY:-}
     volumes:
       - malintic_data:/data
     expose:
@@ -54,7 +58,7 @@ services:
   ngrok:
     image: ngrok/ngrok:latest
     container_name: malintic_ngrok
-    restart: always
+    restart: unless-stopped
     init: true
     depends_on:
       app:
@@ -63,8 +67,8 @@ services:
       - "4040:4040"
     environment:
       NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN:-}
-      NGROK_DOMAIN: ${NGROK_DOMAIN:-boil-prude-curry.ngrok-free.dev}
-    command: http --url=${NGROK_DOMAIN:-boil-prude-curry.ngrok-free.dev} http://malintic_app:80
+      NGROK_DOMAIN: ${NGROK_DOMAIN:-}
+    command: http --url=${NGROK_DOMAIN:?NGROK_DOMAIN doit être défini dans .env} http://malintic_app:80
     networks:
       - malintic_network
 

@@ -304,32 +304,21 @@ class _PoleCardState extends State<_PoleCard> {
 
     String detailMessage = '';
     String poleSubtitle = '';
-    const serviceCatalog = [
-      'Promotion d’entreprises & outils numériques',
-      'Maintenance informatique',
-      'Administration réseaux & systèmes',
-      'Installation de vidéosurveillance',
-      'Installation de contrôle d’accès',
-      'Élaboration de projets numériques (IMITECH)',
-      'Installation d’antennes paraboliques',
-      'Autres services sur demande',
-    ];
-
     if (pole.title == 'Prestations') {
       poleSubtitle = 'Audit, Conseil & Solutions Numériques';
       detailMessage =
           'Découvrez notre catalogue de prestations pour accompagner la transformation numérique, la sécurité et la performance de votre organisation.\n\n'
-          'Notre équipe technique et commerciale reste à votre disposition pour étudier vos besoins et établir un devis personnalisé.';
+          'L’ouverture de ce pôle est en cours et sera bientôt accessible depuis l’interface de formation.';
     } else if (pole.title == 'e-Commerce') {
       poleSubtitle = 'Équipements, Logiciels & Accessoires';
       detailMessage =
           'Notre boutique e-commerce est accessible dès maintenant sur malintic.com. Découvrez nos équipements informatiques, ordinateurs, licences et accessoires.\n\n'
-          'Le nouveau site M@LI-NTIC est en préparation. En attendant, nous vous invitons à consulter notre boutique en ligne.';
+          'Le parcours de la plateforme est en cours de finalisation et la redirection vers les formations reste activée pour le moment.';
     } else if (pole.title == 'Incubator') {
       poleSubtitle = 'Accompagnement & Accélération de Startups';
       detailMessage =
           'L’espace Incubateur & Accélérateur M@LI-NTIC structure ses prochains programmes d’immersion, mentorat technologique et accélération pour les porteurs de projets innovants.\n\n'
-          'Les inscriptions pour la prochaine session seront ouvertes sous peu. N’hésitez pas à vous rapprocher de la direction pour toute information préalable.';
+          'Les inscriptions pour la prochaine session seront ouvertes sous peu. En attendant, l’accès aux formations reste le parcours principal.';
     } else {
       poleSubtitle = 'Module en cours de finalisation';
       detailMessage =
@@ -445,11 +434,7 @@ class _PoleCardState extends State<_PoleCard> {
                       const SizedBox(width: 8),
                       Flexible(
                         child: Text(
-                          isEcommerce
-                              ? 'Boutique en ligne disponible'
-                              : isServices
-                                  ? 'Catalogue de services disponible'
-                                  : 'Déploiement en cours • Bientôt disponible',
+                          'Déploiement en cours • Bientôt disponible',
                           style: GoogleFonts.poppins(
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
@@ -472,49 +457,6 @@ class _PoleCardState extends State<_PoleCard> {
                     fontWeight: FontWeight.w400,
                   ),
                 ),
-                if (isServices) ...[
-                  const SizedBox(height: 18),
-                  Text(
-                    'Nos domaines d’intervention',
-                    style: GoogleFonts.poppins(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: textColor,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: serviceCatalog
-                        .map(
-                          (service) => Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 7,
-                            ),
-                            decoration: BoxDecoration(
-                              color: pole.primaryColor.withValues(alpha: 0.08),
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                color: pole.primaryColor.withValues(alpha: 0.22),
-                              ),
-                            ),
-                            child: Text(
-                              service,
-                              style: GoogleFonts.poppins(
-                                fontSize: 10.5,
-                                fontWeight: FontWeight.w500,
-                                color: isDark
-                                    ? const Color(0xFFF1F5F9)
-                                    : const Color(0xFF475569),
-                              ),
-                            ),
-                          ),
-                        )
-                        .toList(),
-                  ),
-                ],
                 const SizedBox(height: 24),
 
                 // Action Buttons
@@ -541,34 +483,14 @@ class _PoleCardState extends State<_PoleCard> {
                         size: 20,
                       ),
                       label: Text(
-                        isEcommerce
-                            ? 'Accéder à la boutique malintic.com'
-                            : isServices
-                                ? 'Demander un devis personnalisé'
-                                : 'Accéder aux Formations (Actif)',
+                        'Accéder aux Formations (Actif)',
                         style: GoogleFonts.poppins(
                           fontWeight: FontWeight.w700,
                           fontSize: 14,
                         ),
                       ),
-                      onPressed: () async {
+                      onPressed: () {
                         Navigator.of(ctx).pop();
-                        if (isEcommerce) {
-                          final uri = Uri.parse(pole.url ?? 'https://malintic.com');
-                          try {
-                            await launchUrl(uri, mode: LaunchMode.externalApplication);
-                          } catch (_) {}
-                          return;
-                        }
-                        if (isServices) {
-                          final uri = Uri.parse(
-                            'mailto:contact@m-ntic.ml?subject=Demande%20de%20devis%20-%20Prestations',
-                          );
-                          try {
-                            await launchUrl(uri, mode: LaunchMode.externalApplication);
-                          } catch (_) {}
-                          return;
-                        }
                         Navigator.of(context).push(
                           MaterialPageRoute(
                             builder: (context) => const SignInPage(poleName: 'Formations'),

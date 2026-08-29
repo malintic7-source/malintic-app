@@ -111,6 +111,7 @@ CREATE TABLE IF NOT EXISTS public.audit_logs (
 
 -- 7. Activer RLS et autoriser l'accès public pour l'application
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN DEFAULT false;
 ALTER TABLE public.formations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.inscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.payments ENABLE ROW LEVEL SECURITY;

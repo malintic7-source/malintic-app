@@ -35,7 +35,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://boil-prude-curry.ngrok-free.dev/api/:path*"
+      "destination": "https://malintic-api.onrender.com/api/:path*"
     },
     {
       "source": "/formation.html",

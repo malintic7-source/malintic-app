@@ -20,6 +20,15 @@ class _SignInPageState extends State<SignInPage> {
   bool _obscurePassword = true;
 
   @override
+  void initState() {
+    super.initState();
+    final rememberedIdentifier = AuthProvider().rememberedIdentifier;
+    if (rememberedIdentifier != null && rememberedIdentifier.isNotEmpty) {
+      _emailController.text = rememberedIdentifier;
+    }
+  }
+
+  @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
@@ -475,5 +484,3 @@ class _SignInPageState extends State<SignInPage> {
 
 /// Backward compatibility alias
 typedef SignIn = SignInPage;
-
-

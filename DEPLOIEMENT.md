@@ -81,6 +81,27 @@ dart analyze && flutter test && git add . && git commit -m "fix: description" &&
 
 ---
 
+## 🔄 Synchronisation Docker ↔ Supabase
+
+Le conteneur API utilise Supabase comme source de données partagée :
+
+- les écritures locales sont envoyées vers Supabase ;
+- l’API relit les tables partagées toutes les 5 secondes ;
+- au redémarrage, le conteneur recharge l’état partagé ;
+- `restart: unless-stopped` relance automatiquement les services arrêtés ;
+- le volume Docker conserve un cache local et un secours si Supabase est momentanément indisponible.
+
+Dans `.env`, le backend doit recevoir `SUPABASE_URL` et une clé serveur (`SUPABASE_SERVICE_ROLE_KEY`, recommandée) ou `SUPABASE_KEY`. Ne jamais utiliser une clé `service_role` dans Flutter ou dans Vercel côté navigateur.
+
+```powershell
+docker compose -p malintic_app up -d --build
+docker compose -p malintic_app ps
+```
+
+La synchronisation est éventuelle (quelques secondes), et non une réplication PostgreSQL instantanée. Pour une haute disponibilité stricte, Supabase reste la source de vérité unique.
+
+---
+
 ## 🏗️ Stack technique
 
 | Composant | Technologie |
@@ -170,20 +191,132 @@ Exemple : fix(dialog): corriger overflow des boutons sur mobile
 
 ---
 
-## 🆘 Dépannage
+## 🔐 SÉCURITÉ — Corrections des hardcodes
 
+### ⚠️ Points critiques corrigés (29/08/2026)
+
+#### 1. **Supabase credentials hardcodées** ❌ → ✅ Corrigé
+**Problème** : `lib/Services/supabase_config.dart` contenait les credentials en dur
+```dart
+// ❌ AVANT (FAILLE DE SÉCURITÉ)
+defaultValue: 'https://mzixlwnrsqoxolzafmjb.supabase.co'
+defaultValue: 'sb_publishable_X9Srmcc9dIppUO8Hl0EDAw_C-giTCqt'
+```
+
+**Solution** : Utiliser `--dart-define` au build
+```bash
+# ✅ APRÈS (SÉCURISÉ)
+flutter build web \
+  --dart-define=SUPABASE_URL=https://your-project.supabase.co \
+  --dart-define=SUPABASE_ANON_KEY=sb_your_anon_key
+```
+
+#### 2. **Ngrok domain hardcodé** ❌ → ✅ Corrigé
+**Problème** : `boil-prude-curry.ngrok-free.dev` hardcodé partout
+- ❌ server.js ligne 627
+- ❌ vercel.json ligne 38
+- ❌ Documentation statique
+
+**Solution** : Utiliser variable d'environnement NGROK_DOMAIN
 ```powershell
-# Logs Docker
-docker compose -p malintic_app logs app
+# .env (non commité)
+NGROK_DOMAIN=your-custom-domain.ngrok-free.dev
+NGROK_AUTHTOKEN=your_ngrok_token
 
-# Build propre
-flutter clean && flutter pub get && flutter build web --release
+# Docker charge automatiquement
+docker compose --env-file .env up -d ngrok
+```
 
-# Reset conteneur
-docker compose -p malintic_app down
-docker compose -p malintic_app build --no-cache app
-docker compose -p malintic_app up -d app
+#### 3. **Vercel API routing** ❌ → ✅ Corrigé
+**Problème** : URL API hardcodée dans vercel.json
+
+**Solution** : 
+- Utiliser `malintic-api.onrender.com` en production
+- Script `vercel-config-generator.ps1` pour générer dynamiquement
+```powershell
+# Générer vercel.json avec bonne URL
+.\vercel-config-generator.ps1 -ApiUrl "https://malintic-api.onrender.com"
+
+# Ou Render:
+.\vercel-config-generator.ps1 -ApiUrl "https://your-render-backend.onrender.com"
+```
+
+#### 4. **Variables d'environnement centralisées** ✅ Ajoutées
+**Solution** : Nouveau fichier `.env.example` documenté
+```bash
+# ✅ À utiliser en local
+cp .env.example .env
+# Puis éditer .env avec VOS vraies valeurs
+```
+
+**Variables gérées** :
+- `NGROK_AUTHTOKEN` → ngrok service
+- `NGROK_DOMAIN` → ngrok + server.js
+- `PUBLIC_URL` → backend CORS
+- `SUPABASE_URL`, `SUPABASE_ANON_KEY` → si Supabase utilisé
+
+### 🚀 Nouvelle procédure de déploiement
+
+#### Local (développement)
+```powershell
+# 1. Copier et configurer .env
+cp .env.example .env
+# Éditer .env avec vos valeurs locales
+
+# 2. Démarrer les services Docker
+docker compose --env-file .env up -d
+
+# 3. Vérifier
+curl http://localhost:8000
+```
+
+#### Production (Vercel + Render backend)
+```powershell
+# 1. Configurer vercel.json pour API Render
+.\vercel-config-generator.ps1 -ApiUrl "https://malintic-api.onrender.com"
+git add vercel.json && git commit -m "chore: update API URL for production"
+
+# 2. Définir variables d'env dans Vercel dashboard
+# Aucune variable n'est nécessaire dans Vercel pour ce build
+
+# 3. Push → déploiement auto
+git push origin main
+```
+
+#### Admin ngrok (tunnel sécurisé)
+```powershell
+# ⚠️ JAMAIS en dur. Utiliser .env avec votre token personnel
+# .env
+NGROK_AUTHTOKEN=your_personal_ngrok_token
+NGROK_DOMAIN=your-custom-domain.ngrok-free.dev
+
+# Démarrer
+docker compose --env-file .env up -d ngrok
+
+# URL publique (admin only)
+# https://your-custom-domain.ngrok-free.dev
+```
+
+### 📋 Checklist pré-déploiement
+
+- [ ] `.env` configuré avec vraies valeurs ✅
+- [ ] `dart analyze` → 0 erreurs ✅
+- [ ] `flutter test` → tous tests passent ✅
+- [ ] Pas de credentials hardcodées dans le code ✅
+- [ ] `vercel.json` a été généré avec la bonne API URL ✅
+- [ ] Variables d'env définies dans Vercel dashboard (si besoin) ✅
+- [ ] `git push origin main` → Vercel déploie auto ✅
+
+### 🚨 Rappel sécurité
+
+**JAMAIS** commiter `.env` avec les vraies valeurs.
+Les credentials doivent TOUJOURS être en variables d'environnement :
+- ✅ CI/CD (GitHub Actions, Vercel) : secrets management
+- ✅ Docker local : `--env-file .env` (non commité)
+- ✅ Compilation Flutter : `--dart-define` flags
+
+```
 ```
 
 ---
-Dernière mise à jour : 2026-08-28 — M@LI-NTIC Gestion des Formations
+Dernière mise à jour : 2026-08-29 — M@LI-NTIC Gestion des Formations

@@ -32,6 +32,7 @@ build/*
 # Firebase
 .firebase/
 .env
+.env.*
 
 # Web build output
 web/flutter_bootstrap.js

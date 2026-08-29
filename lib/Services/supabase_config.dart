@@ -6,14 +6,18 @@
 ///   --dart-define=SUPABASE_ANON_KEY=your_anon_key
 /// ```
 class SupabaseConfig {
+  /// URL Supabase - DOIT être fourni via flutter build --dart-define
+  /// Exemple: flutter build web --dart-define=SUPABASE_URL=https://your-project.supabase.co
   static const String url = String.fromEnvironment(
     'SUPABASE_URL',
-    defaultValue: 'https://mzixlwnrsqoxolzafmjb.supabase.co',
+    defaultValue: '',
   );
 
+  /// Clé anon Supabase - DOIT être fourni via flutter build --dart-define
+  /// Exemple: flutter build web --dart-define=SUPABASE_ANON_KEY=sb_your_anon_key
   static const String anonKey = String.fromEnvironment(
     'SUPABASE_ANON_KEY',
-    defaultValue: 'sb_publishable_X9Srmcc9dIppUO8Hl0EDAw_C-giTCqt',
+    defaultValue: '',
   );
 
   static const bool isEnabled = bool.fromEnvironment(
