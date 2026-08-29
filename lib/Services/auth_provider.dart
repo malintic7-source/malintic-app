@@ -414,7 +414,7 @@ class AuthProvider {
         }),
       ).timeout(const Duration(seconds: 4));
 
-      if (response.statusCode == 400 || response.statusCode == 401) {
+      if (response.statusCode != 200) {
         String serverMessage = 'Impossible de modifier le mot de passe.';
         try {
           final body = jsonDecode(response.body) as Map<String, dynamic>;
@@ -424,10 +424,13 @@ class AuthProvider {
       }
     } catch (e) {
       if (e is Exception &&
-          (e.toString().contains('mot de passe') || e.toString().contains('caractères'))) {
+          (e.toString().contains('Impossible') ||
+              e.toString().contains('Ancien mot de passe') ||
+              e.toString().contains('mot de passe') ||
+              e.toString().contains('caractères'))) {
         rethrow;
       }
-      // Offline mode: non-blocking server error, continue with local update
+      // The local cache remains usable when the API is temporarily offline.
     }
 
     User updatedUser = _currentUser!.copyWith(

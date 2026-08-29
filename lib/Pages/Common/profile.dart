@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:gestion_formations/Models/user.dart';
+import 'package:gestion_formations/Pages/Login/welcome_page.dart';
 import 'package:gestion_formations/Services/auth_provider.dart';
 import 'package:gestion_formations/config/theme.dart';
 
@@ -13,7 +14,8 @@ class ProfilePage extends StatefulWidget {
   State<ProfilePage> createState() => _ProfilePageState();
 }
 
-class _ProfilePageState extends State<ProfilePage> with TickerProviderStateMixin {
+class _ProfilePageState extends State<ProfilePage>
+    with TickerProviderStateMixin {
   bool isEditing = false;
   late User currentUser;
   late TextEditingController nomController;
@@ -30,7 +32,10 @@ class _ProfilePageState extends State<ProfilePage> with TickerProviderStateMixin
     prenomController = TextEditingController(text: currentUser.prenom);
     phoneController = TextEditingController(text: currentUser.phone);
     emailController = TextEditingController(text: currentUser.email);
-    _fadeController = AnimationController(duration: Duration(milliseconds: 600), vsync: this)..forward();
+    _fadeController = AnimationController(
+      duration: Duration(milliseconds: 600),
+      vsync: this,
+    )..forward();
   }
 
   @override
@@ -49,7 +54,10 @@ class _ProfilePageState extends State<ProfilePage> with TickerProviderStateMixin
     final isCompact = screenWidth < 600;
 
     return SingleChildScrollView(
-      padding: EdgeInsets.symmetric(horizontal: isCompact ? 14 : 20, vertical: 20),
+      padding: EdgeInsets.symmetric(
+        horizontal: isCompact ? 14 : 20,
+        vertical: 20,
+      ),
       child: Center(
         child: ConstrainedBox(
           constraints: BoxConstraints(maxWidth: 960),
@@ -130,8 +138,14 @@ class _ProfilePageState extends State<ProfilePage> with TickerProviderStateMixin
                 radius: 26,
                 backgroundColor: Colors.white,
                 child: Text(
-                  currentUser.nomComplet.isNotEmpty ? currentUser.nomComplet[0].toUpperCase() : '?',
-                  style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w700, color: AppTheme.primary),
+                  currentUser.nomComplet.isNotEmpty
+                      ? currentUser.nomComplet[0].toUpperCase()
+                      : '?',
+                  style: GoogleFonts.poppins(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.primary,
+                  ),
                 ),
               ),
             ),
@@ -142,7 +156,11 @@ class _ProfilePageState extends State<ProfilePage> with TickerProviderStateMixin
                 children: [
                   Text(
                     currentUser.nomComplet,
-                    style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.textPrimary,
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -150,32 +168,52 @@ class _ProfilePageState extends State<ProfilePage> with TickerProviderStateMixin
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
                         decoration: BoxDecoration(
                           color: AppTheme.primary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Text(
-                          currentUser.role.toString().split('.').last.toUpperCase(),
-                          style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: AppTheme.primary),
+                          currentUser.role
+                              .toString()
+                              .split('.')
+                              .last
+                              .toUpperCase(),
+                          style: GoogleFonts.poppins(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.primary,
+                          ),
                         ),
-
                       ),
                       const SizedBox(width: 6),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
                         decoration: BoxDecoration(
-                          color: currentUser.estActif ? AppTheme.success.withValues(alpha: 0.1) : AppTheme.error.withValues(alpha: 0.1),
+                          color: currentUser.estActif
+                              ? AppTheme.success.withValues(alpha: 0.1)
+                              : AppTheme.error.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Text(
                           currentUser.estActif ? 'Actif' : 'Bloqué',
-                          style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w700, color: currentUser.estActif ? AppTheme.success : AppTheme.error),
+                          style: GoogleFonts.poppins(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: currentUser.estActif
+                                ? AppTheme.success
+                                : AppTheme.error,
+                          ),
                         ),
                       ),
                     ],
                   ),
-
                 ],
               ),
             ),
@@ -183,7 +221,7 @@ class _ProfilePageState extends State<ProfilePage> with TickerProviderStateMixin
               icon: Icon(Icons.edit_rounded, size: 18, color: AppTheme.primary),
               onPressed: () => setState(() => isEditing = true),
               tooltip: 'Modifier',
-            )
+            ),
           ],
         ),
       );
@@ -202,7 +240,10 @@ class _ProfilePageState extends State<ProfilePage> with TickerProviderStateMixin
           ),
         ],
       ),
-      padding: EdgeInsets.symmetric(horizontal: isCompact ? 12 : 18, vertical: isCompact ? 14 : 18),
+      padding: EdgeInsets.symmetric(
+        horizontal: isCompact ? 12 : 18,
+        vertical: isCompact ? 14 : 18,
+      ),
       child: Column(
         children: [
           Container(
@@ -217,7 +258,9 @@ class _ProfilePageState extends State<ProfilePage> with TickerProviderStateMixin
               radius: isCompact ? 36 : 40,
               backgroundColor: Colors.white,
               child: Text(
-                currentUser.nomComplet.isNotEmpty ? currentUser.nomComplet[0].toUpperCase() : '?',
+                currentUser.nomComplet.isNotEmpty
+                    ? currentUser.nomComplet[0].toUpperCase()
+                    : '?',
                 style: GoogleFonts.poppins(
                   fontSize: isCompact ? 28 : 30,
                   fontWeight: FontWeight.w700,
@@ -245,13 +288,19 @@ class _ProfilePageState extends State<ProfilePage> with TickerProviderStateMixin
                 padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: AppTheme.primary.withValues(alpha: 0.1),
-                  border: Border.all(color: AppTheme.primary.withValues(alpha: 0.2)),
+                  border: Border.all(
+                    color: AppTheme.primary.withValues(alpha: 0.2),
+                  ),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.person_rounded, color: AppTheme.primary, size: 12),
+                    Icon(
+                      Icons.person_rounded,
+                      color: AppTheme.primary,
+                      size: 12,
+                    ),
                     SizedBox(width: 4),
                     Text(
                       currentUser.role.toString().split('.').last.toUpperCase(),
@@ -267,9 +316,13 @@ class _ProfilePageState extends State<ProfilePage> with TickerProviderStateMixin
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: currentUser.estActif ? Color(0xFF10B981).withValues(alpha: 0.1) : Color(0xFFEF4444).withValues(alpha: 0.1),
+                  color: currentUser.estActif
+                      ? Color(0xFF10B981).withValues(alpha: 0.1)
+                      : Color(0xFFEF4444).withValues(alpha: 0.1),
                   border: Border.all(
-                    color: currentUser.estActif ? Color(0xFF10B981).withValues(alpha: 0.2) : Color(0xFFEF4444).withValues(alpha: 0.2),
+                    color: currentUser.estActif
+                        ? Color(0xFF10B981).withValues(alpha: 0.2)
+                        : Color(0xFFEF4444).withValues(alpha: 0.2),
                   ),
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -277,8 +330,12 @@ class _ProfilePageState extends State<ProfilePage> with TickerProviderStateMixin
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
-                      currentUser.estActif ? Icons.check_circle_rounded : Icons.block_rounded,
-                      color: currentUser.estActif ? Color(0xFF10B981) : Color(0xFFEF4444),
+                      currentUser.estActif
+                          ? Icons.check_circle_rounded
+                          : Icons.block_rounded,
+                      color: currentUser.estActif
+                          ? Color(0xFF10B981)
+                          : Color(0xFFEF4444),
                       size: 12,
                     ),
                     SizedBox(width: 4),
@@ -287,7 +344,9 @@ class _ProfilePageState extends State<ProfilePage> with TickerProviderStateMixin
                       style: GoogleFonts.poppins(
                         fontSize: 10,
                         fontWeight: FontWeight.w700,
-                        color: currentUser.estActif ? Color(0xFF10B981) : Color(0xFFEF4444),
+                        color: currentUser.estActif
+                            ? Color(0xFF10B981)
+                            : Color(0xFFEF4444),
                       ),
                     ),
                   ],
@@ -296,19 +355,35 @@ class _ProfilePageState extends State<ProfilePage> with TickerProviderStateMixin
             ],
           ),
           SizedBox(height: 12),
-          Divider(color: AppTheme.surfaceVariant.withValues(alpha: 0.3), height: 1),
+          Divider(
+            color: AppTheme.surfaceVariant.withValues(alpha: 0.3),
+            height: 1,
+          ),
           SizedBox(height: 12),
           _buildInfoRow(Icons.mail_rounded, 'Email', currentUser.email),
           SizedBox(height: 12),
-          _buildInfoRow(Icons.phone_rounded, 'Téléphone', currentUser.phone.isEmpty ? 'Non renseigné' : currentUser.phone),
+          _buildInfoRow(
+            Icons.phone_rounded,
+            'Téléphone',
+            currentUser.phone.isEmpty ? 'Non renseigné' : currentUser.phone,
+          ),
           SizedBox(height: 10),
-          _buildInfoRow(Icons.calendar_month_rounded, 'Inscrit', '${currentUser.dateCreation.day}/${currentUser.dateCreation.month}/${currentUser.dateCreation.year}'),
+          _buildInfoRow(
+            Icons.calendar_month_rounded,
+            'Inscrit',
+            '${currentUser.dateCreation.day}/${currentUser.dateCreation.month}/${currentUser.dateCreation.year}',
+          ),
           SizedBox(height: 12),
           SizedBox(
             width: double.infinity,
             child: Container(
               decoration: BoxDecoration(
-                gradient: LinearGradient(colors: [AppTheme.primary, AppTheme.primary.withValues(alpha: 0.8)]),
+                gradient: LinearGradient(
+                  colors: [
+                    AppTheme.primary,
+                    AppTheme.primary.withValues(alpha: 0.8),
+                  ],
+                ),
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
@@ -332,7 +407,11 @@ class _ProfilePageState extends State<ProfilePage> with TickerProviderStateMixin
                         SizedBox(width: 8),
                         Text(
                           'Modifier le profil',
-                          style: GoogleFonts.poppins(fontWeight: FontWeight.w700, color: Colors.white, fontSize: 14),
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                            fontSize: 14,
+                          ),
                         ),
                       ],
                     ),
@@ -442,10 +521,18 @@ class _ProfilePageState extends State<ProfilePage> with TickerProviderStateMixin
                 Expanded(
                   child: Text(
                     label,
-                    style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: color, fontSize: 14),
+                    style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.w600,
+                      color: color,
+                      fontSize: 14,
+                    ),
                   ),
                 ),
-                Icon(Icons.arrow_forward_rounded, color: color.withValues(alpha: 0.5), size: 18),
+                Icon(
+                  Icons.arrow_forward_rounded,
+                  color: color.withValues(alpha: 0.5),
+                  size: 18,
+                ),
               ],
             ),
           ),
@@ -480,14 +567,25 @@ class _ProfilePageState extends State<ProfilePage> with TickerProviderStateMixin
             Expanded(
               child: TextButton(
                 onPressed: () => setState(() => isEditing = false),
-                child: Text('Annuler', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 14)),
+                child: Text(
+                  'Annuler',
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                ),
               ),
             ),
             SizedBox(width: 12),
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: [AppTheme.success, AppTheme.success.withValues(alpha: 0.8)]),
+                  gradient: LinearGradient(
+                    colors: [
+                      AppTheme.success,
+                      AppTheme.success.withValues(alpha: 0.8),
+                    ],
+                  ),
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
@@ -502,11 +600,12 @@ class _ProfilePageState extends State<ProfilePage> with TickerProviderStateMixin
                   child: InkWell(
                     onTap: () async {
                       try {
-                        final updatedUser = await AuthProvider().updateCurrentUser(
-                          nom: nomController.text.trim(),
-                          prenom: prenomController.text.trim(),
-                          phone: phoneController.text.trim(),
-                        );
+                        final updatedUser = await AuthProvider()
+                            .updateCurrentUser(
+                              nom: nomController.text.trim(),
+                              prenom: prenomController.text.trim(),
+                              phone: phoneController.text.trim(),
+                            );
                         if (!mounted) return;
                         setState(() {
                           currentUser = updatedUser!;
@@ -517,9 +616,9 @@ class _ProfilePageState extends State<ProfilePage> with TickerProviderStateMixin
                         );
                       } catch (e) {
                         if (!mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('❌ Erreur: $e')),
-                        );
+                        ScaffoldMessenger.of(
+                          context,
+                        ).showSnackBar(SnackBar(content: Text('❌ Erreur: $e')));
                       }
                     },
                     borderRadius: BorderRadius.circular(12),
@@ -528,11 +627,19 @@ class _ProfilePageState extends State<ProfilePage> with TickerProviderStateMixin
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.check_rounded, color: Colors.white, size: 18),
+                          Icon(
+                            Icons.check_rounded,
+                            color: Colors.white,
+                            size: 18,
+                          ),
                           SizedBox(width: 8),
                           Text(
                             'Sauvegarder',
-                            style: GoogleFonts.poppins(fontWeight: FontWeight.w700, color: Colors.white, fontSize: 14),
+                            style: GoogleFonts.poppins(
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                              fontSize: 14,
+                            ),
                           ),
                         ],
                       ),
@@ -547,7 +654,11 @@ class _ProfilePageState extends State<ProfilePage> with TickerProviderStateMixin
     );
   }
 
-  Widget _buildFormField(String label, TextEditingController controller, {bool enabled = true}) {
+  Widget _buildFormField(
+    String label,
+    TextEditingController controller, {
+    bool enabled = true,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -568,14 +679,19 @@ class _ProfilePageState extends State<ProfilePage> with TickerProviderStateMixin
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: BorderSide(color: AppTheme.primary.withValues(alpha: 0.15), width: 1),
+              borderSide: BorderSide(
+                color: AppTheme.primary.withValues(alpha: 0.15),
+                width: 1,
+              ),
             ),
             disabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
               borderSide: BorderSide(color: AppTheme.surfaceVariant),
             ),
             filled: !enabled,
-            fillColor: !enabled ? AppTheme.surfaceVariant.withValues(alpha: 0.3) : Colors.white,
+            fillColor: !enabled
+                ? AppTheme.surfaceVariant.withValues(alpha: 0.3)
+                : Colors.white,
           ),
           style: GoogleFonts.poppins(fontWeight: FontWeight.w500, fontSize: 14),
         ),
@@ -623,7 +739,11 @@ class _ProfilePageState extends State<ProfilePage> with TickerProviderStateMixin
                         color: Color(0xFFEF4444).withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Icon(Icons.lock_rounded, color: Color(0xFFEF4444), size: 20),
+                      child: Icon(
+                        Icons.lock_rounded,
+                        color: Color(0xFFEF4444),
+                        size: 20,
+                      ),
                     ),
                     SizedBox(width: 12),
                     Expanded(
@@ -632,12 +752,19 @@ class _ProfilePageState extends State<ProfilePage> with TickerProviderStateMixin
                         children: [
                           Text(
                             'Changer le mot de passe',
-                            style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w800, color: AppTheme.textPrimary),
+                            style: GoogleFonts.poppins(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              color: AppTheme.textPrimary,
+                            ),
                           ),
                           SizedBox(height: 2),
                           Text(
                             'Sécurisez votre compte',
-                            style: GoogleFonts.poppins(fontSize: 11, color: AppTheme.textSecondary),
+                            style: GoogleFonts.poppins(
+                              fontSize: 11,
+                              color: AppTheme.textSecondary,
+                            ),
                           ),
                         ],
                       ),
@@ -673,7 +800,12 @@ class _ProfilePageState extends State<ProfilePage> with TickerProviderStateMixin
                   width: double.infinity,
                   child: Container(
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(colors: [AppTheme.primary, AppTheme.primary.withValues(alpha: 0.8)]),
+                      gradient: LinearGradient(
+                        colors: [
+                          AppTheme.primary,
+                          AppTheme.primary.withValues(alpha: 0.8),
+                        ],
+                      ),
                       borderRadius: BorderRadius.circular(12),
                       boxShadow: [
                         BoxShadow(
@@ -690,19 +822,32 @@ class _ProfilePageState extends State<ProfilePage> with TickerProviderStateMixin
                           final localContext = context;
                           if (oldPasswordController.text.isEmpty) {
                             ScaffoldMessenger.of(localContext).showSnackBar(
-                              const SnackBar(content: Text('Veuillez saisir votre ancien mot de passe')),
+                              const SnackBar(
+                                content: Text(
+                                  'Veuillez saisir votre ancien mot de passe',
+                                ),
+                              ),
                             );
                             return;
                           }
                           if (newPasswordController.text.length < 8) {
                             ScaffoldMessenger.of(localContext).showSnackBar(
-                              const SnackBar(content: Text('Le nouveau mot de passe doit contenir au moins 8 caractères')),
+                              const SnackBar(
+                                content: Text(
+                                  'Le nouveau mot de passe doit contenir au moins 8 caractères',
+                                ),
+                              ),
                             );
                             return;
                           }
-                          if (newPasswordController.text != confirmPasswordController.text) {
+                          if (newPasswordController.text !=
+                              confirmPasswordController.text) {
                             ScaffoldMessenger.of(localContext).showSnackBar(
-                              const SnackBar(content: Text('Les mots de passe ne correspondent pas')),
+                              const SnackBar(
+                                content: Text(
+                                  'Les mots de passe ne correspondent pas',
+                                ),
+                              ),
                             );
                             return;
                           }
@@ -713,14 +858,42 @@ class _ProfilePageState extends State<ProfilePage> with TickerProviderStateMixin
                             );
                             if (!localContext.mounted) return;
                             Navigator.pop(localContext);
-                            ScaffoldMessenger.of(localContext).showSnackBar(
-                              const SnackBar(content: Text('✅ Mot de passe modifié avec succès')),
+                            await showDialog<void>(
+                              context: localContext,
+                              barrierDismissible: false,
+                              builder: (dialogContext) => AlertDialog(
+                                title: const Text('Mot de passe mis à jour'),
+                                content: const Text(
+                                  'Votre nouveau mot de passe est enregistré pour tous vos appareils. '
+                                  'Pour appliquer la modification, vous allez être déconnecté. '
+                                  'Reconnectez-vous avec ce nouveau mot de passe.',
+                                ),
+                                actions: [
+                                  FilledButton(
+                                    onPressed: () =>
+                                        Navigator.of(dialogContext).pop(),
+                                    child: const Text('Se déconnecter'),
+                                  ),
+                                ],
+                              ),
+                            );
+                            if (!localContext.mounted) return;
+                            await AuthProvider().logout();
+                            if (!localContext.mounted) return;
+                            Navigator.of(
+                              localContext,
+                              rootNavigator: true,
+                            ).pushAndRemoveUntil(
+                              MaterialPageRoute(
+                                builder: (_) => const WelcomePage(),
+                              ),
+                              (route) => false,
                             );
                           } catch (e) {
                             if (!localContext.mounted) return;
-                            ScaffoldMessenger.of(localContext).showSnackBar(
-                              SnackBar(content: Text('❌ $e')),
-                            );
+                            ScaffoldMessenger.of(
+                              localContext,
+                            ).showSnackBar(SnackBar(content: Text('❌ $e')));
                           }
                         },
                         borderRadius: BorderRadius.circular(12),
@@ -729,12 +902,20 @@ class _ProfilePageState extends State<ProfilePage> with TickerProviderStateMixin
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.check_rounded, color: Colors.white, size: 18),
+                              Icon(
+                                Icons.check_rounded,
+                                color: Colors.white,
+                                size: 18,
+                              ),
                               SizedBox(width: 8),
                               Text(
                                 'Mettre à jour',
                                 textAlign: TextAlign.center,
-                                style: GoogleFonts.poppins(fontWeight: FontWeight.w700, color: Colors.white, fontSize: 15),
+                                style: GoogleFonts.poppins(
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                  fontSize: 15,
+                                ),
                               ),
                             ],
                           ),
@@ -748,7 +929,13 @@ class _ProfilePageState extends State<ProfilePage> with TickerProviderStateMixin
                   width: double.infinity,
                   child: TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child: Text('Annuler', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 14)),
+                    child: Text(
+                      'Annuler',
+                      style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -785,16 +972,25 @@ class _ProfilePageState extends State<ProfilePage> with TickerProviderStateMixin
             contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             prefixIcon: Padding(
               padding: EdgeInsets.all(10),
-              child: Icon(icon, color: AppTheme.primary.withValues(alpha: 0.6), size: 18),
+              child: Icon(
+                icon,
+                color: AppTheme.primary.withValues(alpha: 0.6),
+                size: 18,
+              ),
             ),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: BorderSide(color: AppTheme.primary.withValues(alpha: 0.15), width: 1),
+              borderSide: BorderSide(
+                color: AppTheme.primary.withValues(alpha: 0.15),
+                width: 1,
+              ),
             ),
             suffixIcon: IconButton(
               icon: Icon(
-                showPassword ? Icons.visibility_rounded : Icons.visibility_off_rounded,
+                showPassword
+                    ? Icons.visibility_rounded
+                    : Icons.visibility_off_rounded,
                 color: AppTheme.primary.withValues(alpha: 0.5),
                 size: 20,
               ),

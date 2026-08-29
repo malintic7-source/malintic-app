@@ -20,17 +20,19 @@ class FirstLoginPasswordDialog extends StatefulWidget {
 
   static bool _isShowing = false;
 
-  static Future<void> showIfNeeded(BuildContext context, User user, {VoidCallback? onPasswordSet}) async {
+  static Future<void> showIfNeeded(
+    BuildContext context,
+    User user, {
+    VoidCallback? onPasswordSet,
+  }) async {
     if (!user.doitChangerMotDePasse || _isShowing) return;
     _isShowing = true;
     try {
       await showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (context) => FirstLoginPasswordDialog(
-          user: user,
-          onPasswordSet: onPasswordSet,
-        ),
+        builder: (context) =>
+            FirstLoginPasswordDialog(user: user, onPasswordSet: onPasswordSet),
       );
     } finally {
       _isShowing = false;
@@ -38,7 +40,8 @@ class FirstLoginPasswordDialog extends StatefulWidget {
   }
 
   @override
-  State<FirstLoginPasswordDialog> createState() => _FirstLoginPasswordDialogState();
+  State<FirstLoginPasswordDialog> createState() =>
+      _FirstLoginPasswordDialogState();
 }
 
 class _FirstLoginPasswordDialogState extends State<FirstLoginPasswordDialog> {
@@ -58,7 +61,8 @@ class _FirstLoginPasswordDialogState extends State<FirstLoginPasswordDialog> {
   }
 
   bool get _hasMinLength => _newPasswordController.text.length >= 8;
-  bool get _hasLetter => RegExp(r'[a-zA-Z]').hasMatch(_newPasswordController.text);
+  bool get _hasLetter =>
+      RegExp(r'[a-zA-Z]').hasMatch(_newPasswordController.text);
   bool get _hasDigit => RegExp(r'[0-9]').hasMatch(_newPasswordController.text);
 
   Widget _buildFormationThumbnail(Formation formation, {double size = 32}) {
@@ -103,14 +107,20 @@ class _FirstLoginPasswordDialogState extends State<FirstLoginPasswordDialog> {
         color: AppTheme.primary.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(6),
       ),
-      child: Icon(Icons.school_rounded, color: AppTheme.primary, size: size * 0.55),
+      child: Icon(
+        Icons.school_rounded,
+        color: AppTheme.primary,
+        size: size * 0.55,
+      ),
     );
   }
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (_newPasswordController.text != _confirmPasswordController.text) {
-      setState(() => _errorMessage = 'Les deux mots de passe ne correspondent pas.');
+      setState(
+        () => _errorMessage = 'Les deux mots de passe ne correspondent pas.',
+      );
       return;
     }
 
@@ -128,24 +138,7 @@ class _FirstLoginPasswordDialogState extends State<FirstLoginPasswordDialog> {
       if (!mounted) return;
       Navigator.of(context, rootNavigator: true).pop();
       widget.onPasswordSet?.call();
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const Icon(Icons.check_circle_rounded, color: Colors.white),
-              const SizedBox(width: 10),
-              Text(
-                'Mot de passe enregistré ! Accès accordé.',
-                style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600),
-              ),
-            ],
-          ),
-          backgroundColor: AppTheme.success,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      );
+      await _showPasswordChangedMessage();
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -153,6 +146,35 @@ class _FirstLoginPasswordDialogState extends State<FirstLoginPasswordDialog> {
         _errorMessage = e.toString().replaceAll('Exception: ', '');
       });
     }
+  }
+
+  Future<void> _showPasswordChangedMessage() async {
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Mot de passe mis à jour'),
+        content: const Text(
+          'Votre nouveau mot de passe est enregistré pour tous vos appareils. '
+          'Pour appliquer la modification, vous allez être déconnecté. '
+          'Reconnectez-vous avec ce nouveau mot de passe.',
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Se déconnecter'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted) return;
+    await AuthProvider().logout();
+    if (!mounted) return;
+    Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const WelcomePage()),
+      (route) => false,
+    );
   }
 
   Future<void> _logout() async {
@@ -176,7 +198,9 @@ class _FirstLoginPasswordDialogState extends State<FirstLoginPasswordDialog> {
         .map((a) => a['formationId']?.toString() ?? '')
         .where((id) => id.isNotEmpty)
         .toSet();
-    final userFormations = allFormations.where((f) => assignedIds.contains(f.id)).toList();
+    final userFormations = allFormations
+        .where((f) => assignedIds.contains(f.id))
+        .toList();
 
     return PopScope(
       canPop: false,
@@ -202,10 +226,7 @@ class _FirstLoginPasswordDialogState extends State<FirstLoginPasswordDialog> {
                       height: 72,
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
-                          colors: [
-                            AppTheme.primary,
-                            AppTheme.primaryDark,
-                          ],
+                          colors: [AppTheme.primary, AppTheme.primaryDark],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
@@ -256,16 +277,24 @@ class _FirstLoginPasswordDialogState extends State<FirstLoginPasswordDialog> {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+                        color: isDark
+                            ? const Color(0xFF0F172A)
+                            : const Color(0xFFF1F5F9),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
+                        border: Border.all(
+                          color: isDark ? Colors.white12 : Colors.black12,
+                        ),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
                             children: [
-                              const Icon(Icons.school_rounded, size: 16, color: AppTheme.primary),
+                              const Icon(
+                                Icons.school_rounded,
+                                size: 16,
+                                color: AppTheme.primary,
+                              ),
                               const SizedBox(width: 6),
                               Text(
                                 'Vos formations assignées :',
@@ -283,19 +312,33 @@ class _FirstLoginPasswordDialogState extends State<FirstLoginPasswordDialog> {
                             runSpacing: 6,
                             children: userFormations.map((formation) {
                               return Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
                                 decoration: BoxDecoration(
-                                  color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                                  color: isDark
+                                      ? const Color(0xFF1E293B)
+                                      : Colors.white,
                                   borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: isDark ? Colors.white10 : const Color(0xFFE2E8F0)),
+                                  border: Border.all(
+                                    color: isDark
+                                        ? Colors.white10
+                                        : const Color(0xFFE2E8F0),
+                                  ),
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    _buildFormationThumbnail(formation, size: 22),
+                                    _buildFormationThumbnail(
+                                      formation,
+                                      size: 22,
+                                    ),
                                     const SizedBox(width: 6),
                                     ConstrainedBox(
-                                      constraints: const BoxConstraints(maxWidth: 160),
+                                      constraints: const BoxConstraints(
+                                        maxWidth: 160,
+                                      ),
                                       child: Text(
                                         formation.titre,
                                         style: GoogleFonts.poppins(
@@ -320,15 +363,24 @@ class _FirstLoginPasswordDialogState extends State<FirstLoginPasswordDialog> {
 
                   if (_errorMessage != null) ...[
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
                       decoration: BoxDecoration(
                         color: AppTheme.error.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppTheme.error.withValues(alpha: 0.3)),
+                        border: Border.all(
+                          color: AppTheme.error.withValues(alpha: 0.3),
+                        ),
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.error_outline_rounded, color: AppTheme.error, size: 20),
+                          const Icon(
+                            Icons.error_outline_rounded,
+                            color: AppTheme.error,
+                            size: 20,
+                          ),
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(
@@ -363,32 +415,49 @@ class _FirstLoginPasswordDialogState extends State<FirstLoginPasswordDialog> {
                     style: GoogleFonts.poppins(fontSize: 14, color: textColor),
                     decoration: InputDecoration(
                       hintText: 'Minimum 8 caractères',
-                      prefixIcon: const Icon(Icons.lock_outline_rounded, size: 20),
+                      prefixIcon: const Icon(
+                        Icons.lock_outline_rounded,
+                        size: 20,
+                      ),
                       suffixIcon: IconButton(
                         icon: Icon(
-                          _obscureNew ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                          _obscureNew
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined,
                           size: 20,
                         ),
-                        onPressed: () => setState(() => _obscureNew = !_obscureNew),
+                        onPressed: () =>
+                            setState(() => _obscureNew = !_obscureNew),
                       ),
                       filled: true,
-                      fillColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                      fillColor: isDark
+                          ? const Color(0xFF0F172A)
+                          : const Color(0xFFF8FAFC),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide(color: isDark ? Colors.white12 : Colors.black12),
+                        borderSide: BorderSide(
+                          color: isDark ? Colors.white12 : Colors.black12,
+                        ),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide(color: isDark ? Colors.white12 : Colors.black12),
+                        borderSide: BorderSide(
+                          color: isDark ? Colors.white12 : Colors.black12,
+                        ),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
-                        borderSide: const BorderSide(color: AppTheme.primary, width: 2),
+                        borderSide: const BorderSide(
+                          color: AppTheme.primary,
+                          width: 2,
+                        ),
                       ),
                     ),
                     validator: (val) {
-                      if (val == null || val.isEmpty) return 'Veuillez saisir un mot de passe';
-                      if (val.length < 8) return 'Le mot de passe doit contenir au moins 8 caractères';
+                      if (val == null || val.isEmpty)
+                        return 'Veuillez saisir un mot de passe';
+                      if (val.length < 8)
+                        return 'Le mot de passe doit contenir au moins 8 caractères';
                       return null;
                     },
                   ),
@@ -422,32 +491,49 @@ class _FirstLoginPasswordDialogState extends State<FirstLoginPasswordDialog> {
                     style: GoogleFonts.poppins(fontSize: 14, color: textColor),
                     decoration: InputDecoration(
                       hintText: 'Répétez votre mot de passe',
-                      prefixIcon: const Icon(Icons.lock_clock_outlined, size: 20),
+                      prefixIcon: const Icon(
+                        Icons.lock_clock_outlined,
+                        size: 20,
+                      ),
                       suffixIcon: IconButton(
                         icon: Icon(
-                          _obscureConfirm ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                          _obscureConfirm
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined,
                           size: 20,
                         ),
-                        onPressed: () => setState(() => _obscureConfirm = !_obscureConfirm),
+                        onPressed: () =>
+                            setState(() => _obscureConfirm = !_obscureConfirm),
                       ),
                       filled: true,
-                      fillColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                      fillColor: isDark
+                          ? const Color(0xFF0F172A)
+                          : const Color(0xFFF8FAFC),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide(color: isDark ? Colors.white12 : Colors.black12),
+                        borderSide: BorderSide(
+                          color: isDark ? Colors.white12 : Colors.black12,
+                        ),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide(color: isDark ? Colors.white12 : Colors.black12),
+                        borderSide: BorderSide(
+                          color: isDark ? Colors.white12 : Colors.black12,
+                        ),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
-                        borderSide: const BorderSide(color: AppTheme.primary, width: 2),
+                        borderSide: const BorderSide(
+                          color: AppTheme.primary,
+                          width: 2,
+                        ),
                       ),
                     ),
                     validator: (val) {
-                      if (val == null || val.isEmpty) return 'Veuillez confirmer votre mot de passe';
-                      if (val != _newPasswordController.text) return 'Les mots de passe ne correspondent pas';
+                      if (val == null || val.isEmpty)
+                        return 'Veuillez confirmer votre mot de passe';
+                      if (val != _newPasswordController.text)
+                        return 'Les mots de passe ne correspondent pas';
                       return null;
                     },
                   ),
@@ -460,7 +546,9 @@ class _FirstLoginPasswordDialogState extends State<FirstLoginPasswordDialog> {
                       backgroundColor: AppTheme.primary,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
                       elevation: 4,
                       shadowColor: AppTheme.primary.withValues(alpha: 0.4),
                     ),
@@ -468,7 +556,10 @@ class _FirstLoginPasswordDialogState extends State<FirstLoginPasswordDialog> {
                         ? const SizedBox(
                             height: 22,
                             width: 22,
-                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2.5,
+                            ),
                           )
                         : Text(
                             'Enregistrer et accéder à mon compte',
@@ -484,7 +575,11 @@ class _FirstLoginPasswordDialogState extends State<FirstLoginPasswordDialog> {
                   // Logout option
                   TextButton.icon(
                     onPressed: _isLoading ? null : _logout,
-                    icon: const Icon(Icons.logout_rounded, size: 18, color: Colors.grey),
+                    icon: const Icon(
+                      Icons.logout_rounded,
+                      size: 18,
+                      color: Colors.grey,
+                    ),
                     label: Text(
                       'Se déconnecter',
                       style: GoogleFonts.poppins(
@@ -504,12 +599,16 @@ class _FirstLoginPasswordDialogState extends State<FirstLoginPasswordDialog> {
   }
 
   Widget _buildCheckBadge(String label, bool isOk, bool isDark) {
-    final color = isOk ? AppTheme.success : (isDark ? Colors.white38 : Colors.black38);
+    final color = isOk
+        ? AppTheme.success
+        : (isDark ? Colors.white38 : Colors.black38);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Icon(
-          isOk ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+          isOk
+              ? Icons.check_circle_rounded
+              : Icons.radio_button_unchecked_rounded,
           size: 14,
           color: color,
         ),
