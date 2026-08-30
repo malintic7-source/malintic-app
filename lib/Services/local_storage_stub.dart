@@ -10,4 +10,6 @@ class LocalStorage {
   void setSessionItem(String key, String value) {}
 
   void removeSessionItem(String key) {}
+
+  void clearSession() {}
 }

@@ -42,25 +42,25 @@ Write-Host "🏥 Vérification de la santé des services..." -ForegroundColor Ye
 
 # Frontend health
 try {
-    docker-compose exec -T gestion_formations wget -q -O /dev/null http://127.0.0.1/ 2>$null
-    Write-Host "✅ Frontend (gestion_formations) - OK" -ForegroundColor Green
+    docker-compose exec -T app wget -q -O /dev/null http://127.0.0.1/ 2>$null
+    Write-Host "✅ Frontend (malintic_app) - OK" -ForegroundColor Green
 } catch {
-    Write-Host "⚠️  Frontend (gestion_formations) - En cours de démarrage..." -ForegroundColor Yellow
+    Write-Host "⚠️  Frontend (malintic_app) - En cours de démarrage..." -ForegroundColor Yellow
 }
 
 # Backend health
 try {
     docker-compose exec -T api node -e "fetch('http://127.0.0.1:5001/api/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))" 2>$null
-    Write-Host "✅ Backend (gestion_formations_api) - OK" -ForegroundColor Green
+    Write-Host "✅ Backend (malintic_api) - OK" -ForegroundColor Green
 } catch {
-    Write-Host "⚠️  Backend (gestion_formations_api) - En cours de démarrage..." -ForegroundColor Yellow
+    Write-Host "⚠️  Backend (malintic_api) - En cours de démarrage..." -ForegroundColor Yellow
 }
 
 Write-Host ""
 Write-Host "🎉 Déploiement terminé!" -ForegroundColor Green
 Write-Host "===========================================" -ForegroundColor Cyan
 Write-Host "📍 URLs d'accès:" -ForegroundColor Cyan
-Write-Host "   Frontend: http://localhost:8080" -ForegroundColor White
+Write-Host "   Frontend: http://localhost (ou http://localhost:8000)" -ForegroundColor White
 Write-Host "   API:      http://localhost:5001" -ForegroundColor White
 Write-Host ""
 Write-Host "📝 Commandes utiles:" -ForegroundColor Cyan

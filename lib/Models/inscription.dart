@@ -1,4 +1,4 @@
-// Removed Firestore import (migrating off Firebase)
+import 'package:gestion_formations/utils/type_parsers.dart';
 
 enum InscriptionStatus { enAttente, acceptee, rejetee }
 
@@ -46,47 +46,40 @@ class Inscription {
     this.source = 'web',
   }) : apprenantId = apprenantId ?? etudiantId ?? '';
 
-  factory Inscription.fromMap(Map<String, dynamic> data, String id) {
+  factory Inscription.fromMap(Map<dynamic, dynamic> data, String id) {
     InscriptionStatus parseStatus(String statusStr) {
-      if (statusStr.contains('acceptee') || statusStr.contains('accepte') || statusStr.contains('valide')) {
+      final normalized = statusStr.toLowerCase();
+      if (normalized.contains('acceptee') || normalized.contains('accepte') || normalized.contains('valide')) {
         return InscriptionStatus.acceptee;
       }
-      if (statusStr.contains('rejetee') || statusStr.contains('rejete')) {
+      if (normalized.contains('rejetee') || normalized.contains('rejete')) {
         return InscriptionStatus.rejetee;
       }
       return InscriptionStatus.enAttente;
     }
 
-    DateTime parseDate(dynamic val) {
-      if (val is DateTime) return val;
-      if (val != null && val.runtimeType.toString().contains('Timestamp')) {
-        try {
-          return (val as dynamic).toDate();
-        } catch (_) {}
-      }
-      if (val is String) return DateTime.tryParse(val) ?? DateTime.now();
-      return DateTime.now();
-    }
+    final rawModules = data['modules'];
+    final List<String>? parsedModules = rawModules != null ? parseStringList(rawModules) : null;
 
     return Inscription(
       id: id,
-      apprenantId: data['apprenantId'] ?? data['etudiantId'] ?? '',
-      formationId: data['formationId'] ?? '',
-      status: parseStatus(data['status']?.toString() ?? 'InscriptionStatus.enAttente'),
+      apprenantId: parseString(data['apprenantId'] ?? data['etudiantId']),
+      formationId: parseString(data['formationId']),
+      status: parseStatus(parseString(data['status'], defaultValue: 'InscriptionStatus.enAttente')),
       dateInscription: parseDate(data['dateInscription']),
-      paiementId: data['paiementId'],
-      paiementEffectue: data['paiementEffectue'] ?? false,
-      dateAcceptation: data['dateAcceptation'],
-      motifRejet: data['motifRejet'],
-      prenom: data['prenom']?.toString(),
-      nom: data['nom']?.toString(),
-      email: data['email']?.toString(),
-      telephone: data['telephone']?.toString(),
-      description: data['description']?.toString(),
-      modules: data['modules'] is List ? List<String>.from(data['modules']) : null,
-      typeFormation: data['typeFormation']?.toString(),
-      sexe: data['sexe']?.toString(),
-      source: data['source']?.toString() ?? 'web',
+      paiementId: parseStringOrNull(data['paiementId']),
+      paiementEffectue: parseBool(data['paiementEffectue']),
+      dateAcceptation: parseStringOrNull(data['dateAcceptation']),
+      motifRejet: parseStringOrNull(data['motifRejet']),
+      prenom: parseStringOrNull(data['prenom']),
+      nom: parseStringOrNull(data['nom']),
+      email: parseStringOrNull(data['email']),
+      telephone: parseStringOrNull(data['telephone']),
+      description: parseStringOrNull(data['description']),
+      modules: parsedModules,
+      typeFormation: parseStringOrNull(data['typeFormation']),
+      sexe: parseStringOrNull(data['sexe']),
+      source: parseString(data['source'], defaultValue: 'web'),
     );
   }
 

@@ -1,3 +1,5 @@
+import 'package:gestion_formations/utils/type_parsers.dart';
+
 enum SeanceStatut { brouillon, publie }
 
 class Seance {
@@ -38,7 +40,7 @@ class Seance {
   bool get estPubliee => statut == SeanceStatut.publie;
   bool get estBrouillon => statut == SeanceStatut.brouillon;
 
-  factory Seance.fromMap(Map<String, dynamic> data, String id) {
+  factory Seance.fromMap(Map<dynamic, dynamic> data, String id) {
     SeanceStatut parseStatut(String? str) {
       if (str != null && (str.contains('publie') || str.contains('publié'))) {
         return SeanceStatut.publie;
@@ -46,28 +48,22 @@ class Seance {
       return SeanceStatut.brouillon;
     }
 
-    DateTime parseDate(dynamic val) {
-      if (val is DateTime) return val;
-      if (val is String) return DateTime.tryParse(val) ?? DateTime.now();
-      return DateTime.now();
-    }
-
     return Seance(
       id: id,
-      formationId: data['formationId']?.toString() ?? '',
-      formationTitle: data['formationTitle']?.toString() ?? '',
-      moduleId: data['moduleId']?.toString(),
-      moduleTitle: data['moduleTitle']?.toString(),
-      formateurId: data['formateurId']?.toString() ?? '',
-      formateurNom: data['formateurNom']?.toString() ?? '',
+      formationId: parseString(data['formationId']),
+      formationTitle: parseString(data['formationTitle']),
+      moduleId: parseStringOrNull(data['moduleId']),
+      moduleTitle: parseStringOrNull(data['moduleTitle']),
+      formateurId: parseString(data['formateurId']),
+      formateurNom: parseString(data['formateurNom']),
       date: parseDate(data['date']),
-      heureDebut: data['heureDebut']?.toString() ?? '09:00',
-      heureFin: data['heureFin']?.toString() ?? '11:00',
-      salleOuLien: data['salleOuLien']?.toString(),
-      modalite: data['modalite']?.toString() ?? 'Présentiel',
-      statut: parseStatut(data['statut']?.toString()),
+      heureDebut: parseString(data['heureDebut'], defaultValue: '09:00'),
+      heureFin: parseString(data['heureFin'], defaultValue: '11:00'),
+      salleOuLien: parseStringOrNull(data['salleOuLien']),
+      modalite: parseString(data['modalite'], defaultValue: 'Présentiel'),
+      statut: parseStatut(parseStringOrNull(data['statut'])),
       dateCreation: parseDate(data['dateCreation']),
-      datePublication: data['datePublication'] != null ? parseDate(data['datePublication']) : null,
+      datePublication: parseDateOrNull(data['datePublication']),
     );
   }
 

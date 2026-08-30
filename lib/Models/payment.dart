@@ -1,4 +1,4 @@
-// Removed Firestore import (migrating off Firebase)
+import 'package:gestion_formations/utils/type_parsers.dart';
 
 enum PaymentStatus { enAttente, effectue, echoue }
 
@@ -46,12 +46,13 @@ class Payment {
     this.dateEcheance,
   }) : apprenantId = apprenantId ?? etudiantId ?? '';
 
-  factory Payment.fromMap(Map<String, dynamic> data, String id) {
+  factory Payment.fromMap(Map<dynamic, dynamic> data, String id) {
     PaymentStatus parseStatus(String statusStr) {
-      if (statusStr.contains('effectue')) {
+      final normalized = statusStr.toLowerCase();
+      if (normalized.contains('effectue') || normalized.contains('paye') || normalized.contains('succes')) {
         return PaymentStatus.effectue;
       }
-      if (statusStr.contains('echoue')) {
+      if (normalized.contains('echoue') || normalized.contains('rejete') || normalized.contains('annule')) {
         return PaymentStatus.echoue;
       }
       return PaymentStatus.enAttente;
@@ -74,36 +75,24 @@ class Payment {
       return PaymentMethod.carte;
     }
 
-    DateTime? parseDate(dynamic val) {
-      if (val == null) return null;
-      if (val is DateTime) return val;
-      if (val != null && val.runtimeType.toString().contains('Timestamp')) {
-        try {
-          return (val as dynamic).toDate();
-        } catch (_) {}
-      }
-      if (val is String) return DateTime.tryParse(val);
-      return null;
-    }
-
     return Payment(
       id: id,
-      inscriptionId: data['inscriptionId'] ?? '',
-      apprenantId: data['apprenantId'] ?? data['etudiantId'] ?? '',
-      formationId: data['formationId'] ?? '',
-      montant: (data['montant'] ?? 0).toDouble(),
-      status: parseStatus(data['status']?.toString() ?? 'PaymentStatus.enAttente'),
-      methode: parseMethod(data['methode']?.toString() ?? 'PaymentMethod.carte'),
-      dateCreation: parseDate(data['dateCreation']) ?? DateTime.now(),
-      dateEffectuation: parseDate(data['dateEffectuation']),
-      referenceTransaction: data['referenceTransaction'],
-      motifEchec: data['motifEchec'],
-      motif: data['motif']?.toString(),
-      moduleId: data['moduleId']?.toString(),
-      trancheNumero: (data['trancheNumero'] as num?)?.toInt() ?? 1,
-      nombreTranches: (data['nombreTranches'] as num?)?.toInt() ?? 1,
-      remise: (data['remise'] as num?)?.toDouble() ?? 0,
-      dateEcheance: parseDate(data['dateEcheance']),
+      inscriptionId: parseString(data['inscriptionId']),
+      apprenantId: parseString(data['apprenantId'] ?? data['etudiantId']),
+      formationId: parseString(data['formationId']),
+      montant: parseDouble(data['montant']),
+      status: parseStatus(parseString(data['status'], defaultValue: 'PaymentStatus.enAttente')),
+      methode: parseMethod(parseString(data['methode'], defaultValue: 'PaymentMethod.carte')),
+      dateCreation: parseDate(data['dateCreation']),
+      dateEffectuation: parseDateOrNull(data['dateEffectuation']),
+      referenceTransaction: parseStringOrNull(data['referenceTransaction']),
+      motifEchec: parseStringOrNull(data['motifEchec']),
+      motif: parseStringOrNull(data['motif']),
+      moduleId: parseStringOrNull(data['moduleId']),
+      trancheNumero: parseInt(data['trancheNumero'], defaultValue: 1),
+      nombreTranches: parseInt(data['nombreTranches'], defaultValue: 1),
+      remise: parseDouble(data['remise']),
+      dateEcheance: parseDateOrNull(data['dateEcheance']),
     );
   }
 

@@ -149,9 +149,12 @@ class AuthProvider {
             effectivePw.isNotEmpty &&
             effectivePw != '00000000') {
           // Ce compte a un mot de passe personnalisé : 00000000 est STRICTEMENT EXPIRÉ ET REJETÉ
-          if (cleanPassword == '00000000') return null;
-          if (cleanPassword == effectivePw)
+          if (cleanPassword == '00000000') {
+            return null;
+          }
+          if (cleanPassword == effectivePw) {
             return user.copyWith(doitChangerMotDePasse: false);
+          }
           return null;
         } else {
           // Première connexion uniquement : 00000000 est temporairement accepté
@@ -218,9 +221,12 @@ class AuthProvider {
           effectiveAdminPw.isNotEmpty &&
           effectiveAdminPw != '00000000') {
         // Après validation de changement de mot de passe, 00000000 est STRICTEMENT EXPIRÉ ET REJETÉ
-        if (cleanPassword == '00000000') return null;
-        if (cleanPassword == effectiveAdminPw)
+        if (cleanPassword == '00000000') {
+          return null;
+        }
+        if (cleanPassword == effectiveAdminPw) {
           return fallbackAdmin.copyWith(doitChangerMotDePasse: false);
+        }
         return null;
       } else {
         // Première connexion uniquement
@@ -315,8 +321,12 @@ class AuthProvider {
     } catch (_) {
       // The local state must still be cleared if the network is unavailable.
     }
+    
+    // Cache invalidation : purger tous les caches locaux
     TabSessionLifecycle.deactivate();
     _db.setServerSessionActive(false);
+    _localStorage.clearSession(); // ✅ Vider le sessionStorage (onglet courant)
+    
     _currentUser = null;
     _authController.add(null);
     try {

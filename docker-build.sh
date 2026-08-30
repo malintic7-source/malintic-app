@@ -59,24 +59,24 @@ sleep 5
 echo "🏥 Vérification de la santé des services..."
 
 # Frontend health
-if docker-compose exec -T gestion_formations wget -q -O /dev/null http://127.0.0.1/ 2>/dev/null; then
-  echo "✅ Frontend (gestion_formations) - OK"
+if docker-compose exec -T app wget -q -O /dev/null http://127.0.0.1/ 2>/dev/null; then
+  echo "✅ Frontend (malintic_app) - OK"
 else
-  echo "⚠️  Frontend (gestion_formations) - En cours de démarrage..."
+  echo "⚠️  Frontend (malintic_app) - En cours de démarrage..."
 fi
 
 # Backend health
 if docker-compose exec -T api node -e "fetch('http://127.0.0.1:5001/api/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))" 2>/dev/null; then
-  echo "✅ Backend (gestion_formations_api) - OK"
+  echo "✅ Backend (malintic_api) - OK"
 else
-  echo "⚠️  Backend (gestion_formations_api) - En cours de démarrage..."
+  echo "⚠️  Backend (malintic_api) - En cours de démarrage..."
 fi
 
 echo ""
 echo "🎉 Déploiement terminé!"
 echo "==========================================="
 echo "📍 URLs d'accès:"
-echo "   Frontend: http://localhost:8080"
+echo "   Frontend: http://localhost (ou http://localhost:8000)"
 echo "   API:      http://localhost:5001"
 echo ""
 echo "📝 Commandes utiles:"

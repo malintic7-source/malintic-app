@@ -53,6 +53,29 @@ async function pullSharedState() {
   }
 }
 
+// ─── HTTPS Redirect en production ────────────────────────────────────────
+if (isProduction) {
+  app.use((req, res, next) => {
+    if (req.protocol !== 'https') {
+      return res.redirect(301, `https://${req.get('host')}${req.originalUrl}`);
+    }
+    next();
+  });
+}
+
+// ─── Rate-limiting pour endpoints admin ───────────────────────────────────
+const adminAttempts = new Map(); // ip → { count, resetAt }
+const ADMIN_MAX_REQUESTS = 100; // 100 requêtes
+const ADMIN_WINDOW_MS = 60 * 1000; // par minute
+
+function requireAdminRateLimit(req, res, next) {
+  const ip = getClientIp(req);
+  if (checkRateLimit(adminAttempts, ip, ADMIN_MAX_REQUESTS, ADMIN_WINDOW_MS)) {
+    return res.status(429).json({ error: 'Trop de requêtes admin. Réessayez dans une minute.' });
+  }
+  next();
+}
+
 // Response compression for ngrok and LAN speed optimization
 app.use((req, res, next) => {
   const acceptEncoding = req.headers['accept-encoding'] || '';
@@ -75,6 +98,17 @@ app.use((req, res, next) => {
     }
     return originalSend.call(this, body);
   };
+  next();
+});
+
+// ─── Content-Type validation ─────────────────────────────────────────────
+app.use((req, res, next) => {
+  if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
+    const contentType = req.get('content-type') || '';
+    if (!contentType.includes('application/json')) {
+      return res.status(400).json({ error: 'Content-Type must be application/json' });
+    }
+  }
   next();
 });
 
@@ -130,6 +164,22 @@ function saveSessions() {
 }
 
 loadSessions();
+
+// ─── #11 Cleanup périodique des sessions expirées ────────────────────────────
+setInterval(() => {
+  const now = Date.now();
+  let cleaned = 0;
+  for (const [token, session] of sessions.entries()) {
+    if (!session || (now - session.createdAt) >= sessionMaxAgeMs) {
+      sessions.delete(token);
+      cleaned++;
+    }
+  }
+  if (cleaned > 0) {
+    saveSessions();
+    console.log(`[Sessions] ${cleaned} session(s) expirée(s) supprimée(s)`);
+  }
+}, 60 * 60 * 1000); // Nettoyage toutes les heures
 
 // ─── #5 Cache mémoire pour éviter la relecture disque à chaque requête ────────
 let _stateCache = null;
@@ -316,7 +366,7 @@ function initialState() {
       nom: 'Administrateur',
       prenom: 'Mamadou',
       phone: '',
-      role: 'UserRole.admin',
+      role: 'admin',
       passwordHash: hashPassword(password),
       estActif: true,
       dateCreation: new Date().toISOString(),
@@ -417,7 +467,12 @@ function _mapFormation(f) {
   };
 }
 
+const VALID_ROLES = ['admin', 'dg', 'daf', 'comptable', 'assistant', 'it', 'formateur', 'apprenant'];
+
 function _mapUser(u) {
+  const cleanedRole = _cleanRole(u.role);
+  // Valider que le rôle est dans la liste autorisée
+  const validatedRole = VALID_ROLES.includes(cleanedRole) ? cleanedRole : 'apprenant';
   return {
     id: u.id,
     email: u.email || '',
@@ -425,7 +480,7 @@ function _mapUser(u) {
     prenom: u.prenom || '',
     phone: u.phone || '',
     matricule: u.matricule || null,
-    role: _cleanRole(u.role),
+    role: validatedRole,
     photo_url: u.photoUrl || u.photo_url || null,
     specialite: u.specialite || null,
     sexe: u.sexe || 'Homme',
@@ -774,7 +829,15 @@ function validateFormationAssignments(data, users) {
   return null;
 }
 
+// ─── API Versioning - /api/v1/ redirige vers /api/ ────────────────────────
+app.use('/api/v1/*', (req, res, next) => {
+  // Remapper /api/v1/... vers /api/...
+  req.url = req.url.replace(/^\/api\/v1/, '/api');
+  next();
+});
+
 app.get('/api/health', (_, res) => res.json({ status: 'ok' }));
+app.get('/api/v1/health', (_, res) => res.json({ status: 'ok' }));
 
 app.get('/api/system/network-info', requireAdministrator, (req, res) => {
   const os = require('os');
@@ -818,12 +881,17 @@ app.post('/api/auth/login', (req, res) => {
   }
   const input = String(req.body?.email || req.body?.identifier || '').trim().toLowerCase();
   const password = String(req.body?.password || '');
+  
+  // Valider le format email si c'est un email
+  if (input.includes('@') && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input)) {
+    return res.status(400).json({ error: 'Format d\'email invalide.' });
+  }
   const cleanInputPhone = input.replace(/[^0-9]/g, '');
 
   const state = readState();
   const user = state.users.find((item) => {
     const itemEmail = String(item.email || '').trim().toLowerCase();
-    const itemPhone = String(item.phone || item.telephone || '').replace(/[^0-9]/g, '');
+    const itemPhone = String(item.phone || '').replace(/[^0-9]/g, '');
     const itemMatricule = String(item.matricule || '').trim().toLowerCase();
     const emailPrefix = itemEmail.split('@')[0];
 
@@ -958,11 +1026,11 @@ app.post('/api/auth/change-password', requireSession, (req, res) => {
   res.json(publicUser(user));
 });
 
-app.post('/api/admin/users/:id/password', requireAdministrator, (req, res) => {
+app.post('/api/admin/users/:id/password', requireAdministrator, requireAdminRateLimit, (req, res) => {
   const session = req.session;
   const state = readState();
 
-  const { newPassword, mustChangePassword = true } = req.body || {};
+  const { newPassword, doitChangerMotDePasse = true } = req.body || {};
   const password = String(newPassword || '').trim();
   if (!password || password.length < 6) {
     return res.status(400).json({ error: 'Le mot de passe doit contenir au moins 6 caractères.' });
@@ -973,7 +1041,7 @@ app.post('/api/admin/users/:id/password', requireAdministrator, (req, res) => {
 
   user.passwordHash = hashPassword(password);
   delete user.password;
-  user.doitChangerMotDePasse = Boolean(mustChangePassword);
+  user.doitChangerMotDePasse = Boolean(doitChangerMotDePasse);
   user.dateModification = new Date().toISOString();
 
   // Log in audit trail
@@ -985,7 +1053,8 @@ app.post('/api/admin/users/:id/password', requireAdministrator, (req, res) => {
     userNom: adminNom,
     userRole: session?.role || 'admin',
     action: 'Réinitialisation mot de passe admin',
-    description: `Mot de passe de ${targetNom} (${user.email}) modifié par ${adminNom} (Forcer changement 1ère connexion: ${mustChangePassword ? 'Oui' : 'Non'})`,
+    description: `Mot de passe de ${targetNom} (${user.email}) modifié par ${adminNom} (Forcer changement 1ère connexion: ${doitChangerMotDePasse ? 'Oui' : 'Non'})`,
+
     targetId: user.id,
     targetType: 'user',
     userId: session.userId,
@@ -1152,6 +1221,14 @@ function handleCollectionPut(req, res) {
 app.put('/api/:collection/:id', handleCollectionPut);
 app.post('/api/:collection/:id', handleCollectionPut);
 app.post('/api/:collection', (req, res) => {
+  req.params.id = req.body?.id || `${req.params.collection}_${Date.now()}`;
+  return handleCollectionPut(req, res);
+});
+
+// Routes admin avec rate-limiting
+app.put('/api/admin/:collection/:id', requireAdministrator, requireAdminRateLimit, handleCollectionPut);
+app.post('/api/admin/:collection/:id', requireAdministrator, requireAdminRateLimit, handleCollectionPut);
+app.post('/api/admin/:collection', requireAdministrator, requireAdminRateLimit, (req, res) => {
   req.params.id = req.body?.id || `${req.params.collection}_${Date.now()}`;
   return handleCollectionPut(req, res);
 });

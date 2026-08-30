@@ -49,4 +49,11 @@ class LocalStorage {
       html.window.sessionStorage.remove(key);
     } catch (_) {}
   }
+
+  void clearSession() {
+    _sessionMemoryFallback.clear();
+    try {
+      html.window.sessionStorage.clear();
+    } catch (_) {}
+  }
 }

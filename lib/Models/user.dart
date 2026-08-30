@@ -1,3 +1,5 @@
+import 'package:gestion_formations/utils/type_parsers.dart';
+
 enum UserRole { admin, dg, daf, comptable, assistant, it, formateur, apprenant }
 
 class User {
@@ -74,7 +76,7 @@ class User {
   /// Utilisateurs membres du personnel
   bool get isStaff => role != UserRole.apprenant;
 
-  factory User.fromMap(Map<String, dynamic> data, String id) {
+  factory User.fromMap(Map<dynamic, dynamic> data, String id) {
     UserRole parseRole(String roleStr) {
       final normalized = roleStr.toLowerCase();
       if (normalized.contains('admin')) return UserRole.admin;
@@ -87,39 +89,30 @@ class User {
       return UserRole.apprenant;
     }
 
-    DateTime parseDate(dynamic val) {
-      if (val is DateTime) return val;
-      if (val != null && val.runtimeType.toString().contains('Timestamp')) {
-        try {
-          return (val as dynamic).toDate();
-        } catch (_) {}
-      }
-      if (val is String) return DateTime.tryParse(val) ?? DateTime.now();
-      return DateTime.now();
-    }
+    final rawAssigned = data['assignedFormations'] as List<dynamic>? ?? [];
+    final parsedAssigned = rawAssigned
+        .whereType<Map>()
+        .map((item) => Map<String, dynamic>.from(item))
+        .toList();
 
     return User(
       id: id,
-      email: data['email'] ?? '',
-      nom: data['nom'] ?? '',
-      prenom: data['prenom'] ?? '',
-      phone: data['phone'] ?? '',
-      role: parseRole(data['role']?.toString() ?? 'UserRole.apprenant'),
+      email: parseString(data['email']),
+      nom: parseString(data['nom']),
+      prenom: parseString(data['prenom']),
+      phone: parseString(data['phone']),
+      role: parseRole(parseString(data['role'], defaultValue: 'UserRole.apprenant')),
       // #1 — Les mots de passe ne sont jamais réhydratés depuis l'API ou le stockage local.
       password: '',
-      photoUrl: data['photoUrl'],
-      matricule: data['matricule']?.toString(),
-      assignedFormations: (data['assignedFormations'] as List<dynamic>? ?? [])
-          .whereType<Map>()
-          .map((item) => Map<String, dynamic>.from(item))
-          .toList(),
-      sexe: data['sexe']?.toString() ?? 'Homme',
-      estActif: data['estActif'] ?? true,
-      doitChangerMotDePasse: data['doitChangerMotDePasse'] == true || data['mustChangePassword'] == true,
-      dateCreation: parseDate(data['dateCreation']),
-      dateModification:
-          data['dateModification'] != null ? parseDate(data['dateModification']) : null,
-      specialite: data['specialite']?.toString(),
+      photoUrl: parseStringOrNull(data['photoUrl'] ?? data['photo_url']),
+      matricule: parseStringOrNull(data['matricule']),
+      assignedFormations: parsedAssigned,
+      sexe: parseString(data['sexe'], defaultValue: 'Homme'),
+      estActif: parseBool(data['estActif'] ?? data['est_actif'], defaultValue: true),
+      doitChangerMotDePasse: parseBool(data['doitChangerMotDePasse'] ?? data['mustChangePassword'] ?? data['must_change_password']),
+      dateCreation: parseDate(data['dateCreation'] ?? data['date_creation']),
+      dateModification: parseDateOrNull(data['dateModification'] ?? data['date_modification']),
+      specialite: parseStringOrNull(data['specialite']),
     );
   }
 

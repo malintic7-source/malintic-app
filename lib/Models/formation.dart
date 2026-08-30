@@ -1,4 +1,4 @@
-// Removed Firestore import for Docker migration
+import 'package:gestion_formations/utils/type_parsers.dart';
 
 enum FormationType { enligne, presentielle, mixte }
 
@@ -27,15 +27,15 @@ class Horaire {
     this.lieuOuLien,
   });
 
-  factory Horaire.fromMap(Map<String, dynamic> map) {
+  factory Horaire.fromMap(Map<dynamic, dynamic> map) {
     return Horaire(
-      jour: map['jour'] ?? '',
-      heureDebut: map['heureDebut'] ?? '',
-      heureFin: map['heureFin'] ?? '',
-      module: map['module']?.toString(),
-      groupe: map['groupe']?.toString(),
-      modalite: map['modalite']?.toString(),
-      lieuOuLien: map['lieuOuLien']?.toString(),
+      jour: parseString(map['jour']),
+      heureDebut: parseString(map['heureDebut']),
+      heureFin: parseString(map['heureFin']),
+      module: parseStringOrNull(map['module']),
+      groupe: parseStringOrNull(map['groupe']),
+      modalite: parseStringOrNull(map['modalite']),
+      lieuOuLien: parseStringOrNull(map['lieuOuLien']),
     );
   }
 
@@ -76,7 +76,7 @@ class Formation {
   final DateTime? dateFin;
   final DateTime dateCreation;
   final int? capaciteMax;
-  final int? nombreInscrits;
+  final int nombreInscrits;
   final bool estStage;
   final int? maxModulesParEtudiant;
 
@@ -107,7 +107,7 @@ class Formation {
     this.maxModulesParEtudiant,
   });
 
-  factory Formation.fromMap(Map<String, dynamic> data, String id) {
+  factory Formation.fromMap(Map<dynamic, dynamic> data, String id) {
     FormationType parseType(String typeStr) {
       if (typeStr.contains('presentielle')) {
         return FormationType.presentielle;
@@ -135,49 +135,51 @@ class Formation {
       return null;
     }
 
-    DateTime? parseDate(dynamic val) {
-      if (val == null) return null;
-      if (val is DateTime) return val;
-      if (val != null && val.runtimeType.toString().contains('Timestamp')) {
-        try {
-          return (val as dynamic).toDate();
-        } catch (_) {}
+    final rawPrices = data['modulePrices'] as Map<dynamic, dynamic>? ?? {};
+    final parsedPrices = <String, double>{};
+    for (final entry in rawPrices.entries) {
+      parsedPrices[entry.key.toString()] = parseDouble(entry.value);
+    }
+
+    final rawFormateurIds = data['moduleFormateurIds'] as Map<dynamic, dynamic>? ?? {};
+    final parsedFormateurIds = <String, String>{};
+    for (final entry in rawFormateurIds.entries) {
+      parsedFormateurIds[entry.key.toString()] = entry.value.toString();
+    }
+
+    final rawHoraires = data['horaires'] as List<dynamic>? ?? [];
+    final parsedHoraires = <Horaire>[];
+    for (final h in rawHoraires) {
+      if (h is Map) {
+        parsedHoraires.add(Horaire.fromMap(h));
       }
-      if (val is String) return DateTime.tryParse(val);
-      return null;
     }
 
     return Formation(
       id: id,
-      titre: data['titre'] ?? '',
-      description: data['description'] ?? '',
-      modules: List<String>.from(data['modules'] ?? []),
-      modulePrices: (data['modulePrices'] as Map<dynamic, dynamic>? ?? {})
-          .map((key, value) => MapEntry(key.toString(), (value as num).toDouble())),
-      moduleFormateurIds:
-          (data['moduleFormateurIds'] as Map<dynamic, dynamic>? ?? {})
-              .map((key, value) => MapEntry(key.toString(), value.toString())),
-      modulesBonus: List<String>.from(data['modulesBonus'] ?? []),
-      imageUrl: data['imageUrl'],
-      imageFormat: parseImageFormat(data['imageFormat']),
-      formateurIds: List<String>.from(data['formateurIds'] ?? []),
-      prix: (data['prix'] ?? 0).toDouble(),
-      prixEnLigne: data['prixEnLigne']?.toDouble(),
+      titre: parseString(data['titre']),
+      description: parseString(data['description']),
+      modules: parseStringList(data['modules']),
+      modulePrices: parsedPrices,
+      moduleFormateurIds: parsedFormateurIds,
+      modulesBonus: parseStringList(data['modulesBonus']),
+      imageUrl: parseStringOrNull(data['imageUrl']),
+      imageFormat: parseImageFormat(parseStringOrNull(data['imageFormat'])),
+      formateurIds: parseStringList(data['formateurIds']),
+      prix: parseDouble(data['prix']),
+      prixEnLigne: parseDoubleOrNull(data['prixEnLigne']),
       type: parseType(data['type']?.toString() ?? 'FormationType.enligne'),
       status: parseStatus(data['status']?.toString() ?? 'FormationStatus.programmee'),
-      dureeSemaines: data['dureeSemaines'] ?? 0,
-      dureeHeures: data['dureeHeures'],
-      horaires: (data['horaires'] as List?)
-              ?.map((h) => Horaire.fromMap(h as Map<String, dynamic>))
-              .toList() ??
-          [],
-      dateDebut: parseDate(data['dateDebut']),
-      dateFin: parseDate(data['dateFin']),
-      dateCreation: parseDate(data['dateCreation']) ?? DateTime.now(),
-      capaciteMax: data['capaciteMax'],
-      nombreInscrits: data['nombreInscrits'] ?? 0,
-      estStage: data['estStage'] ?? false,
-      maxModulesParEtudiant: data['maxModulesParEtudiant'],
+      dureeSemaines: parseInt(data['dureeSemaines']),
+      dureeHeures: parseStringOrNull(data['dureeHeures']),
+      horaires: parsedHoraires,
+      dateDebut: parseDateOrNull(data['dateDebut']),
+      dateFin: parseDateOrNull(data['dateFin']),
+      dateCreation: parseDate(data['dateCreation']),
+      capaciteMax: parseIntOrNull(data['capaciteMax']),
+      nombreInscrits: parseInt(data['nombreInscrits']),
+      estStage: parseBool(data['estStage']),
+      maxModulesParEtudiant: parseIntOrNull(data['maxModulesParEtudiant']),
     );
   }
 
