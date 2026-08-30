@@ -1,0 +1,2083 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Formation - M@LINTIC</title>
+
+    <meta property="og:title" content="Formation - M@LINTIC">
+    <meta property="og:description" content="Inscrivez-vous à nos formations professionnelles M@LINTIC">
+    <meta property="og:image" content="/images/Malintic.png">
+    <meta property="og:url" content="/">
+    <meta property="og:type" content="website">
+
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Formation - M@LINTIC">
+    <meta name="twitter:image" content="/images/Malintic.png">
+
+    <meta name="description" content="Formations professionnelles M@LINTIC">
+    <meta name="theme-color" content="#0066CC">
+
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #0066CC;
+            --primary-rgb: 0,102,204;
+            --accent: #E53935;
+            --accent-rgb: 229,57,53;
+        }
+
+        body {
+            font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #EBF4FF 0%, #FFFFFF 58%, #FFF6EE 100%);
+            color: #1A1A1A;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 36px 24px;
+        }
+
+        /* ========== HEADER ========== */
+        .header {
+            background: linear-gradient(135deg, var(--primary) 0%, #2080D3 40%, var(--accent) 100%);
+            color: white;
+            padding: 24px 28px 24px;
+            border-radius: 20px;
+            margin-bottom: 24px;
+            box-shadow: 0 16px 50px rgba(0, 102, 204, 0.22), 0 0 30px rgba(255, 107, 53, 0.10);
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -60%;
+            right: -15%;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+            border-radius: 50%;
+            animation: float 8s ease-in-out infinite;
+        }
+
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: -40%;
+            left: -10%;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.06) 0%, transparent 70%);
+            border-radius: 50%;
+            animation: float 10s ease-in-out infinite reverse;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(30px) rotate(5deg); }
+        }
+
+        .header-content {
+            position: relative;
+            z-index: 1;
+            animation: slideDown 0.8s ease-out;
+        }
+
+        .header-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 12px;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            flex: 1;
+            justify-content: flex-start;
+        }
+
+        .header-center {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex: 1;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            flex: 1;
+            gap: 14px;
+        }
+
+        .share-button {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            padding: 10px 20px;
+            border-radius: 20px;
+            border: none;
+            font-size: 13px;
+            font-weight: 700;
+            color: white;
+            cursor: pointer;
+            transition: transform 0.25s ease, box-shadow 0.25s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            letter-spacing: 0.3px;
+            box-shadow: 0 10px 20px rgba(0, 102, 204, 0.20);
+        }
+
+        .share-button:hover {
+            background: linear-gradient(135deg, #0052AA 0%, #E4582E 100%);
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 12px 32px rgba(0, 102, 204, 0.28);
+        }
+
+        .share-modal-content {
+            background: linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%);
+            padding: 28px;
+            max-width: 460px;
+            width: 100%;
+            border-radius: 26px;
+            box-shadow: 0 24px 80px rgba(0, 102, 204, 0.16);
+            text-align: center;
+            border: 1px solid rgba(0, 102, 204, 0.12);
+        }
+
+        .share-modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 18px;
+        }
+
+        .share-modal-header h2 {
+            font-size: 20px;
+            margin: 0;
+            color: #0F172A;
+        }
+
+        .share-modal-close {
+            background: none;
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            color: #475569;
+            transition: color 0.2s ease;
+        }
+
+        .share-modal-close:hover {
+            color: #0F172A;
+        }
+
+        .share-modal-body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 18px;
+        }
+
+        .share-modal-body p {
+            font-size: 14px;
+            color: #475569;
+            line-height: 1.6;
+            margin: 0;
+        }
+
+        .share-modal-link {
+            width: 100%;
+            padding: 14px 18px;
+            background: #F8FAFC;
+            border: 1px solid rgba(2, 132, 199, 0.18);
+            border-radius: 14px;
+            overflow-wrap: anywhere;
+            word-break: break-all;
+            font-size: 13px;
+            color: #0F172A;
+        }
+
+        .share-modal-actions {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 12px;
+            margin-top: 6px;
+        }
+
+        .share-modal-actions button {
+            border: none;
+            padding: 12px 18px;
+            border-radius: 14px;
+            cursor: pointer;
+            font-weight: 700;
+            min-width: 130px;
+        }
+
+        .share-copy-btn {
+            background: #E5E7EB;
+            color: #0F172A;
+        }
+
+        .share-launch-btn {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            color: white;
+            box-shadow: 0 14px 26px rgba(var(--primary-rgb), 0.20);
+        }
+
+        .share-launch-btn:hover {
+            filter: brightness(1.05);
+        }
+
+        .share-qr-wrapper {
+            width: 240px;
+            height: 240px;
+            padding: 18px;
+            background: white;
+            border-radius: 24px;
+            border: 1px solid #E5E7EB;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .formation-image-card {
+            width: 70px;
+            height: 70px;
+            border-radius: 14px;
+            overflow: hidden;
+            cursor: pointer;
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            flex-shrink: 0;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+            background: white;
+        }
+
+        .formation-image-card:hover {
+            transform: scale(1.1) rotate(2deg);
+            border-color: rgba(255, 255, 255, 0.6);
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+        }
+
+        .formation-image-card img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .formation-image-placeholder {
+            width: 90px;
+            height: 90px;
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.12);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 3px solid rgba(255, 255, 255, 0.25);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+        }
+
+        .formation-image-placeholder i {
+            font-size: 28px;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        /* Image Modal */
+        .image-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 3000;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .image-modal.active {
+            display: flex;
+        }
+
+        .image-modal-content {
+            max-width: 90%;
+            max-height: 90%;
+            position: relative;
+        }
+
+        .image-modal-content img {
+            max-width: 100%;
+            max-height: 90vh;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .image-modal-close {
+            position: absolute;
+            top: -40px;
+            right: 0;
+            font-size: 32px;
+            color: white;
+            background: none;
+            border: none;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+
+        .image-modal-close:hover {
+            color: var(--primary);
+        }
+
+        /* Floating Help Button */
+        .floating-help {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 8px 24px rgba(0, 102, 204, 0.3);
+            transition: all 0.3s;
+            z-index: 1000;
+            animation: bounce 2s infinite;
+        }
+
+        .floating-help:hover {
+            transform: scale(1.1);
+            box-shadow: 0 12px 32px rgba(0, 102, 204, 0.4);
+        }
+
+        .floating-help i {
+            font-size: 24px;
+            color: white;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        /* Help Modal */
+        .help-modal {
+            display: none;
+            position: fixed;
+            bottom: 100px;
+            right: 30px;
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 20px 60px rgba(0, 102, 204, 0.2);
+            z-index: 1000;
+            min-width: 200px;
+            animation: slideUp 0.3s ease-out;
+        }
+
+        .help-modal.active {
+            display: block;
+        }
+
+        .help-option {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 8px;
+        }
+
+        .help-option:last-child {
+            margin-bottom: 0;
+        }
+
+        .help-option:hover {
+            background: #F8F9FA;
+        }
+
+        .help-option.call {
+            background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+            color: white;
+        }
+
+        .help-option.whatsapp {
+            background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+            color: white;
+        }
+
+        .help-option i {
+            font-size: 20px;
+        }
+
+        .help-option span {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        /* Price Toggle */
+        .price-toggle {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.18);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.28);
+        }
+
+        .price-toggle input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            accent-color: white;
+        }
+
+        .price-toggle label {
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            color: white;
+        }
+
+        /* Formation Type Selector */
+        .formation-type-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .type-option {
+            flex: 1;
+            padding: 14px 16px;
+            border-radius: 14px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.14);
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+            color: white;
+        }
+
+        .type-option:hover {
+            background: rgba(255, 255, 255, 0.26);
+            transform: translateY(-1px);
+        }
+
+        .type-option.active {
+            background: white;
+            color: #0F172A;
+            border-color: white;
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
+        }
+
+        .type-option.active i {
+            color: var(--primary);
+        }
+
+        .type-option i {
+            font-size: 18px;
+            margin-bottom: 6px;
+            display: block;
+        }
+
+        .type-option span {
+            font-size: 12px;
+            font-weight: 600;
+            color: white;
+        }
+
+        .type-option.active {
+            background: #FFFFFF;
+            color: #0F172A;
+            border-color: rgba(255, 255, 255, 0.9);
+        }
+
+        .type-option.active i {
+            color: var(--primary);
+        }
+
+        /* Contact Options in Success */
+        .contact-options {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .contact-btn {
+            flex: 1;
+            padding: 12px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.3s;
+        }
+
+        .contact-btn.call {
+            background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+            color: white;
+        }
+
+        .contact-btn.whatsapp {
+            background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+            color: white;
+        }
+
+        .contact-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .header-logo {
+            width: 75px;
+            height: 75px;
+            object-fit: contain;
+            background: white;
+            padding: 6px;
+            border-radius: 14px;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+            animation: slideDown 0.8s ease-out 0.1s backwards;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 900;
+            margin-bottom: 4px;
+            letter-spacing: -0.5px;
+            line-height: 1.15;
+            animation: slideDown 0.8s ease-out 0.15s backwards;
+            text-shadow: 0 2px 14px rgba(0, 0, 0, 0.18);
+        }
+
+        .header p {
+            font-size: 13px;
+            opacity: 0.95;
+            font-weight: 500;
+            letter-spacing: 0.3px;
+            animation: slideDown 0.8s ease-out 0.25s backwards;
+            text-shadow: 0 1px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-divider {
+            width: 50px;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent);
+            margin: 8px auto;
+            border-radius: 2px;
+            animation: slideDown 0.8s ease-out 0.3s backwards;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ========== CONTENT GRID ========== */
+        .content-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 40px;
+            margin-bottom: 50px;
+        }
+
+        /* Formation Details */
+        .formation-details {
+            background: white;
+            border-radius: 14px;
+            padding: 35px;
+            box-shadow: 0 4px 16px rgba(0, 102, 204, 0.08);
+            border: 1px solid rgba(0, 102, 204, 0.05);
+        }
+
+        .formation-title {
+            font-size: 28px;
+            font-weight: 800;
+            color: #1A1A1A;
+            margin-bottom: 12px;
+            letter-spacing: -0.3px;
+        }
+
+        .formation-description {
+            font-size: 15px;
+            color: #666666;
+            line-height: 1.7;
+            margin-bottom: 35px;
+        }
+
+        .info-section {
+            margin-bottom: 35px;
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #1A1A1A;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            letter-spacing: -0.3px;
+        }
+
+        .section-icon {
+            width: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary);
+            font-size: 16px;
+        }
+
+        .section-title::before {
+            content: '';
+            width: 4px;
+            height: 20px;
+            background: linear-gradient(180deg, var(--primary), var(--accent));
+            border-radius: 2px;
+            margin-right: 4px;
+        }
+
+        /* Modules */
+        .modules-list {
+            display: grid;
+            gap: 10px;
+        }
+
+        .module-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 14px;
+            background: #F8F9FA;
+            border-radius: 10px;
+            border: 1.5px solid #E0E0E0;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .module-info {
+            margin-bottom: 16px;
+        }
+
+        .module-info p {
+            margin: 0;
+            font-size: 13px;
+            color: #334155;
+        }
+
+        .module-limit-message {
+            margin-top: 6px;
+            color: #0f766e;
+            font-weight: 600;
+        }
+
+        .module-item:hover {
+            background: #EFF6FF;
+            border-color: var(--primary);
+            transform: translateX(2px);
+        }
+
+        .module-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            margin-top: 2px;
+            cursor: pointer;
+            accent-color: var(--primary);
+            flex-shrink: 0;
+        }
+
+        .module-label {
+            flex: 1;
+            cursor: pointer;
+        }
+
+        .module-label strong {
+            display: block;
+            font-size: 14px;
+            font-weight: 700;
+            color: #1A1A1A;
+            margin-bottom: 2px;
+        }
+
+        .module-label span {
+            font-size: 13px;
+            color: #666666;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.96);
+            border-radius: 14px;
+            padding: 24px;
+            box-shadow: 0 14px 40px rgba(var(--primary-rgb), 0.08);
+            border: 1px solid rgba(var(--primary-rgb), 0.08);
+        }
+
+        .price-card {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            color: white;
+            text-align: center;
+            border: none;
+            box-shadow: 0 18px 40px rgba(var(--primary-rgb), 0.18);
+        }
+
+        .price-label {
+            font-size: 12px;
+            font-weight: 700;
+            opacity: 0.95;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+
+        .price {
+            font-size: 42px;
+            font-weight: 900;
+            margin-bottom: 4px;
+            letter-spacing: -0.5px;
+        }
+
+        .price-currency {
+            font-size: 13px;
+            opacity: 0.95;
+            font-weight: 600;
+        }
+
+        .cta-button {
+            width: 100%;
+            margin-top: 16px;
+            padding: 16px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            border: none;
+            color: white;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            box-shadow: 0 12px 30px rgba(0, 102, 204, 0.24);
+        }
+
+        @keyframes subtle-pulse {
+            0%, 100% {
+                box-shadow: 0 8px 24px rgba(255, 255, 255, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+            }
+            50% {
+                box-shadow: 0 12px 32px rgba(255, 255, 255, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+            }
+        }
+
+        .cta-button::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .cta-button:hover:not(:disabled) {
+            background: linear-gradient(135deg, #0055B3 0%, #E84F30 100%);
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 16px 40px rgba(0, 102, 204, 0.26);
+        }
+
+        .cta-button:active:not(:disabled) {
+            transform: translateY(-1px) scale(0.98);
+            animation: none;
+        }
+
+        .cta-button:disabled {
+            background: linear-gradient(135deg, #A3BFFA 0%, #D9D9D9 100%);
+            cursor: not-allowed;
+            box-shadow: none;
+            opacity: 0.75;
+        }
+
+        .cta-button i {
+            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            font-size: 16px;
+        }
+
+        .cta-button:hover i {
+            transform: translateX(2px) scale(1.1);
+        }
+
+        /* Stats */
+        .stats {
+            display: grid;
+            gap: 12px;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            font-size: 14px;
+        }
+
+        .stat-item:last-child {
+            border-bottom: none;
+        }
+
+        .stat-label {
+            color: #666666;
+            font-weight: 600;
+        }
+
+        .stat-value {
+            color: #1A1A1A;
+            font-weight: 700;
+        }
+
+        /* ========== MODAL ========== */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.56);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 16px;
+            padding: 35px;
+            max-width: 520px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 102, 204, 0.2);
+            animation: slideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .modal-title {
+            font-size: 22px;
+            font-weight: 800;
+            color: #1A1A1A;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .modal-close {
+            font-size: 24px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #666666;
+            transition: color 0.3s;
+        }
+
+        .modal-close:hover {
+            color: var(--primary);
+        }
+
+        /* Form */
+        .enrollment-form {
+            display: grid;
+            gap: 16px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            font-size: 13px;
+            font-weight: 700;
+            color: #1A1A1A;
+            margin-bottom: 8px;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            padding: 12px 14px;
+            border: 1.5px solid #CBD5E1;
+            border-radius: 10px;
+            font-family: 'Poppins', sans-serif;
+            font-size: 13px;
+            transition: all 0.3s ease;
+            background: #F8FAFC;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.1);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .submit-btn {
+            padding: 12px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 8px 20px rgba(var(--primary-rgb), 0.2);
+            margin-top: 8px;
+        }
+
+        .submit-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 28px rgba(0, 102, 204, 0.3);
+        }
+
+        .submit-btn:disabled {
+            background: #CCCCCC;
+            cursor: not-allowed;
+            box-shadow: none;
+            opacity: 0.6;
+        }
+
+        .validation-message {
+            font-size: 12px;
+            color: #EF4444;
+            margin-top: 8px;
+            display: none;
+            text-align: center;
+        }
+
+        .validation-message.show {
+            display: block;
+        }
+
+        /* Messages */
+        .success-message {
+            background: linear-gradient(135deg, #ECFDF5 0%, #F0FDF4 100%);
+            color: #065F46;
+            padding: 30px;
+            border-radius: 12px;
+            border-left: 4px solid #10B981;
+            text-align: center;
+        }
+
+        .success-message h3 {
+            font-size: 20px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .success-message p {
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .error-message {
+            background: #FEF2F2;
+            color: #991B1B;
+            padding: 25px;
+            border-radius: 12px;
+            border-left: 4px solid #EF4444;
+            text-align: center;
+        }
+
+        .error-message h3 {
+            font-size: 18px;
+            margin-bottom: 8px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--primary);
+            font-size: 16px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 16px;
+            }
+
+            .header {
+                padding: 35px 24px;
+                margin-bottom: 35px;
+            }
+
+            .header h1 {
+                font-size: 24px;
+            }
+
+            .content-grid {
+                grid-template-columns: 1fr;
+                gap: 24px;
+                margin-bottom: 30px;
+            }
+
+            .formation-details,
+            .card {
+                padding: 20px;
+            }
+
+            .formation-title {
+                font-size: 22px;
+            }
+
+            .modal-content {
+                padding: 24px;
+            }
+
+            .modal-title {
+                font-size: 18px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="loading" class="loading">
+            <i class="fas fa-spinner fa-spin"></i> Chargement de la formation...
+        </div>
+
+        <div id="app" style="display: none;"></div>
+
+    <!-- Image Modal -->
+    <div id="imageModal" class="image-modal">
+        <div class="image-modal-content">
+            <button class="image-modal-close" onclick="closeImageModal()">&times;</button>
+            <img id="modalImage" src="" alt="Formation">
+        </div>
+    </div>
+
+    <!-- Help Modal -->
+    <div id="helpModal" class="help-modal">
+        <div class="help-option call" onclick="callAssistant()">
+            <i class="fas fa-phone"></i>
+            <span>Appeler</span>
+        </div>
+        <div class="help-option whatsapp" onclick="contactWhatsApp()">
+            <i class="fab fa-whatsapp"></i>
+            <span>WhatsApp</span>
+        </div>
+    </div>
+
+    <!-- Floating Help Button -->
+    <div class="floating-help" onclick="toggleHelpModal()">
+        <i class="fas fa-question"></i>
+    </div>
+    </div>
+
+    <!-- Modal Inscription -->
+    <div id="enrollmentModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">
+                    <i class="fas fa-pen-fancy"></i> S'inscrire
+                </h2>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <form id="inscriptionForm" class="enrollment-form"></form>
+        </div>
+    </div>
+
+    <div id="shareModal" class="modal">
+        <div class="share-modal-content">
+            <div class="share-modal-header">
+                <h2>Partager l'accès</h2>
+                <button class="share-modal-close" onclick="closeShareModal()">&times;</button>
+            </div>
+            <div class="share-modal-body">
+                <div class="share-qr-wrapper">
+                    <canvas id="shareQrCanvas"></canvas>
+                </div>
+                <p>Copiez ce lien ou partagez-le pour donner accès direct au portail d'inscription.</p>
+                <div id="shareLinkOutput" class="share-modal-link"></div>
+                <div class="share-modal-actions">
+                    <button class="share-copy-btn" onclick="copyShareLink()">Copier le lien</button>
+                    <button class="share-launch-btn" onclick="launchNativeShare()">Partager</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        const SUPABASE_REST_URL = 'https://mzixlwnrsqoxolzafmjb.supabase.co/rest/v1';
+        const SUPABASE_ANON_KEY = 'sb_publishable_X9Srmcc9dIppUO8Hl0EDAw_C-giTCqt';
+
+        async function submitInscriptionToBackend(inscriptionData) {
+            const inscId = inscriptionData.id || `insc_web_${Date.now()}`;
+            inscriptionData.id = inscId;
+            inscriptionData.status = 'enAttente';
+            inscriptionData.statut = 'en_attente';
+            inscriptionData.dateInscription = new Date().toISOString();
+
+            let transmitted = false;
+
+            // 1. Tenter l'envoi vers l'API locale
+            try {
+                const resp = await fetchWithTimeout(`/api/inscriptions/${encodeURIComponent(inscId)}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'ngrok-skip-browser-warning': 'true',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        ...inscriptionData,
+                        etudiantId: inscriptionData.etudiantId || `user_web_${Date.now()}`,
+                        paiementEffectue: false,
+                        source: 'web'
+                    }),
+                }, 4000);
+                if (resp && resp.ok) {
+                    console.log('Inscription transmise à l’API locale');
+                    transmitted = true;
+                }
+            } catch (e) {
+                console.warn('API locale indisponible :', e);
+            }
+
+            // 2. Envoi direct vers Supabase Cloud (garantit l'arrivée même si Ngrok ou le serveur local est inaccessible)
+            try {
+                const supaRow = {
+                    id: inscId,
+                    formation_id: inscriptionData.formationId,
+                    formationId: inscriptionData.formationId,
+                    prenom: inscriptionData.prenom,
+                    nom: inscriptionData.nom,
+                    email: inscriptionData.email,
+                    telephone: inscriptionData.telephone,
+                    modules: inscriptionData.modules || [],
+                    montant: Number(inscriptionData.montant || 0),
+                    description: inscriptionData.description || '',
+                    status: 'enAttente',
+                    statut: 'en_attente',
+                    source: 'web',
+                    type_formation: inscriptionData.typeFormation || 'presentiel',
+                    typeFormation: inscriptionData.typeFormation || 'presentiel',
+                    date_inscription: new Date().toISOString(),
+                    dateInscription: new Date().toISOString(),
+                    paiement_effectue: false,
+                    paiementEffectue: false
+                };
+
+                const supaResp = await fetch(`${SUPABASE_REST_URL}/inscriptions`, {
+                    method: 'POST',
+                    headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'resolution=merge-duplicates'
+                    },
+                    body: JSON.stringify([supaRow])
+                });
+
+                if (supaResp && (supaResp.ok || supaResp.status === 201 || supaResp.status === 200)) {
+                    console.log('Inscription enregistrée sur Supabase Cloud avec succès');
+                    transmitted = true;
+                }
+            } catch (e) {
+                console.warn('Supabase indisponible :', e);
+            }
+
+            saveLocalInscription(inscriptionData);
+            return { success: true, transmitted: transmitted };
+        }
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const rawIdParam = urlParams.get('id') || urlParams.get('formationId') || urlParams.get('formation_id') || '';
+        let formationId = rawIdParam.trim();
+        if (formationId.endsWith('.html') || formationId === 'formation.html') {
+            formationId = '';
+        }
+        const localTestMode = urlParams.get('localTest') === 'true';
+
+        const fallbackFormations = [
+            {
+                id: 'form_1',
+                titre: 'Développement Mobile Flutter',
+                description: 'Apprenez à créer des applications iOS et Android performantes et réactives avec Flutter et Dart.',
+                modules: ['Bases de Dart', 'Widgets et UI Material 3', 'Gestion d\'état', 'Intégration API REST'],
+                formateurIds: ['formateur_1'],
+                prix: 150000,
+                prixEnLigne: 120000,
+                type: 'mixte',
+                estStage: false,
+                maxModulesParEtudiant: 4,
+                dateDebut: '2026-07-30T00:00:00.000Z',
+                dateFin: '2026-09-18T00:00:00.000Z',
+                dateFinInscription: '2026-08-18T00:00:00.000Z',
+                duree: '8 semaines',
+                niveau: 'Tous niveaux',
+                format: 'Mixte',
+                imageUrl: 'images/Malintic.png'
+            },
+            {
+                id: 'form_2',
+                titre: 'Développement Web Fullstack React & Node.js',
+                description: 'Formation complète pour concevoir des applications web modernes et évolutives.',
+                modules: ['HTML5/CSS3/JavaScript ES6', 'React.js Fundamentals', 'Node.js & Express', 'MongoDB'],
+                formateurIds: ['formateur_1'],
+                prix: 180000,
+                prixEnLigne: 140000,
+                type: 'enligne',
+                estStage: false,
+                maxModulesParEtudiant: 4,
+                dateDebut: '2026-08-18T00:00:00.000Z',
+                dateFin: '2026-10-07T00:00:00.000Z',
+                dateFinInscription: '2026-08-13T00:00:00.000Z',
+                duree: '10 semaines',
+                niveau: 'Intermédiaire',
+                format: 'En ligne',
+                imageUrl: 'images/Malintic.png'
+            },
+            {
+                id: 'form_sfp_2026',
+                titre: 'Stage de Formation Professionnelle - SFP5',
+                description: 'Stage professionnel de 3 mois. Choisissez 3 modules parmi les 19 proposés et bénéficiez des bonus offerts : initiation en informatique, PowerPoint + IA et mémoire de fin d’étude universitaire ou professionnel.',
+                modules: ['Base de données + IA', 'Initiation à Windows Server', 'Initiation au Réseau Téléphonique VoIP', 'Initiation à la Sécurité Informatique', 'Maintenance Informatique', 'Système de Vidéosurveillance Analogique', 'Initiation au Réseau Informatique', 'Initiation au Système de Panneau Solaire (SPS)', 'Adobe Photoshop', 'Adobe Première Pro', 'CapCut / VN + IA (Vidéos)', 'Canva + IA (Affiches)', 'Sage 100 comptabilité Générale', 'IMITECH (Initiation en entrepreneuriat : Business Model Canvas)', 'Word et Excel', 'Community Management', 'Intelligence Artificielle (IA)', 'Internet des Objets (IOT)', 'Création d’applications (Flutter)'],
+                modulesBonus: ['Initiation en informatique (Matériels, Logiciels)', 'PowerPoint + IA', 'Mémoire de fin d’étude Universitaire ou Professionnel'],
+                modulePrices: {
+                    'Base de données + IA': 33000,
+                    'Initiation à Windows Server': 28000,
+                    'Initiation au Réseau Téléphonique VoIP': 26000,
+                    'Initiation à la Sécurité Informatique': 30000,
+                    'Maintenance Informatique': 29000,
+                    'Système de Vidéosurveillance Analogique': 27000,
+                    'Initiation au Réseau Informatique': 28000,
+                    'Initiation au Système de Panneau Solaire (SPS)': 28000,
+                    'Adobe Photoshop': 22000,
+                    'Adobe Première Pro': 22000,
+                    'CapCut / VN + IA (Vidéos)': 22000,
+                    'Canva + IA (Affiches)': 20000,
+                    'Sage 100 comptabilité Générale': 28000,
+                    'IMITECH (Initiation en entrepreneuriat : Business Model Canvas)': 25000,
+                    'Word et Excel': 20000,
+                    'Community Management': 23000,
+                    'Intelligence Artificielle (IA)': 32000,
+                    'Internet des Objets (IOT)': 28000,
+                    'Création d’applications (Flutter)': 33000
+                },
+                formateurIds: ['formateur_1'],
+                prix: 100000,
+                prixEnLigne: 125000,
+                type: 'mixte',
+                estStage: true,
+                maxModulesParEtudiant: 3,
+                dateDebut: '2026-06-27T00:00:00.000Z',
+                dateFin: '2026-09-27T00:00:00.000Z',
+                dateFinInscription: '2026-06-17T00:00:00.000Z',
+                duree: '12 semaines',
+                niveau: 'Tous niveaux',
+                format: 'Mixte',
+                imageUrl: 'images/Malintic.png'
+            }
+        ];
+
+        function getSavedFormationsFromStorage() {
+            try {
+                const raw = localStorage.getItem('app_saved_formations');
+                if (raw) {
+                    const list = JSON.parse(raw);
+                    if (Array.isArray(list)) return list;
+                }
+            } catch (e) {}
+            return [];
+        }
+
+        async function fetchWithTimeout(url, options = {}, timeoutMs = 8000) {
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), timeoutMs);
+            try {
+                const customHeaders = {
+                    'ngrok-skip-browser-warning': 'true',
+                    'Accept': 'application/json',
+                    ...(options.headers || {})
+                };
+                return await fetch(url, { ...options, headers: customHeaders, signal: controller.signal, cache: 'no-store' });
+            } finally {
+                clearTimeout(timer);
+            }
+        }
+
+        async function fetchFormationFromBackend(id) {
+            if (id) {
+                const savedList = getSavedFormationsFromStorage();
+                const foundLocal = savedList.find(f => f.id === id);
+                if (foundLocal) return foundLocal;
+            }
+
+            if (id) {
+                try {
+                    const singleResp = await fetchWithTimeout(`/api/formations/${encodeURIComponent(id)}`);
+                    if (singleResp.ok) {
+                        const item = await singleResp.json();
+                        if (item && item.id) return item;
+                    }
+                } catch (e) {
+                    console.warn('Lecture formation par id indisponible :', e);
+                }
+            }
+
+            try {
+                const resp = await fetchWithTimeout('/api/formations');
+                if (resp.ok) {
+                    const list = await resp.json();
+                    if (Array.isArray(list)) {
+                        if (id) {
+                            const found = list.find(f => f.id === id);
+                            if (found) return found;
+                        } else if (list.length > 0) {
+                            return list[0];
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn('Lecture catalogue formations indisponible :', e);
+            }
+
+            // Fallback Supabase Cloud direct
+            try {
+                const supaResp = await fetchWithTimeout(`${SUPABASE_REST_URL}/formations?select=*`, {
+                    headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Accept': 'application/json'
+                    }
+                }, 5000);
+                if (supaResp && supaResp.ok) {
+                    const list = await supaResp.json();
+                    if (Array.isArray(list) && list.length > 0) {
+                        if (id) {
+                            const found = list.find(f => f.id === id);
+                            if (found) return found;
+                        } else {
+                            return list[0];
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn('Lecture Supabase indisponible :', e);
+            }
+
+            if (id) {
+                const foundFallback = fallbackFormations.find(f => f.id === id);
+                if (foundFallback) return foundFallback;
+            }
+            return fallbackFormations[0] || null;
+        }
+
+        function saveLocalInscription(inscriptionData) {
+            try {
+                const key1 = 'local_inscriptions';
+                const existing1 = JSON.parse(localStorage.getItem(key1) || '[]');
+                existing1.push(inscriptionData);
+                localStorage.setItem(key1, JSON.stringify(existing1));
+
+                const key2 = 'app_saved_inscriptions';
+                const existing2 = JSON.parse(localStorage.getItem(key2) || '[]');
+                existing2.push(inscriptionData);
+                localStorage.setItem(key2, JSON.stringify(existing2));
+            } catch (e) {}
+        }
+
+        window.closeModal = function() {
+            document.getElementById('enrollmentModal').classList.remove('active');
+        };
+
+        window.openModal = function() {
+            document.getElementById('enrollmentModal').classList.add('active');
+        };
+
+        window.handleEnrollClick = function() {
+            const moduleCheckboxes = Array.from(document.querySelectorAll('.module-checkbox'));
+            const selectedModules = moduleCheckboxes.filter(cb => cb.checked).length;
+
+            const currentIsStage = window.currentFormation?.estStage === true ||
+                String(window.currentFormation?.estStage).toLowerCase() === 'true' ||
+                /\bsfp\b|stage de formation/i.test(window.currentFormation?.titre || '');
+            const requiredModules = Number(window.currentFormation?.maxModulesParEtudiant) || 3;
+            if (moduleCheckboxes.length > 0 && (currentIsStage
+                ? selectedModules !== requiredModules
+                : selectedModules === 0)) {
+                alert(currentIsStage
+                    ? `Veuillez sélectionner exactement ${requiredModules} modules.`
+                    : 'Veuillez sélectionner au moins un module avant de vous inscrire.');
+                return;
+            }
+            openModal();
+        };
+
+        function resolveImageUrl(url) {
+            if (!url || typeof url !== 'string' || url.trim() === '') return 'images/Malintic.png';
+            const trimmed = url.trim();
+            if (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('data:image')) {
+                return trimmed;
+            }
+            const path = trimmed.startsWith('/') ? trimmed.substring(1) : trimmed;
+            return path.startsWith('images/') ? path : 'images/' + path;
+        }
+
+        // Image Modal Functions
+        window.openImageModal = function(imageUrl) {
+            const finalUrl = resolveImageUrl(imageUrl);
+            document.getElementById('modalImage').src = finalUrl;
+            document.getElementById('imageModal').classList.add('active');
+        };
+
+        window.closeImageModal = function() {
+            document.getElementById('imageModal').classList.remove('active');
+        };
+
+        // Price Toggle Function
+        window.togglePrice = function() {
+            const checkbox = document.getElementById('priceToggle');
+            const displayPrice = document.getElementById('displayPrice');
+            const formation = window.currentFormation;
+            
+            if (checkbox.checked) {
+                displayPrice.textContent = formation.prixEnLigne || formation.prix;
+            } else {
+                displayPrice.textContent = formation.prix || '0';
+            }
+        };
+
+        // Formation Type Selection Function
+        window.selectFormationType = function(type) {
+            const formation = window.currentFormation;
+            const displayPrice = document.getElementById('displayPrice');
+            const typePresentiel = document.getElementById('typePresentiel');
+            const typeEnLigne = document.getElementById('typeEnLigne');
+            
+            // Update active state
+            if (type === 'presentiel') {
+                typePresentiel.classList.add('active');
+                typeEnLigne.classList.remove('active');
+                displayPrice.textContent = formation.prix || '0';
+            } else if (type === 'enligne') {
+                typeEnLigne.classList.add('active');
+                typePresentiel.classList.remove('active');
+                displayPrice.textContent = formation.prixEnLigne || formation.prix;
+            }
+            
+            // Store selected type
+            window.selectedFormationType = type;
+        };
+
+        // Help Modal Functions
+        window.toggleHelpModal = function() {
+            document.getElementById('helpModal').classList.toggle('active');
+        };
+
+        window.callAssistant = function() {
+            window.location.href = 'tel:+22392753558';
+        };
+
+        window.contactWhatsApp = function() {
+            const formation = window.currentFormation;
+            const message = `Bonjour, je souhaite avoir plus d'informations sur la formation "${formation.titre}".\n\nLien: ${window.location.href}\n\nMerci!`;
+            const encodedMessage = encodeURIComponent(message);
+            window.open(`https://wa.me/22392753558?text=${encodedMessage}`, '_blank');
+        };
+
+        // Share Function
+        window.shareFormation = function() {
+            // Use the current origin so sharing works on Docker/local and LAN.
+            const baseHost = window.location.origin || 'http://localhost:8080';
+            // Share direct link to the public static formation page
+            const shareUrl = `${baseHost}/formation.html?id=${formationId}`;
+            const shareLinkOutput = document.getElementById('shareLinkOutput');
+            shareLinkOutput.textContent = shareUrl;
+            generateQrCode(shareUrl);
+            document.getElementById('shareModal').classList.add('active');
+        };
+
+        window.closeShareModal = function() {
+            document.getElementById('shareModal').classList.remove('active');
+        };
+
+        window.copyShareLink = function() {
+            const shareUrl = document.getElementById('shareLinkOutput').textContent;
+            if (!shareUrl) return;
+            navigator.clipboard.writeText(shareUrl).then(() => {
+                alert('Lien copié dans le presse-papiers !');
+            }).catch(() => {
+                alert('Impossible de copier le lien.');
+            });
+        };
+
+        window.launchNativeShare = function() {
+            const formation = window.currentFormation || {};
+            const shareUrl = document.getElementById('shareLinkOutput').textContent;
+            const shareData = {
+                title: formation.titre || 'Portail d’inscription',
+                text: `${formation.titre || 'Inscription'}\n\n${formation.description || ''}\n\nLien: ${shareUrl}`,
+                url: shareUrl,
+            };
+
+            if (navigator.share) {
+                navigator.share(shareData).catch((err) => {
+                    console.error(err);
+                    alert('Impossible de partager via votre appareil.');
+                });
+            } else {
+                window.copyShareLink();
+            }
+        };
+
+        function generateQrCode(url) {
+            const canvas = document.getElementById('shareQrCanvas');
+            if (!canvas || typeof QRious === 'undefined') return;
+            new QRious({
+                element: canvas,
+                value: url,
+                size: 220,
+                background: 'white',
+                foreground: '#111827',
+                level: 'H',
+            });
+        }
+
+        async function loadFormation() {
+            try {
+                let formation = null;
+
+                if (formationId) {
+                    const savedList = getSavedFormationsFromStorage();
+                    formation = savedList.find(f => f.id === formationId);
+                    if (!formation) {
+                        formation = fallbackFormations.find(f => f.id === formationId);
+                    }
+                }
+
+                if (!formation && !localTestMode) {
+                    formation = await fetchFormationFromBackend(formationId);
+                }
+
+                if (!formation) {
+                    formation = fallbackFormations.find(f => f.id === formationId) || fallbackFormations[0] || null;
+                }
+
+                if (!formation) {
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('app').innerHTML = `
+                        <div class="error-message">
+                            <h3><i class="fas fa-exclamation-circle"></i> Formation non trouvée</h3>
+                            <p>Désolé, cette formation n'existe pas ou les données ne sont pas accessibles.</p>
+                        </div>
+                    `;
+                    document.getElementById('app').style.display = 'block';
+                    return;
+                }
+
+                renderFormation(formation);
+            } catch (error) {
+                console.error('Erreur:', error);
+                const fallbackFormation = fallbackFormations.find(f => f.id === formationId) || fallbackFormations[0] || null;
+                if (fallbackFormation) {
+                    renderFormation(fallbackFormation);
+                } else {
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('app').innerHTML = `
+                        <div class="error-message">
+                            <h3><i class="fas fa-triangle-exclamation"></i> Erreur</h3>
+                            <p>Une erreur est survenue. Veuillez réessayer.</p>
+                        </div>
+                    `;
+                    document.getElementById('app').style.display = 'block';
+                }
+            }
+        }
+
+        function renderFormation(formation) {
+            // Store formation globally for access in other functions
+            window.currentFormation = formation;
+            window.selectedFormationType = 'presentiel'; // Default type
+            
+            const modules = formation.modules || [];
+            // Older shared records may not yet contain a boolean estStage.
+            // Detect SFP defensively so a learner is always limited to 3.
+            const isStage = formation.estStage === true ||
+                String(formation.estStage).toLowerCase() === 'true' ||
+                /\bsfp\b|stage de formation/i.test(formation.titre || '');
+            const configuredLimit = Number(formation.maxModulesParEtudiant);
+            const maxModulesSelection = isStage ? (configuredLimit || 3) : modules.length;
+            const formationTypeLabel = isStage ? 'Stage (SFP)' : 'Formation';
+
+            // Formatage des dates
+            const formationType = formation.type || 'presentiel';
+        const defaultSelectedType = formationType === 'mixte' ? 'presentiel' : formationType;
+        window.selectedFormationType = defaultSelectedType;
+        const isOnlineOnly = formationType === 'enligne';
+        const showTypeSelector = formationType === 'mixte' && formation.prixEnLigne && formation.prix;
+        const displayPriceValue = isOnlineOnly
+            ? (formation.prixEnLigne || formation.prix || 0)
+            : (formation.prix || 0);
+        const displayTypeLabel = formationType === 'enligne'
+            ? 'En ligne'
+            : formationType === 'mixte'
+            ? 'Mixte'
+            : 'Présentiel';
+
+        // Formatage des dates
+        const formatDate = (date) => {
+                if (!date) return null;
+                const d = new Date(date.seconds ? date.seconds * 1000 : date);
+                return d.toLocaleDateString('fr-FR', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                });
+            };
+
+            const dateDebut = formation.dateDebut ? formatDate(formation.dateDebut) : null;
+            const dateFin = formation.dateFin ? formatDate(formation.dateFin) : null;
+            const dateFinInscription = formation.dateFinInscription ? formatDate(formation.dateFinInscription) : null;
+
+            const modulesCheckboxes = modules.map((m, idx) => `
+                <div class="module-item">
+                    <input type="checkbox" id="module_${idx}" value="${m}" class="module-checkbox">
+                    <label for="module_${idx}" class="module-label">
+                        <strong>${m}</strong>
+                    </label>
+                </div>
+            `).join('');
+
+            const html = `
+                <div class="header">
+                    <div class="header-content">
+                        <div class="header-top">
+                            <div class="header-left">
+                                <img src="images/Malintic.png" alt="M@LINTIC" class="header-logo" onerror="this.onerror=null; this.src='images/logo.png';">
+                            </div>
+                            <div class="header-center">
+                                <div class="formation-image-card" onclick="openImageModal('${resolveImageUrl(formation.imageUrl)}')">
+                                    <img src="${resolveImageUrl(formation.imageUrl)}" alt="${formation.titre || 'Formation'}" onerror="this.onerror=null; this.src='images/Malintic.png';">
+                                </div>
+                            </div>
+                            <div class="header-right">
+                                <button class="share-button" onclick="shareFormation()">
+                                    <i class="fas fa-share-alt"></i> Partager
+                                </button>
+                            </div>
+                        </div>
+                        <h1>${formation.titre || 'Formation'}</h1>
+                        <div class="header-divider"></div>
+                        <p>M@LINTIC - Formations Professionnelles</p>
+                    </div>
+                </div>
+
+                <div class="content-grid">
+                    <div class="formation-details">
+                        <h2 class="formation-title">${formation.titre}</h2>
+                        <p class="formation-description">${formation.description || 'Description non disponible'}</p>
+
+                        ${dateDebut || dateFin || dateFinInscription ? `
+                        <div class="info-section">
+                            <div class="section-title">
+                                <i class="fas fa-calendar section-icon"></i>
+                                Calendrier
+                            </div>
+                            <div class="stats">
+                                ${dateFinInscription ? `
+                                <div class="stat-item">
+                                    <span class="stat-label">Inscriptions jusqu'au</span>
+                                    <span class="stat-value">${dateFinInscription}</span>
+                                </div>
+                                ` : ''}
+                                ${dateDebut ? `
+                                <div class="stat-item">
+                                    <span class="stat-label">Début de formation</span>
+                                    <span class="stat-value">${dateDebut}</span>
+                                </div>
+                                ` : ''}
+                                ${dateFin ? `
+                                <div class="stat-item">
+                                    <span class="stat-label">Fin de formation</span>
+                                    <span class="stat-value">${dateFin}</span>
+                                </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                        ` : ''}
+
+                        <div class="info-section">
+                            <div class="section-title">
+                                <i class="fas fa-book section-icon"></i>
+                                Modules de Formation
+                            </div>
+                            <div class="modules-list">
+                                ${modulesCheckboxes}
+                            </div>
+                        </div>
+
+                        <div class="info-section">
+                            <div class="section-title">
+                                <i class="fas fa-circle-info section-icon"></i>
+                                Détails
+                            </div>
+                            <div class="stats">
+                                <div class="stat-item">
+                                    <span class="stat-label">Durée</span>
+                                    <span class="stat-value">${formation.duree || 'À déterminer'}</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-label">Niveau</span>
+                                    <span class="stat-value">${formation.niveau || 'Tous niveaux'}</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-label">Format</span>
+                                    <span class="stat-value">${formation.format || 'En ligne'}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="sidebar">
+                        <div class="card price-card">
+                            ${formation.prixEnLigne && formation.prix ? `
+                            <div class="formation-type-selector">
+                                <div class="type-option active" id="typePresentiel" onclick="selectFormationType('presentiel')">
+                                    <i class="fas fa-users"></i>
+                                    <span>Présentiel</span>
+                                </div>
+                                <div class="type-option" id="typeEnLigne" onclick="selectFormationType('enligne')">
+                                    <i class="fas fa-laptop"></i>
+                                    <span>En ligne</span>
+                                </div>
+                            </div>
+                            ` : ''}
+                            <div class="price-label">Tarif</div>
+                            <div class="price" id="displayPrice">${displayPriceValue || '0'}</div>
+                            <div class="price-currency">FCFA</div>
+                            <button class="cta-button" id="enrollButton" onclick="handleEnrollClick()" disabled>
+                                <i class="fas fa-arrow-right"></i> S'inscrire
+                            </button>
+                        </div>
+
+                        <div class="card">
+                            <div class="section-title" style="margin-bottom: 14px;">
+                                <i class="fas fa-check section-icon"></i>
+                                Résumé
+                            </div>
+                            <div class="stats">
+                                <div class="stat-item">
+                                    <span class="stat-label">Modules</span>
+                                    <span class="stat-value">${modules.length}</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-label">Statut</span>
+                                    <span class="stat-value">Disponible</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-label">Type</span>
+                                    <span class="stat-value">Professionnel</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('app').innerHTML = html;
+            document.getElementById('app').style.display = 'block';
+
+            const formHtml = `
+                <div class="form-group">
+                    <p class="form-section-title">Inscription : ${formationTypeLabel}</p>
+                </div>
+                <div class="form-group">
+                    <label>Formation</label>
+                    <div class="share-modal-link">${formation.titre}</div>
+                </div>
+                <div class="form-group">
+                    <label for="prenom">Prénom *</label>
+                    <input type="text" id="prenom" name="prenom" required>
+                </div>
+                <div class="form-group">
+                    <label for="nom">Nom *</label>
+                    <input type="text" id="nom" name="nom" required>
+                </div>
+                <div class="form-group">
+                    <label for="email">Email *</label>
+                    <input type="email" id="email" name="email" required>
+                </div>
+                <div class="form-group">
+                    <label for="telephone">Téléphone *</label>
+                    <input type="tel" id="telephone" name="telephone" required>
+                </div>
+                <div class="form-group">
+                    <label for="description">Message (Optionnel)</label>
+                    <textarea id="description" name="description"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Choix des modules</label>
+                    <p class="form-hint">Sélectionnez les modules que vous souhaitez suivre pour cette formation.</p>
+                </div>
+                <div class="form-group module-info">
+                    <p id="formationTypeLabel"></p>
+                    <p id="moduleLimitMessage" class="module-limit-message"></p>
+                </div>
+                <button type="submit" class="submit-btn" id="submitBtn" disabled>
+                    <i class="fas fa-check"></i> Confirmer l'inscription
+                </button>
+                <div class="validation-message" id="validationMsg">
+                    <i class="fas fa-exclamation-circle"></i> Veuillez sélectionner au moins un module
+                </div>
+            `;
+            document.getElementById('inscriptionForm').innerHTML = formHtml;
+
+            // Affiche le type de formation et, pour les stages, la limite de modules
+            document.getElementById('formationTypeLabel').textContent = formationTypeLabel;
+            if (isStage && formation.maxModulesParEtudiant) {
+                document.getElementById('moduleLimitMessage').textContent = `Sélectionnez exactement ${maxModulesSelection} modules.`;
+            } else if (modules.length > 0) {
+                document.getElementById('moduleLimitMessage').textContent = `Sélectionnez au moins 1 module.`;
+            } else {
+                document.getElementById('moduleLimitMessage').textContent = `Aucun module requis pour cette formation. Complétez vos informations et confirmez.`;
+            }
+
+            // Fonction pour mettre à jour l'état du bouton et l'état des cases à cocher
+            function updateSubmitButton() {
+                const moduleCheckboxes = Array.from(document.querySelectorAll('.module-checkbox'));
+                const selectedModules = moduleCheckboxes.filter(cb => cb.checked).length;
+                const submitBtn = document.getElementById('submitBtn');
+                const validationMsg = document.getElementById('validationMsg');
+                const enrollBtn = document.getElementById('enrollButton');
+
+                const modulesAvailable = moduleCheckboxes.length > 0;
+                const isValidSelection = modulesAvailable
+                    ? (isStage ? selectedModules === maxModulesSelection : selectedModules > 0 && selectedModules <= maxModulesSelection)
+                    : true;
+                submitBtn.disabled = !isValidSelection;
+                if (enrollBtn) enrollBtn.disabled = !isValidSelection;
+
+                if (isValidSelection) {
+                    validationMsg.classList.remove('show');
+                } else if (isStage) {
+                    validationMsg.textContent = `Le stage SFP exige exactement ${maxModulesSelection} modules`;
+                    validationMsg.classList.add('show');
+                } else if (selectedModules === 0) {
+                    validationMsg.textContent = 'Veuillez sélectionner au moins un module';
+                    validationMsg.classList.add('show');
+                } else {
+                    validationMsg.textContent = `Vous pouvez sélectionner au maximum ${maxModulesSelection} module(s)`;
+                    validationMsg.classList.add('show');
+                }
+
+                moduleCheckboxes.forEach((checkbox) => {
+                    if (!checkbox.checked && selectedModules >= maxModulesSelection) {
+                        checkbox.disabled = true;
+                    } else {
+                        checkbox.disabled = false;
+                    }
+                });
+            }
+
+            // Ajouter les event listeners sur toutes les cases à cocher
+            document.querySelectorAll('.module-checkbox').forEach(checkbox => {
+                checkbox.addEventListener('change', updateSubmitButton);
+            });
+
+            // État initial
+            updateSubmitButton();
+
+            document.getElementById('inscriptionForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                const selectedModules = Array.from(document.querySelectorAll('.module-checkbox:checked'))
+                    .map(cb => cb.value);
+
+                const selectedType = window.selectedFormationType || 'presentiel';
+
+                if (isStage && selectedModules.length !== maxModulesSelection) {
+                    alert(`Le stage SFP exige exactement ${maxModulesSelection} modules.`);
+                    return;
+                }
+                if (!isStage && selectedModules.length === 0) {
+                    alert('Veuillez sélectionner au moins un module!');
+                    return;
+                }
+
+                const prenom = document.getElementById('prenom').value;
+                const nom = document.getElementById('nom').value;
+                const email = document.getElementById('email').value;
+                const telephone = document.getElementById('telephone').value;
+                const description = document.getElementById('description').value;
+                const modulePrices = formation.modulePrices || {};
+                const moduleTotal = selectedModules.reduce(
+                    (total, module) => total + (Number(modulePrices[module]) || 0),
+                    0,
+                );
+                const montant = moduleTotal > 0
+                    ? moduleTotal
+                    : (selectedType === 'enligne'
+                        ? Number(formation.prixEnLigne || formation.prix || 0)
+                        : Number(formation.prix || 0));
+
+                try {
+                    const etudiantId = `web_${Date.now()}`;
+                    const inscriptionData = {
+                        etudiantId,
+                        prenom,
+                        nom,
+                        email,
+                        telephone,
+                        formationId: formationId,
+                        modules: selectedModules,
+                        montant,
+                        description,
+                        statut: 'en_attente',
+                        dateInscription: new Date().toISOString(),
+                        source: 'web',
+                        typeFormation: selectedType,
+                        localTestMode: localTestMode
+                    };
+
+                    if (localTestMode) {
+                        saveLocalInscription(inscriptionData);
+                    } else {
+                        await submitInscriptionToBackend(inscriptionData);
+                    }
+
+                    document.getElementById('enrollmentModal').classList.remove('active');
+                    document.getElementById('app').innerHTML = `
+                        <div class="success-message">
+                            <h3><i class="fas fa-check-circle"></i> Inscription Réussie!</h3>
+                            <p style="margin-top: 12px;">Vous serez contacté sur le numéro <strong>${telephone}</strong> ou l'email <strong>${email}</strong></p>
+                            <p style="margin-top: 14px; font-size: 12px; opacity: 0.8;">Référence: ${etudiantId}</p>
+                            <div class="contact-options">
+                                <button class="contact-btn call" onclick="callAssistant()">
+                                    <i class="fas fa-phone"></i> Appeler l'assistant
+                                </button>
+                                <button class="contact-btn whatsapp" onclick="contactWhatsApp()">
+                                    <i class="fab fa-whatsapp"></i> WhatsApp
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                } catch (error) {
+                    console.error('Erreur:', error);
+                    alert('Une erreur est survenue. Veuillez réessayer.');
+                }
+            });
+        }
+
+        loadFormation();
+
+        document.getElementById('enrollmentModal').addEventListener('click', (e) => {
+            if (e.target.id === 'enrollmentModal') closeModal();
+        });
+
+        // Ensure meta tags reflect current origin (useful when sharing locally)
+        try {
+            const origin = window.location.origin;
+            const ogUrl = document.querySelector('meta[property="og:url"]');
+            if (ogUrl) ogUrl.setAttribute('content', origin + '/');
+            const ogImage = document.querySelector('meta[property="og:image"]');
+            if (ogImage) ogImage.setAttribute('content', origin + '/images/Malintic.png');
+            const twImage = document.querySelector('meta[name="twitter:image"]');
+            if (twImage) twImage.setAttribute('content', origin + '/images/Malintic.png');
+        } catch (e) {
+            // ignore
+        }
+    </script>
+</body>
+</html>
