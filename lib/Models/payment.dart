@@ -104,6 +104,47 @@ class Payment {
     return Payment.fromMap(data, doc.id ?? '');
   }
 
+  Payment copyWith({
+    String? id,
+    String? inscriptionId,
+    String? apprenantId,
+    String? etudiantId,
+    String? formationId,
+    double? montant,
+    PaymentStatus? status,
+    PaymentMethod? methode,
+    DateTime? dateCreation,
+    DateTime? dateEffectuation,
+    String? referenceTransaction,
+    String? motifEchec,
+    String? motif,
+    String? moduleId,
+    int? trancheNumero,
+    int? nombreTranches,
+    double? remise,
+    DateTime? dateEcheance,
+  }) {
+    return Payment(
+      id: id ?? this.id,
+      inscriptionId: inscriptionId ?? this.inscriptionId,
+      apprenantId: apprenantId ?? etudiantId ?? this.apprenantId,
+      formationId: formationId ?? this.formationId,
+      montant: montant ?? this.montant,
+      status: status ?? this.status,
+      methode: methode ?? this.methode,
+      dateCreation: dateCreation ?? this.dateCreation,
+      dateEffectuation: dateEffectuation ?? this.dateEffectuation,
+      referenceTransaction: referenceTransaction ?? this.referenceTransaction,
+      motifEchec: motifEchec ?? this.motifEchec,
+      motif: motif ?? this.motif,
+      moduleId: moduleId ?? this.moduleId,
+      trancheNumero: trancheNumero ?? this.trancheNumero,
+      nombreTranches: nombreTranches ?? this.nombreTranches,
+      remise: remise ?? this.remise,
+      dateEcheance: dateEcheance ?? this.dateEcheance,
+    );
+  }
+
   Map<String, dynamic> toMap() {
     return {
       'id': id,
@@ -128,4 +169,12 @@ class Payment {
   }
 
   Map<String, dynamic> toFirestore() => toMap();
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is Payment && runtimeType == other.runtimeType && id == other.id;
+
+  @override
+  int get hashCode => id.hashCode;
 }

@@ -49,10 +49,15 @@ class Inscription {
   factory Inscription.fromMap(Map<dynamic, dynamic> data, String id) {
     InscriptionStatus parseStatus(String statusStr) {
       final normalized = statusStr.toLowerCase();
-      if (normalized.contains('acceptee') || normalized.contains('accepte') || normalized.contains('valide')) {
+      if (normalized.contains('acceptee') ||
+          normalized.contains('accepte') ||
+          normalized.contains('valide') ||
+          normalized.contains('approuve')) {
         return InscriptionStatus.acceptee;
       }
-      if (normalized.contains('rejetee') || normalized.contains('rejete')) {
+      if (normalized.contains('rejetee') ||
+          normalized.contains('rejete') ||
+          normalized.contains('refuse')) {
         return InscriptionStatus.rejetee;
       }
       return InscriptionStatus.enAttente;
@@ -91,6 +96,49 @@ class Inscription {
     return Inscription.fromMap(data, doc.id ?? '');
   }
 
+  Inscription copyWith({
+    String? id,
+    String? apprenantId,
+    String? etudiantId,
+    String? formationId,
+    InscriptionStatus? status,
+    DateTime? dateInscription,
+    String? paiementId,
+    bool? paiementEffectue,
+    String? dateAcceptation,
+    String? motifRejet,
+    String? prenom,
+    String? nom,
+    String? email,
+    String? telephone,
+    String? description,
+    List<String>? modules,
+    String? typeFormation,
+    String? sexe,
+    String? source,
+  }) {
+    return Inscription(
+      id: id ?? this.id,
+      apprenantId: apprenantId ?? etudiantId ?? this.apprenantId,
+      formationId: formationId ?? this.formationId,
+      status: status ?? this.status,
+      dateInscription: dateInscription ?? this.dateInscription,
+      paiementId: paiementId ?? this.paiementId,
+      paiementEffectue: paiementEffectue ?? this.paiementEffectue,
+      dateAcceptation: dateAcceptation ?? this.dateAcceptation,
+      motifRejet: motifRejet ?? this.motifRejet,
+      prenom: prenom ?? this.prenom,
+      nom: nom ?? this.nom,
+      email: email ?? this.email,
+      telephone: telephone ?? this.telephone,
+      description: description ?? this.description,
+      modules: modules ?? this.modules,
+      typeFormation: typeFormation ?? this.typeFormation,
+      sexe: sexe ?? this.sexe,
+      source: source ?? this.source,
+    );
+  }
+
   Map<String, dynamic> toMap() {
     return {
       'id': id,
@@ -116,4 +164,12 @@ class Inscription {
   }
 
   Map<String, dynamic> toFirestore() => toMap();
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is Inscription && runtimeType == other.runtimeType && id == other.id;
+
+  @override
+  int get hashCode => id.hashCode;
 }

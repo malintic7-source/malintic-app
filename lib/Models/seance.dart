@@ -122,4 +122,12 @@ class Seance {
       datePublication: datePublication ?? this.datePublication,
     );
   }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is Seance && runtimeType == other.runtimeType && id == other.id;
+
+  @override
+  int get hashCode => id.hashCode;
 }
