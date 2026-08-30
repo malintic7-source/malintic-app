@@ -1,8 +1,8 @@
 {
   "outputDirectory": "build/web",
-  "buildCommand": "bash build-vercel.sh",
   "cleanUrls": true,
   "framework": null,
+  "buildCommand": null,
   "installCommand": null,
   "headers": [
     {
