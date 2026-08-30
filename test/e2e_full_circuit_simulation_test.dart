@@ -174,7 +174,7 @@ void main() {
       expect(paymentsStagiaire.first.trancheNumero, equals(1));
       expect(paymentsStagiaire.first.dateEcheance, isNotNull);
       expect(db.getInscriptionPaidAmount(inscription.id), equals(70000.0));
-      expect(db.getInscriptionBalance(inscription.id), equals(23000.0)); // 98 000 (33k+33k+32k) - 5 000 (remise) - 70 000 (versé)
+      expect(db.getInscriptionBalance(inscription.id), equals(25000.0)); // Prix fixe global SFP5 100 000 - 5 000 (remise) - 70 000 (versé)
     });
 
     test('4. [Formateur] Émargement de Présence et Avancement des Heures Réalisées', () async {
@@ -266,6 +266,29 @@ void main() {
       expect(totalDone, equals(20));
       final progressionPercent = (totalDone / totalAssigned * 100).round();
       expect(progressionPercent, equals(36));
+    });
+
+    test('6. [Admin / Employé LAN] Inscription au guichet/bureau pour un candidat SFP5 en direct', () async {
+      // Un employé autorisé enregistre un candidat sur place au bureau
+      final adminCreatedInsc = await db.createInscription(
+        etudiantId: 'admin_desk_$testRunId',
+        formationId: 'form_sfp_2026',
+        prenom: 'Fatoumata',
+        nom: 'Bagayoko',
+        email: 'fatoumata.desk.$testRunId@malintic.com',
+        telephone: '+223 76 88 99 00',
+        modules: ['Adobe Photoshop', 'Adobe Première Pro', 'Canva + IA (Affiches)'],
+        typeFormation: 'presentiel',
+      );
+
+      expect(adminCreatedInsc.id, isNotEmpty);
+      expect(adminCreatedInsc.formationId, equals('form_sfp_2026'));
+      expect(adminCreatedInsc.status, equals(InscriptionStatus.enAttente));
+      expect(adminCreatedInsc.modules, hasLength(3));
+
+      // Le prix de base calculé pour cette inscription SFP5 au guichet est bien le prix fixe de 100 000 FCFA
+      final baseTotal = db.getInscriptionBaseTotal(adminCreatedInsc.id);
+      expect(baseTotal, equals(100000.0));
     });
   });
 }

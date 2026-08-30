@@ -2989,7 +2989,13 @@ class LocalDataService {
         ? formation.prixEnLigne!
         : formation.prix;
 
-    // Si une sélection partielle de modules est spécifiée et que des prix individuels existent
+    // Pour les stages SFP (estStage == true), c'est un prix forfaitaire fixe
+    // qui couvre l'ensemble des modules choisis (pas de tarification par module individuel).
+    if (formation.estStage) {
+      return basePrice;
+    }
+
+    // Si une sélection partielle de modules est spécifiée et que des prix individuels existent pour une formation modulaire standard
     if (moduleIds != null &&
         moduleIds.isNotEmpty &&
         moduleIds.length < formation.modules.length &&
