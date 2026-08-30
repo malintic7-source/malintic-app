@@ -109,20 +109,22 @@ class Formation {
 
   factory Formation.fromMap(Map<dynamic, dynamic> data, String id) {
     FormationType parseType(String typeStr) {
-      if (typeStr.contains('presentielle')) {
+      final lower = typeStr.toLowerCase();
+      if (lower.contains('presentiel')) {
         return FormationType.presentielle;
       }
-      if (typeStr.contains('mixte')) {
+      if (lower.contains('mixte')) {
         return FormationType.mixte;
       }
       return FormationType.enligne;
     }
 
     FormationStatus parseStatus(String statusStr) {
-      if (statusStr.contains('enCours')) {
+      final lower = statusStr.toLowerCase();
+      if (lower.contains('encours') || lower.contains('en_cours') || lower.contains('cours') || lower.contains('active')) {
         return FormationStatus.enCours;
       }
-      if (statusStr.contains('terminee')) {
+      if (lower.contains('termine') || lower.contains('cloture')) {
         return FormationStatus.terminee;
       }
       return FormationStatus.programmee;
@@ -130,8 +132,9 @@ class Formation {
 
     ImageFormat? parseImageFormat(String? formatStr) {
       if (formatStr == null) return null;
-      if (formatStr.contains('carre')) return ImageFormat.carre;
-      if (formatStr.contains('vertical')) return ImageFormat.vertical;
+      final lower = formatStr.toLowerCase();
+      if (lower.contains('carre')) return ImageFormat.carre;
+      if (lower.contains('vertical') || lower.contains('portrait')) return ImageFormat.vertical;
       return null;
     }
 
