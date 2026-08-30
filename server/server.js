@@ -1229,12 +1229,11 @@ function handleCollectionPut(req, res) {
     data.motifRejet = null;
     data.dateInscription = new Date().toISOString();
   }
-  if (collection === 'users' && data.password) {
-    data.passwordHash = hashPassword(String(data.password));
-    delete data.password;
-  } else if (collection === 'users') {
-    delete data.password;
-    delete data.passwordHash;
+  if (collection === 'users') {
+    if (data.password) {
+      data.passwordHash = hashPassword(String(data.password));
+      delete data.password;
+    }
   }
   if (collection === 'formations') {
     const assignmentError = validateFormationAssignments(data, state.users);
