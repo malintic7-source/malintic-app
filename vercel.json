@@ -46,26 +46,6 @@
       "destination": "/inscription.html"
     },
     {
-      "source": "/formation",
-      "destination": "/formation.html"
-    },
-    {
-      "source": "/formation/:id",
-      "destination": "/formation.html"
-    },
-    {
-      "source": "/formations",
-      "destination": "/formation.html"
-    },
-    {
-      "source": "/inscription",
-      "destination": "/inscription.html"
-    },
-    {
-      "source": "/inscription/:id",
-      "destination": "/inscription.html"
-    },
-    {
       "source": "/((?!api/|.*\\.[\\w]+$).*)",
       "destination": "/index.html"
     }
