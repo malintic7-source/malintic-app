@@ -70,6 +70,39 @@ void main() {
       expect(inscription.source, 'web');
     });
 
+    test('maps payment to and from supabase row including dateEcheance and remise', () {
+      final paymentRow = {
+        'id': 'pay_10',
+        'inscription_id': 'insc_10',
+        'etudiant_id': 'etu_10',
+        'formation_id': 'form_sfp_2026',
+        'montant': 75000,
+        'remise': 5000,
+        'tranche_numero': 2,
+        'nombre_tranches': 3,
+        'status': 'effectue',
+        'methode': 'orangeMoney',
+        'reference': 'OM-2026-9911',
+        'date_echeance': '2026-09-15T00:00:00.000Z',
+        'date_creation': '2026-08-01T10:00:00.000Z',
+      };
+
+      final payment = SupabaseMapper.paymentFromRow(paymentRow);
+      expect(payment.id, 'pay_10');
+      expect(payment.montant, 75000.0);
+      expect(payment.remise, 5000.0);
+      expect(payment.trancheNumero, 2);
+      expect(payment.nombreTranches, 3);
+      expect(payment.referenceTransaction, 'OM-2026-9911');
+      expect(payment.dateEcheance, isNotNull);
+      expect(payment.dateEcheance?.year, 2026);
+
+      final row = SupabaseMapper.toRow('payments', payment.toMap());
+      expect(row['remise'], 5000.0);
+      expect(row['tranche_numero'], 2);
+      expect(row['date_echeance'], isNotNull);
+    });
+
     test('user select excludes password_hash', () {
       expect(SupabaseMapper.userSelect, isNot(contains('password_hash')));
     });

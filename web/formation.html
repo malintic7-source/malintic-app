@@ -1578,10 +1578,10 @@
 
         // Share Function
         window.shareFormation = function() {
-            // Use the current origin so sharing works on Docker/local and LAN.
+            const formation = window.currentFormation || {};
+            const activeId = formation.id || formationId || '';
             const baseHost = window.location.origin || 'http://localhost:8080';
-            // Share direct link to the public static formation page
-            const shareUrl = `${baseHost}/formation.html?id=${formationId}`;
+            const shareUrl = activeId ? `${baseHost}/formation.html?id=${encodeURIComponent(activeId)}` : `${baseHost}/formation.html`;
             const shareLinkOutput = document.getElementById('shareLinkOutput');
             shareLinkOutput.textContent = shareUrl;
             generateQrCode(shareUrl);
@@ -2014,13 +2014,14 @@
 
                 try {
                     const etudiantId = `web_${Date.now()}`;
+                    const targetFormationId = formation.id || formationId || (window.currentFormation && window.currentFormation.id) || 'form_sfp_2026';
                     const inscriptionData = {
                         etudiantId,
                         prenom,
                         nom,
                         email,
                         telephone,
-                        formationId: formationId,
+                        formationId: targetFormationId,
                         modules: selectedModules,
                         montant,
                         description,

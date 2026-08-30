@@ -284,6 +284,7 @@ class SupabaseMapper {
       'date_effectuation': data['dateEffectuation'] ?? data['date_effectuation'],
       'motif': data['motif'],
       'module_id': data['moduleId'] ?? data['module_id'],
+      'date_echeance': data['dateEcheance'] ?? data['date_echeance'],
     };
     row.removeWhere((_, v) => v == null);
     return row;
@@ -306,6 +307,7 @@ class SupabaseMapper {
       'dateEffectuation': row['date_effectuation'] ?? row['date_paiement'] ?? row['dateEffectuation'],
       'motif': row['motif'],
       'moduleId': row['module_id'] ?? row['moduleId'],
+      'dateEcheance': row['date_echeance'] ?? row['dateEcheance'],
     };
   }
 
