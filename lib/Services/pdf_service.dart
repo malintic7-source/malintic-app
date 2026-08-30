@@ -2390,7 +2390,13 @@ class PdfService {
       final endStr = '${end.day.toString().padLeft(2, '0')} ${months[end.month - 1]} ${end.year}';
       return '$startStr au $endStr';
     }
-    return '26 Avril au 02 Août $fallbackYear';
+    if (start != null) {
+      return 'À partir du ${start.day.toString().padLeft(2, '0')} ${months[start.month - 1]} ${start.year}';
+    }
+    if (end != null) {
+      return 'Jusqu\'au ${end.day.toString().padLeft(2, '0')} ${months[end.month - 1]} ${end.year}';
+    }
+    return 'Session $fallbackYear';
   }
 
   /// Generates a Premium Official Trainer Honorarium & Compensation Slip PDF (Fiche de Paie / Honoraires Formateur)
