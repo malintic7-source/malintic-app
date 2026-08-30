@@ -6,6 +6,7 @@ const zlib = require('zlib');
 
 const app = express();
 app.disable('x-powered-by');
+app.enable('trust proxy');
 const isProduction = process.env.NODE_ENV === 'production';
 const allowedOrigins = new Set(
   String(process.env.CORS_ALLOWED_ORIGINS || '')
@@ -56,7 +57,13 @@ async function pullSharedState() {
 // ─── HTTPS Redirect en production ────────────────────────────────────────
 if (isProduction) {
   app.use((req, res, next) => {
-    if (req.protocol !== 'https') {
+    // Ne pas rediriger pour le health check ou les requêtes internes locales
+    if (req.path === '/api/health' || req.path === '/api/v1/health') return next();
+    const isLocalhost = ['localhost', '127.0.0.1', 'api', 'malintic_api'].includes(req.hostname);
+    if (isLocalhost) return next();
+
+    const proto = req.headers['x-forwarded-proto'] || req.protocol;
+    if (proto !== 'https') {
       return res.redirect(301, `https://${req.get('host')}${req.originalUrl}`);
     }
     next();
