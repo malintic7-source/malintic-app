@@ -38,12 +38,13 @@ Map<String, dynamic> resolveInscriptionFormationData(
   Map<dynamic, dynamic>? formationData,
   Map<dynamic, dynamic> inscription,
 ) {
+  final inscriptionPrice = inscription['montant'] ?? inscription['prix'] ?? 0;
   final fallback = {
-    'titre': 'Formation',
-    'description': '',
-    'prix': 0,
-    'prixEnLigne': 0,
-    'type': 'presentiel',
+    'titre': (inscription['formationTitle'] ?? inscription['formation_title'] ?? 'Formation').toString(),
+    'description': (inscription['description'] ?? '').toString(),
+    'prix': inscriptionPrice,
+    'prixEnLigne': inscriptionPrice,
+    'type': (inscription['typeFormation'] ?? inscription['type_formation'] ?? 'presentiel').toString(),
   };
 
   if (formationData == null || formationData.isEmpty) {
@@ -654,6 +655,7 @@ class _AdminInscriptionsState extends State<AdminInscriptions> with TickerProvid
 
     final displayUserData = resolveInscriptionUserData(userData, inscription);
     final displayFormationData = resolveInscriptionFormationData(formationData, inscription);
+    final statusStr = (inscription['status'] ?? inscription['statut'] ?? '').toString().toLowerCase();
 
                 return GestureDetector(
                   onTap: () => _showDetailDialog(
@@ -779,7 +781,7 @@ class _AdminInscriptionsState extends State<AdminInscriptions> with TickerProvid
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                               ),
                             ),
-                            if (inscription['status'] == 'en_attente' || inscription['statut'] == 'en_attente') ...[
+                            if (!statusStr.contains('valide') && !statusStr.contains('accepte') && !statusStr.contains('rejet')) ...[
                               OutlinedButton.icon(
                                 onPressed: () => _updateStatus(inscriptionId, 'rejete'),
                                 icon: const Icon(Icons.close_rounded, size: 15, color: AppTheme.error),
@@ -845,19 +847,42 @@ class _AdminInscriptionsState extends State<AdminInscriptions> with TickerProvid
         ? [isStage ? '• Aucun module SFP sélectionné' : '• Tous les modules de la formation']
         : rawModules.map((m) => '• $m').toList();
     final currentStatusStr = (inscription['status'] ?? inscription['statut'] ?? '').toString();
+    final statusLower = currentStatusStr.toLowerCase();
+    final isPending = !statusLower.contains('valide') && !statusLower.contains('accepte') && !statusLower.contains('rejet');
 
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
         backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(
-          'Détails de l\'Inscription',
-          style: GoogleFonts.poppins(
-            fontSize: 18,
-            fontWeight: FontWeight.w800,
-            color: Colors.black87,
-          ),
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Détails de l\'Inscription',
+              style: GoogleFonts.poppins(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: Colors.black87,
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: _getStatusColor(currentStatusStr).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: _getStatusColor(currentStatusStr).withValues(alpha: 0.3)),
+              ),
+              child: Text(
+                _getStatusLabel(currentStatusStr),
+                style: GoogleFonts.poppins(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: _getStatusColor(currentStatusStr),
+                ),
+              ),
+            ),
+          ],
         ),
         content: SingleChildScrollView(
           child: Column(
@@ -869,45 +894,74 @@ class _AdminInscriptionsState extends State<AdminInscriptions> with TickerProvid
                 email,
                 phone,
               ]),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               _buildDialogSection('Formation', [
                 formationData['titre'] ?? 'N/A',
                 formationData['description'] ?? '',
                 'Type: ${_getFormationTypeLabel(formationData['type'] ?? 'presentiel')}',
                 'Prix: ${_getFormationPrice(formationData, inscription)} FCFA',
               ]),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               _buildDialogSection('Modules Sélectionnés', modulesList),
               if (inscription['description']?.toString().isNotEmpty ?? false)
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    SizedBox(height: 16),
+                    const SizedBox(height: 16),
                     _buildDialogSection('Description', [
                       inscription['description'].toString(),
                     ]),
                   ],
                 ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               _buildStatusSection(inscriptionId, currentStatusStr, dialogContext),
             ],
           ),
         ),
+        actionsAlignment: MainAxisAlignment.spaceBetween,
         actions: [
           TextButton.icon(
             icon: const Icon(Icons.delete_forever_rounded, color: AppTheme.error, size: 18),
             label: Text('Supprimer', style: GoogleFonts.poppins(color: AppTheme.error, fontWeight: FontWeight.w700)),
             onPressed: () => _confirmDeleteInscription(context, inscriptionId, '${userData['prenom']} ${userData['nom']}'),
           ),
-          ElevatedButton.icon(
-            icon: const Icon(Icons.close_rounded, size: 18),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primary,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-            label: Text('Fermer', style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
-            onPressed: () => Navigator.pop(context),
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            children: [
+              if (isPending) ...[
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.close_rounded, size: 16, color: AppTheme.error),
+                  label: Text('Rejeter', style: GoogleFonts.poppins(color: AppTheme.error, fontWeight: FontWeight.w700)),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Color(0xFFFCA5A5)),
+                    backgroundColor: const Color(0xFFFEF2F2),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  onPressed: () => _updateStatus(inscriptionId, 'rejete', dialogContext),
+                ),
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.check_circle_outline_rounded, size: 16, color: Colors.white),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.success,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  label: Text('Valider & Enrôler', style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
+                  onPressed: () => _updateStatus(inscriptionId, 'valide', dialogContext),
+                ),
+              ],
+              ElevatedButton.icon(
+                icon: const Icon(Icons.close_rounded, size: 18),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                label: Text('Fermer', style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ],
           ),
         ],
       ),
