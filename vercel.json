@@ -42,6 +42,10 @@
       "destination": "/formation.html"
     },
     {
+      "source": "/inscription.html",
+      "destination": "/inscription.html"
+    },
+    {
       "source": "/((?!api/|.*\\.[\\w]+$).*)",
       "destination": "/index.html"
     }
