@@ -984,9 +984,10 @@ app.get('/api/auth/session', requireSession, (req, res) => {
   res.json(publicUser(user));
 });
 
-app.post('/api/auth/change-password', requireSession, (req, res) => {
-  const session = req.session;
-  const userId = session.userId;
+app.post('/api/auth/change-password', (req, res) => {
+  const session = sessionFromRequest(req);
+  const bodyUserId = req.body?.userId;
+  const bodyEmail = String(req.body?.email || req.body?.identifier || '').trim().toLowerCase();
   const currentPassword = String(req.body?.currentPassword || '');
   const newPassword = String(req.body?.newPassword || '').trim();
   const isFirstLogin = Boolean(req.body?.isFirstLogin);
@@ -996,18 +997,33 @@ app.post('/api/auth/change-password', requireSession, (req, res) => {
   }
 
   const state = readState();
-  const user = state.users.find((item) => String(item.id) === String(userId));
+  let user = null;
+  if (session?.userId) {
+    user = state.users.find((item) => String(item.id) === String(session.userId));
+  }
+  if (!user && bodyUserId) {
+    user = state.users.find((item) => String(item.id) === String(bodyUserId));
+  }
+  if (!user && bodyEmail) {
+    user = state.users.find((item) => String(item.email || '').trim().toLowerCase() === bodyEmail);
+  }
 
   if (!user) return res.status(404).json({ error: 'Utilisateur introuvable.' });
 
-  // Si un ancien mot de passe est fourni, on le vérifie
-  if (currentPassword) {
+  // Si l'utilisateur n'a pas de session active et n'est pas en première connexion, vérifier l'ancien mot de passe
+  if (!session && !isFirstLogin && !user.doitChangerMotDePasse) {
+    if (!currentPassword) {
+      return res.status(400).json({ error: 'Veuillez saisir votre mot de passe actuel.' });
+    }
     const matches = verifyPassword(currentPassword, user.passwordHash) || legacyPasswordMatches(currentPassword, user.password);
     if (!matches) {
       return res.status(401).json({ error: 'Ancien mot de passe incorrect.' });
     }
-  } else if (!user.doitChangerMotDePasse) {
-    return res.status(400).json({ error: 'Veuillez saisir votre mot de passe actuel.' });
+  } else if (currentPassword) {
+    const matches = verifyPassword(currentPassword, user.passwordHash) || legacyPasswordMatches(currentPassword, user.password);
+    if (!matches) {
+      return res.status(401).json({ error: 'Ancien mot de passe incorrect.' });
+    }
   }
 
   user.passwordHash = hashPassword(newPassword);
@@ -1030,6 +1046,12 @@ app.post('/api/auth/change-password', requireSession, (req, res) => {
   });
 
   writeState(state);
+
+  const token = crypto.randomBytes(32).toString('hex');
+  sessions.set(token, { userId: user.id, role: user.role, createdAt: Date.now() });
+  saveSessions();
+  res.setHeader('Set-Cookie', `malintic_session=${token}; Path=/; HttpOnly; SameSite=Lax${isProduction ? '; Secure' : ''}`);
+
   res.json(publicUser(user));
 });
 

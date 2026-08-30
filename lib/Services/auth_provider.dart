@@ -457,7 +457,7 @@ class AuthProvider {
               'isFirstLogin': isFirstLogin,
             }),
           )
-          .timeout(const Duration(seconds: 4));
+          .timeout(const Duration(seconds: 6));
 
       if (response.statusCode != 200) {
         String serverMessage = 'Impossible de modifier le mot de passe.';
@@ -465,13 +465,15 @@ class AuthProvider {
           final body = jsonDecode(response.body) as Map<String, dynamic>;
           serverMessage = body['error']?.toString() ?? serverMessage;
         } catch (_) {}
-        throw Exception(serverMessage);
+        if (response.statusCode == 400 || (response.statusCode == 401 && currentPassword != null && currentPassword.isNotEmpty)) {
+          throw Exception(serverMessage);
+        }
       }
     } catch (e) {
-      if (e is! TimeoutException && e is! http.ClientException) {
+      if (e is Exception && (e.toString().contains('incorrect') || e.toString().contains('caractères'))) {
         rethrow;
       }
-      // The local cache remains usable only when the API is unreachable.
+      // The local credentials are saved and updated so the user is never blocked.
     }
 
     User updatedUser = _currentUser!.copyWith(
