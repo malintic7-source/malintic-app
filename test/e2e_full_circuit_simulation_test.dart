@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gestion_formations/Models/user.dart';
+import 'package:gestion_formations/Models/formation.dart';
 import 'package:gestion_formations/Models/inscription.dart';
 import 'package:gestion_formations/Models/payment.dart';
 import 'package:gestion_formations/Services/db_services.dart';
@@ -289,6 +290,66 @@ void main() {
       // Le prix de base calculé pour cette inscription SFP5 au guichet est bien le prix fixe de 100 000 FCFA
       final baseTotal = db.getInscriptionBaseTotal(adminCreatedInsc.id);
       expect(baseTotal, equals(100000.0));
+    });
+
+    test('7. [Hors-SFP / Formations Modulaires Individuelles] Tarification individuelle par module à la carte', () async {
+      // Création d'une formation individuelle hors SFP avec prix par module
+      final modularFormation = Formation(
+        id: 'form_modulaire_$testRunId',
+        titre: 'Formations Individuelles à la Carte',
+        description: 'Suivez des modules individuels à votre propre rythme.',
+        estStage: false, // Hors-SFP
+        modules: [
+          'Adobe Photoshop Expert',
+          'Flutter Mobile Dev',
+          'Maintenance & Réseau',
+        ],
+        modulePrices: {
+          'Adobe Photoshop Expert': 35000,
+          'Flutter Mobile Dev': 50000,
+          'Maintenance & Réseau': 40000,
+        },
+        formateurIds: const ['formateur_1'],
+        prix: 120000,
+        type: FormationType.presentielle,
+        status: FormationStatus.programmee,
+        dureeSemaines: 6,
+        horaires: const [],
+        dateCreation: DateTime.now(),
+      );
+
+      await db.addFormation(modularFormation);
+
+      // Inscription à un seul module individuel : 'Flutter Mobile Dev'
+      final singleModuleInsc = await db.createInscription(
+        apprenantId: 'etudiant_flutter_$testRunId',
+        formationId: modularFormation.id,
+        prenom: 'Ousmane',
+        nom: 'Sangaré',
+        email: 'ousmane.flutter.$testRunId@malintic.com',
+        telephone: '+223 70 12 34 56',
+        modules: ['Flutter Mobile Dev'],
+        typeFormation: 'presentiel',
+      );
+
+      // Le montant calculé pour ce module individuel hors SFP est exactement 50 000 FCFA
+      final singleTotal = db.getInscriptionBaseTotal(singleModuleInsc.id);
+      expect(singleTotal, equals(50000.0));
+
+      // Inscription à deux modules individuels : Photoshop (35k) + Maintenance (40k) = 75 000 FCFA
+      final dualModuleInsc = await db.createInscription(
+        apprenantId: 'etudiant_dual_$testRunId',
+        formationId: modularFormation.id,
+        prenom: 'Mariam',
+        nom: 'Koné',
+        email: 'mariam.kone.$testRunId@malintic.com',
+        telephone: '+223 71 99 88 77',
+        modules: ['Adobe Photoshop Expert', 'Maintenance & Réseau'],
+        typeFormation: 'presentiel',
+      );
+
+      final dualTotal = db.getInscriptionBaseTotal(dualModuleInsc.id);
+      expect(dualTotal, equals(75000.0));
     });
   });
 }
