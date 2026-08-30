@@ -43,9 +43,13 @@ ngrok.env
 # Temporary / Artifacts
 .codex-history/
 backup/
-tmp_*.txt
-tmp_*.json
+tmp_*
+coverage/
+test-results/
+*.lcov
+.nyc_output/
 .vercel
 .firebase/
 supabase/.temp/
 .widget_preview/
+

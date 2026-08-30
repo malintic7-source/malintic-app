@@ -1,16 +1,63 @@
-Dockerfile*
-docker-compose*.yml
+# Source code (only prebuilt build/web is served)
+lib/
 server/
 api/
+supabase/
+supabase_setup.sql
+
+# Test files & Tooling (Never deploy to Vercel)
+test/
+test/**
+coverage/
+*.test.*
+*.spec.*
+
+# Native platforms & Tooling
 android/
 ios/
 linux/
 macos/
 windows/
 .dart_tool/
-.git/
-test/
+.packages
+.pub-cache/
+.pub/
+
+# Docker & Infrastructure
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+nginx.conf
+render.yaml
+.renderignore
+
+# Local Deployment Scripts & Batch files
 *.bat
 *.ps1
 *.sh
+build-vercel.sh
+deploy.*
+
+# Documentation
+*.md
+LICENSE
+CHANGELOG.md
+
+# Backups & Temporary files
+backup/
+tmp_*
+.codex-history/
+.widget_preview/
+.tools/
+
+# Environment & Version Control
+.git/
+.gitignore
+.vercel
+.firebase/
 .env*
+ngrok.env
+*.log
+.DS_Store
+Thumbs.db
+

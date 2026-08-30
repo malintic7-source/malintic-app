@@ -1,13 +1,54 @@
-Dockerfile*
-docker-compose.yml
-nginx.conf
-build/
+# Tests & Code Quality
+test/
+test/**
+coverage/
+*.test.*
+*.spec.*
+
+# Static frontend & source (Render only runs Node backend API in /server)
 lib/
 web/
-test/
+build/
 images/
-.firebase/
 .dart_tool/
+.packages
+
+# Native platforms
+android/
+ios/
+linux/
+macos/
+windows/
+
+# Docker & Infrastructure
+Dockerfile*
+docker-compose*.yml
+nginx.conf
+
+# Scripts & Documentation
+*.bat
+*.ps1
+*.sh
+*.md
+LICENSE
+CHANGELOG.md
+
+# Backups & Temporary files
+backup/
+tmp_*
+supabase/
+.codex-history/
+.widget_preview/
+.tools/
+
+# IDE & Version Control
+.git/
 .idea/
 .vscode/
+.firebase/
+.vercel/
+*.log
+.DS_Store
+Thumbs.db
+
 
