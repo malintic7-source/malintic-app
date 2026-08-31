@@ -158,31 +158,47 @@ class Formation {
       }
     }
 
+    final titre = parseString(data['titre']);
+    final isSfp = id == '09cKUMEJm3UnRztD4Jm2' ||
+        id == 'form_sfp_2026' ||
+        titre.toLowerCase().contains('sfp') ||
+        titre.toLowerCase().contains('stage de formation professionnelle') ||
+        parseBool(data['estStage']);
+
+    final parsedModulesBonus = parseStringList(data['modulesBonus']);
+    if (isSfp && parsedModulesBonus.isEmpty) {
+      parsedModulesBonus.addAll(const [
+        'Initiation en informatique (Matériels, Logiciels)',
+        'PowerPoint + IA',
+        'Mémoire de fin d’étude Universitaire ou Professionnel',
+      ]);
+    }
+
     return Formation(
       id: id,
-      titre: parseString(data['titre']),
+      titre: isSfp && (titre == 'SFP 5' || titre.isEmpty) ? 'Stage de Formation Professionnelle - SFP5' : titre,
       description: parseString(data['description']),
       modules: parseStringList(data['modules']),
       modulePrices: parsedPrices,
       moduleFormateurIds: parsedFormateurIds,
-      modulesBonus: parseStringList(data['modulesBonus']),
+      modulesBonus: parsedModulesBonus,
       imageUrl: parseStringOrNull(data['imageUrl']),
       imageFormat: parseImageFormat(parseStringOrNull(data['imageFormat'])),
       formateurIds: parseStringList(data['formateurIds']),
-      prix: parseDouble(data['prix']),
-      prixEnLigne: parseDoubleOrNull(data['prixEnLigne']),
+      prix: parseDouble(data['prix']) > 0 ? parseDouble(data['prix']) : (isSfp ? 100000.0 : 0.0),
+      prixEnLigne: parseDoubleOrNull(data['prixEnLigne']) ?? (isSfp ? 125000.0 : null),
       type: parseType(data['type']?.toString() ?? 'FormationType.enligne'),
       status: parseStatus(data['status']?.toString() ?? 'FormationStatus.programmee'),
-      dureeSemaines: parseInt(data['dureeSemaines']),
-      dureeHeures: parseStringOrNull(data['dureeHeures']),
+      dureeSemaines: parseInt(data['dureeSemaines']) > 0 ? parseInt(data['dureeSemaines']) : (isSfp ? 12 : 0),
+      dureeHeures: parseStringOrNull(data['dureeHeures']) ?? (isSfp ? '3 mois • 3 séances par semaine • 3h par séance' : null),
       horaires: parsedHoraires,
       dateDebut: parseDateOrNull(data['dateDebut']),
       dateFin: parseDateOrNull(data['dateFin']),
       dateCreation: parseDate(data['dateCreation']),
       capaciteMax: parseIntOrNull(data['capaciteMax']),
       nombreInscrits: parseInt(data['nombreInscrits']),
-      estStage: parseBool(data['estStage']),
-      maxModulesParEtudiant: parseIntOrNull(data['maxModulesParEtudiant']),
+      estStage: isSfp,
+      maxModulesParEtudiant: isSfp ? (parseIntOrNull(data['maxModulesParEtudiant']) ?? 3) : null,
     );
   }
 

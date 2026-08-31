@@ -286,6 +286,131 @@ function migrateLegacyPasswords(state) {
   return migrated;
 }
 
+const SFP_OFFICIAL_19_MODULES = [
+  'Base de données + IA',
+  'Initiation à Windows Server',
+  'Initiation au Réseau Téléphonique VoIP',
+  'Initiation à la Sécurité Informatique',
+  'Maintenance Informatique',
+  'Système de Vidéosurveillance Analogique',
+  'Initiation au Réseau Informatique',
+  'Initiation au Système de Panneau Solaire (SPS)',
+  'Adobe Photoshop',
+  'Adobe Première Pro',
+  'CapCut / VN + IA (Vidéos)',
+  'Canva + IA (Affiches)',
+  'Sage 100 comptabilité Générale',
+  'IMITECH (Initiation en entrepreneuriat : Business Model Canvas)',
+  'Word et Excel',
+  'Community Management',
+  'Intelligence Artificielle (IA)',
+  'Internet des Objets (IOT)',
+  'Création d’applications (Flutter)',
+];
+
+const SFP_BONUS_MODULES = [
+  'Initiation en informatique (Matériels, Logiciels)',
+  'PowerPoint + IA',
+  'Mémoire de fin d’étude Universitaire ou Professionnel',
+];
+
+const SFP_OFFICIAL_PRICES = {
+  'Base de données + IA': 33000,
+  'Initiation à Windows Server': 28000,
+  'Initiation au Réseau Téléphonique VoIP': 26000,
+  'Initiation à la Sécurité Informatique': 30000,
+  'Maintenance Informatique': 29000,
+  'Système de Vidéosurveillance Analogique': 27000,
+  'Initiation au Réseau Informatique': 28000,
+  'Initiation au Système de Panneau Solaire (SPS)': 28000,
+  'Adobe Photoshop': 22000,
+  'Adobe Première Pro': 22000,
+  'CapCut / VN + IA (Vidéos)': 22000,
+  'Canva + IA (Affiches)': 20000,
+  'Sage 100 comptabilité Générale': 28000,
+  'IMITECH (Initiation en entrepreneuriat : Business Model Canvas)': 25000,
+  'Word et Excel': 20000,
+  'Community Management': 23000,
+  'Intelligence Artificielle (IA)': 32000,
+  'Internet des Objets (IOT)': 28000,
+  'Création d’applications (Flutter)': 33000,
+};
+
+function repairFormations(state) {
+  if (!Array.isArray(state.formations)) return false;
+  let modified = false;
+
+  for (const f of state.formations) {
+    const isSfp = f.id === '09cKUMEJm3UnRztD4Jm2' ||
+      f.id === 'form_sfp_2026' ||
+      String(f.titre || '').toLowerCase().includes('sfp') ||
+      String(f.titre || '').toLowerCase().includes('stage de formation professionnelle') ||
+      f.estStage === true ||
+      f.est_stage === true;
+
+    if (isSfp) {
+      if (f.titre !== 'Stage de Formation Professionnelle - SFP5') {
+        f.titre = 'Stage de Formation Professionnelle - SFP5';
+        modified = true;
+      }
+      if (f.description !== 'Stage professionnel de 3 mois. Choisissez 3 modules parmi les 19 proposés et bénéficiez des bonus offerts : initiation en informatique, PowerPoint + IA et mémoire de fin d’étude universitaire ou professionnel.') {
+        f.description = 'Stage professionnel de 3 mois. Choisissez 3 modules parmi les 19 proposés et bénéficiez des bonus offerts : initiation en informatique, PowerPoint + IA et mémoire de fin d’étude universitaire ou professionnel.';
+        modified = true;
+      }
+      if (f.estStage !== true) { f.estStage = true; modified = true; }
+      if (f.est_stage !== true) { f.est_stage = true; modified = true; }
+      if (f.maxModulesParEtudiant !== 3) { f.maxModulesParEtudiant = 3; modified = true; }
+      if (f.max_modules_par_etudiant !== 3) { f.max_modules_par_etudiant = 3; modified = true; }
+      if (f.prix !== 100000) { f.prix = 100000; modified = true; }
+      if (f.prixEnLigne !== 125000) { f.prixEnLigne = 125000; f.prix_en_ligne = 125000; modified = true; }
+      if (f.dureeSemaines !== 12) { f.dureeSemaines = 12; f.duree_semaines = 12; modified = true; }
+      if (f.dureeHeures !== '3 mois • 3 séances par semaine • 3h par séance') {
+        f.dureeHeures = '3 mois • 3 séances par semaine • 3h par séance';
+        f.duree_heures = '3 mois • 3 séances par semaine • 3h par séance';
+        modified = true;
+      }
+      if (!Array.isArray(f.modulesBonus) || f.modulesBonus.length < 3) {
+        f.modulesBonus = [...SFP_BONUS_MODULES];
+        f.modules_bonus = [...SFP_BONUS_MODULES];
+        modified = true;
+      }
+      if (!Array.isArray(f.modules) || f.modules.length < 19) {
+        f.modules = [...SFP_OFFICIAL_19_MODULES];
+        modified = true;
+      }
+      if (!f.modulePrices || Object.keys(f.modulePrices).length < 19) {
+        f.modulePrices = { ...SFP_OFFICIAL_PRICES };
+        f.module_prices = { ...SFP_OFFICIAL_PRICES };
+        modified = true;
+      }
+    } else {
+      if (f.estStage !== false) { f.estStage = false; f.est_stage = false; modified = true; }
+      if (f.maxModulesParEtudiant !== null && f.maxModulesParEtudiant !== undefined) {
+        f.maxModulesParEtudiant = null;
+        f.max_modules_par_etudiant = null;
+        modified = true;
+      }
+      if (!f.modulePrices || Object.keys(f.modulePrices).length === 0) {
+        f.modulePrices = {};
+        for (const m of (f.modules || [])) {
+          const modName = String(m).toLowerCase();
+          if (modName.includes('flutter') || modName.includes('react') || modName.includes('node')) {
+            f.modulePrices[m] = 45000;
+          } else if (modName.includes('svs') || modName.includes('vidéo') || modName.includes('analogique') || modName.includes('ip')) {
+            f.modulePrices[m] = 40000;
+          } else {
+            f.modulePrices[m] = 35000;
+          }
+        }
+        f.module_prices = { ...f.modulePrices };
+        modified = true;
+      }
+    }
+  }
+
+  return modified;
+}
+
 function sessionFromRequest(req) {
   const cookies = Object.fromEntries((req.headers.cookie || '').split(';').map((value) => {
     const [key, ...rest] = value.trim().split('=');
@@ -422,7 +547,9 @@ function readState() {
   try {
     const parsed = JSON.parse(fs.readFileSync(dataFile, 'utf8'));
     for (const name of collections) if (!Array.isArray(parsed[name])) parsed[name] = [];
-    if (migrateLegacyPasswords(parsed)) writeState(parsed);
+    const pwMigrated = migrateLegacyPasswords(parsed);
+    const formRepaired = repairFormations(parsed);
+    if (pwMigrated || formRepaired) writeState(parsed);
     _stateCache = parsed;
     _stateCacheDirty = false;
     return parsed;
@@ -431,8 +558,9 @@ function readState() {
       try {
         const restored = JSON.parse(fs.readFileSync(backupFile, 'utf8'));
         for (const name of collections) if (!Array.isArray(restored[name])) restored[name] = [];
-        migrateLegacyPasswords(restored);
-        fs.writeFileSync(dataFile, JSON.stringify(restored, null, 2));
+        const pwMigrated = migrateLegacyPasswords(restored);
+        const formRepaired = repairFormations(restored);
+        if (pwMigrated || formRepaired) writeState(restored);
         _stateCache = restored;
         _stateCacheDirty = false;
         return restored;
