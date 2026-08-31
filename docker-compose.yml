@@ -120,6 +120,7 @@ services:
 
 volumes:
   malintic_data:
+    name: malintic_data
     driver: local
 
 networks:
