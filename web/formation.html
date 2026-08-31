@@ -1280,53 +1280,36 @@
             return { success: true, transmitted: transmitted };
         }
 
-        const urlParams = new URLSearchParams(window.location.search);
-        const rawIdParam = urlParams.get('id') || urlParams.get('formationId') || urlParams.get('formation_id') || '';
-        let formationId = rawIdParam.trim();
-        if (formationId.endsWith('.html') || formationId === 'formation.html') {
-            formationId = '';
+        function extractFormationIdFromLocation() {
+            try {
+                const searchParams = new URLSearchParams(window.location.search);
+                let id = searchParams.get('id') || searchParams.get('formationId') || searchParams.get('formation_id');
+                if (id && !id.endsWith('.html') && id !== 'formation.html') return id.trim();
+
+                const hash = window.location.hash || '';
+                if (hash.includes('?')) {
+                    const hashSearch = hash.substring(hash.indexOf('?'));
+                    const hashParams = new URLSearchParams(hashSearch);
+                    id = hashParams.get('id') || hashParams.get('formationId') || hashParams.get('formation_id');
+                    if (id && !id.endsWith('.html') && id !== 'formation.html') return id.trim();
+                }
+
+                const parts = window.location.pathname.split('/').filter(Boolean);
+                if (parts.length >= 2 && (parts[0] === 'formation' || parts[0] === 'formation.html')) {
+                    const candidate = parts[1];
+                    if (candidate && !candidate.includes('.')) return candidate.trim();
+                }
+            } catch (e) {
+                console.warn('Erreur extraction formationId:', e);
+            }
+            return '';
         }
+
+        let formationId = extractFormationIdFromLocation();
+        const urlParams = new URLSearchParams(window.location.search);
         const localTestMode = urlParams.get('localTest') === 'true';
 
         const fallbackFormations = [
-            {
-                id: 'form_1',
-                titre: 'Développement Mobile Flutter',
-                description: 'Apprenez à créer des applications iOS et Android performantes et réactives avec Flutter et Dart.',
-                modules: ['Bases de Dart', 'Widgets et UI Material 3', 'Gestion d\'état', 'Intégration API REST'],
-                formateurIds: ['formateur_1'],
-                prix: 150000,
-                prixEnLigne: 120000,
-                type: 'mixte',
-                estStage: false,
-                maxModulesParEtudiant: 4,
-                dateDebut: '2026-07-30T00:00:00.000Z',
-                dateFin: '2026-09-18T00:00:00.000Z',
-                dateFinInscription: '2026-08-18T00:00:00.000Z',
-                duree: '8 semaines',
-                niveau: 'Tous niveaux',
-                format: 'Mixte',
-                imageUrl: 'images/Malintic.png'
-            },
-            {
-                id: 'form_2',
-                titre: 'Développement Web Fullstack React & Node.js',
-                description: 'Formation complète pour concevoir des applications web modernes et évolutives.',
-                modules: ['HTML5/CSS3/JavaScript ES6', 'React.js Fundamentals', 'Node.js & Express', 'MongoDB'],
-                formateurIds: ['formateur_1'],
-                prix: 180000,
-                prixEnLigne: 140000,
-                type: 'enligne',
-                estStage: false,
-                maxModulesParEtudiant: 4,
-                dateDebut: '2026-08-18T00:00:00.000Z',
-                dateFin: '2026-10-07T00:00:00.000Z',
-                dateFinInscription: '2026-08-13T00:00:00.000Z',
-                duree: '10 semaines',
-                niveau: 'Intermédiaire',
-                format: 'En ligne',
-                imageUrl: 'images/Malintic.png'
-            },
             {
                 id: 'form_sfp_2026',
                 titre: 'Stage de Formation Professionnelle - SFP5',
@@ -1367,15 +1350,75 @@
                 niveau: 'Tous niveaux',
                 format: 'Mixte',
                 imageUrl: 'images/Malintic.png'
+            },
+            {
+                id: 'form_1',
+                titre: 'Développement Mobile Flutter',
+                description: 'Apprenez à créer des applications iOS et Android performantes et réactives avec Flutter et Dart.',
+                modules: ['Bases de Dart', 'Widgets et UI Material 3', 'Gestion d\'état', 'Intégration API REST'],
+                formateurIds: ['formateur_1'],
+                prix: 150000,
+                prixEnLigne: 120000,
+                type: 'mixte',
+                estStage: false,
+                maxModulesParEtudiant: 4,
+                dateDebut: '2026-07-30T00:00:00.000Z',
+                dateFin: '2026-09-18T00:00:00.000Z',
+                dateFinInscription: '2026-08-18T00:00:00.000Z',
+                duree: '8 semaines',
+                niveau: 'Tous niveaux',
+                format: 'Mixte',
+                imageUrl: 'images/Malintic.png'
+            },
+            {
+                id: 'form_2',
+                titre: 'Développement Web Fullstack React & Node.js',
+                description: 'Formation complète pour concevoir des applications web modernes et évolutives.',
+                modules: ['HTML5/CSS3/JavaScript ES6', 'React.js Fundamentals', 'Node.js & Express', 'MongoDB'],
+                formateurIds: ['formateur_1'],
+                prix: 180000,
+                prixEnLigne: 140000,
+                type: 'enligne',
+                estStage: false,
+                maxModulesParEtudiant: 4,
+                dateDebut: '2026-08-18T00:00:00.000Z',
+                dateFin: '2026-10-07T00:00:00.000Z',
+                dateFinInscription: '2026-08-13T00:00:00.000Z',
+                duree: '10 semaines',
+                niveau: 'Intermédiaire',
+                format: 'En ligne',
+                imageUrl: 'images/Malintic.png'
             }
         ];
+
+        function normalizeFormation(item) {
+            if (!item || typeof item !== 'object') return null;
+            return {
+                ...item,
+                id: item.id || '',
+                titre: item.titre || item.title || 'Formation M@LINTIC',
+                description: item.description || '',
+                prix: item.prix !== undefined ? Number(item.prix) : 0,
+                prixEnLigne: item.prixEnLigne !== undefined ? Number(item.prixEnLigne) : (item.prix_en_ligne !== undefined ? Number(item.prix_en_ligne) : null),
+                modules: Array.isArray(item.modules) ? item.modules : [],
+                modulePrices: item.modulePrices || item.module_prices || {},
+                modulesBonus: item.modulesBonus || item.modules_bonus || [],
+                imageUrl: item.imageUrl || item.photo_url || item.photoUrl || 'images/Malintic.png',
+                estStage: item.estStage === true || item.est_stage === true || String(item.estStage).toLowerCase() === 'true' || String(item.est_stage).toLowerCase() === 'true' || /\bsfp\b|stage/i.test(item.titre || ''),
+                maxModulesParEtudiant: item.maxModulesParEtudiant || item.max_modules_par_etudiant || 3,
+                type: item.type || 'mixte',
+                duree: item.duree || (item.duree_semaines ? `${item.duree_semaines} semaines` : '12 semaines'),
+                niveau: item.niveau || 'Tous niveaux',
+                format: item.format || 'Mixte'
+            };
+        }
 
         function getSavedFormationsFromStorage() {
             try {
                 const raw = localStorage.getItem('app_saved_formations');
                 if (raw) {
                     const list = JSON.parse(raw);
-                    if (Array.isArray(list)) return list;
+                    if (Array.isArray(list)) return list.map(normalizeFormation);
                 }
             } catch (e) {}
             return [];
@@ -1408,7 +1451,7 @@
                     const singleResp = await fetchWithTimeout(`/api/formations/${encodeURIComponent(id)}`);
                     if (singleResp.ok) {
                         const item = await singleResp.json();
-                        if (item && item.id) return item;
+                        if (item && item.id) return normalizeFormation(item);
                     }
                 } catch (e) {
                     console.warn('Lecture formation par id indisponible :', e);
@@ -1419,13 +1462,13 @@
                 const resp = await fetchWithTimeout('/api/formations');
                 if (resp.ok) {
                     const list = await resp.json();
-                    if (Array.isArray(list)) {
+                    if (Array.isArray(list) && list.length > 0) {
+                        const normalizedList = list.map(normalizeFormation);
                         if (id) {
-                            const found = list.find(f => f.id === id);
+                            const found = normalizedList.find(f => f.id === id || f.id.toLowerCase() === id.toLowerCase());
                             if (found) return found;
-                        } else if (list.length > 0) {
-                            return list[0];
                         }
+                        return normalizedList[0];
                     }
                 }
             } catch (e) {
@@ -1444,12 +1487,12 @@
                 if (supaResp && supaResp.ok) {
                     const list = await supaResp.json();
                     if (Array.isArray(list) && list.length > 0) {
+                        const normalizedList = list.map(normalizeFormation);
                         if (id) {
-                            const found = list.find(f => f.id === id);
+                            const found = normalizedList.find(f => f.id === id || f.id.toLowerCase() === id.toLowerCase());
                             if (found) return found;
-                        } else {
-                            return list[0];
                         }
+                        return normalizedList[0];
                     }
                 }
             } catch (e) {
@@ -1457,7 +1500,7 @@
             }
 
             if (id) {
-                const foundFallback = fallbackFormations.find(f => f.id === id);
+                const foundFallback = fallbackFormations.find(f => f.id === id || f.id.toLowerCase().includes(id.toLowerCase()) || id.toLowerCase().includes(f.id.toLowerCase()));
                 if (foundFallback) return foundFallback;
             }
             return fallbackFormations[0] || null;

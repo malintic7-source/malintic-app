@@ -1,8 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gestion_formations/Services/db_services.dart';
-import 'package:gestion_formations/Models/user.dart';
-import 'package:gestion_formations/Models/formation.dart';
-import 'package:gestion_formations/Models/inscription.dart';
 import 'package:gestion_formations/Models/payment.dart';
 
 void main() {

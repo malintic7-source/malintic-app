@@ -113,19 +113,25 @@ class _AuthWrapperState extends State<AuthWrapper> {
       final uri = Uri.base;
       _preselectedFormationId =
           uri.queryParameters['formationId'] ?? uri.queryParameters['id'];
-      _showInscriptionPage = uri.queryParameters['inscription'] == 'true';
+      _showInscriptionPage = uri.queryParameters['inscription'] == 'true' ||
+          uri.path.contains('formation') ||
+          uri.path.contains('inscription') ||
+          (_preselectedFormationId != null && _preselectedFormationId!.isNotEmpty);
 
-      if (!_showInscriptionPage) {
-        final frag = uri.fragment;
-        if (frag.isNotEmpty && frag.contains('inscription')) {
-          final fragPart = frag.contains('?') ? frag.split('?').last : '';
-          final fragParams = Uri.splitQueryString(fragPart.isNotEmpty ? fragPart : '');
-          if (fragParams['inscription'] == 'true' || frag.contains('inscription')) {
+      final frag = uri.fragment;
+      if (frag.isNotEmpty) {
+        final fragPart = frag.contains('?') ? frag.split('?').last : '';
+        final fragParams = Uri.splitQueryString(fragPart.isNotEmpty ? fragPart : '');
+        if (fragParams['inscription'] == 'true' ||
+            frag.contains('formation') ||
+            frag.contains('inscription')) {
+          _showInscriptionPage = true;
+        }
+        if (_preselectedFormationId == null || _preselectedFormationId!.isEmpty) {
+          _preselectedFormationId =
+              fragParams['formationId'] ?? fragParams['id'];
+          if (_preselectedFormationId != null && _preselectedFormationId!.isNotEmpty) {
             _showInscriptionPage = true;
-          }
-          if (_preselectedFormationId == null || _preselectedFormationId!.isEmpty) {
-            _preselectedFormationId =
-                fragParams['formationId'] ?? fragParams['id'];
           }
         }
       }
@@ -142,7 +148,6 @@ class _AuthWrapperState extends State<AuthWrapper> {
       builder: (context, snapshot) {
         final activeUser = snapshot.data ?? AuthProvider().currentUser;
         if (activeUser != null) {
-          // Déclenche le dialog de première connexion si nécessaire
           if (activeUser.doitChangerMotDePasse) {
             return _FirstLoginGate(user: activeUser);
           }

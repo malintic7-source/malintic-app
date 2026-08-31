@@ -63,8 +63,16 @@
       "destination": "https://malintic-api.onrender.com/api/:path*"
     },
     {
+      "source": "/formation",
+      "destination": "/formation.html"
+    },
+    {
       "source": "/formation.html",
       "destination": "/formation.html"
+    },
+    {
+      "source": "/inscription",
+      "destination": "/inscription.html"
     },
     {
       "source": "/inscription.html",

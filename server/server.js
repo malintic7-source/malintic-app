@@ -31,12 +31,16 @@ for (const origin of [process.env.PUBLIC_URL, process.env.NGROK_DOMAIN && `https
 }
 
 
-// ─── HTTPS Redirect en production ────────────────────────────────────────
+// ─── HTTPS Redirect en production (exemptant les IP LAN locales et loopback) ──────────────────
 if (isProduction) {
   app.use((req, res, next) => {
-    // Ne pas rediriger pour le health check ou les requêtes internes locales
     if (req.path === '/api/health' || req.path === '/api/v1/health') return next();
-    const isLocalhost = ['localhost', '127.0.0.1', 'api', 'malintic_api'].includes(req.hostname);
+    const host = req.hostname || '';
+    const isLocalhost = ['localhost', '127.0.0.1', 'api', 'malintic_api'].includes(host) ||
+      host.startsWith('192.168.') ||
+      host.startsWith('10.') ||
+      host.startsWith('172.') ||
+      host.endsWith('.local');
     if (isLocalhost) return next();
 
     const proto = req.headers['x-forwarded-proto'] || req.protocol;
@@ -99,7 +103,20 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: '15mb' }));
 app.use((req, res, next) => {
   const origin = String(req.headers.origin || '').replace(/\/$/, '');
-  if (origin && allowedOrigins.has(origin)) {
+  const isAllowedOrigin = !origin ||
+    allowedOrigins.has(origin) ||
+    origin.includes('localhost') ||
+    origin.includes('127.0.0.1') ||
+    origin.includes('192.168.') ||
+    origin.includes('10.') ||
+    origin.includes('172.') ||
+    origin.includes('.local') ||
+    origin.includes('vercel.app') ||
+    origin.includes('ngrok-free.app') ||
+    origin.includes('ngrok.io') ||
+    origin.includes('onrender.com');
+
+  if (origin && isAllowedOrigin) {
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Vary', 'Origin');
     res.setHeader('Access-Control-Allow-Credentials', 'true');
