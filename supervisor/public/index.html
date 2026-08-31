@@ -6,39 +6,50 @@
   <title>M@LINTIC — Superviseur Haute Disponibilité & PRA / PCA</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #0b1120;
-      --card-bg: rgba(30, 41, 59, 0.7);
+      --bg: #070d18;
+      --bg-surface: #0f172a;
+      --card-bg: rgba(15, 23, 42, 0.75);
       --card-border: rgba(255, 255, 255, 0.08);
-      --primary: #0284c7;
-      --primary-light: #38bdf8;
+      --card-border-hover: rgba(0, 102, 204, 0.4);
+      --primary: #0066cc;
+      --primary-dark: #004499;
+      --primary-light: #3385e0;
+      --logo-red: #e53935;
+      --logo-red-dark: #c62828;
       --success: #10b981;
+      --success-dark: #059669;
       --warning: #f59e0b;
       --danger: #ef4444;
       --text: #f8fafc;
       --text-muted: #94a3b8;
+      --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
+    
     body {
-      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-family: var(--font-sans);
       background-color: var(--bg);
       color: var(--text);
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       background-image: 
-        radial-gradient(at 0% 0%, rgba(2, 132, 199, 0.15) 0px, transparent 50%),
-        radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.1) 0px, transparent 50%);
+        radial-gradient(circle at 10% 10%, rgba(229, 57, 53, 0.12) 0px, transparent 40%),
+        radial-gradient(circle at 90% 15%, rgba(0, 102, 204, 0.18) 0px, transparent 45%),
+        radial-gradient(circle at 50% 90%, rgba(16, 185, 129, 0.08) 0px, transparent 50%);
+      background-attachment: fixed;
     }
 
     header {
-      padding: 20px 32px;
+      padding: 16px 32px;
       border-bottom: 1px solid var(--card-border);
-      background: rgba(15, 23, 42, 0.8);
-      backdrop-filter: blur(12px);
+      background: rgba(11, 17, 32, 0.85);
+      backdrop-filter: blur(16px);
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -57,25 +68,36 @@
       width: 44px;
       height: 44px;
       border-radius: 12px;
-      background: linear-gradient(135deg, var(--primary), #0369a1);
+      background: linear-gradient(135deg, var(--logo-red) 0%, var(--primary) 100%);
       display: flex;
       align-items: center;
       justify-content: center;
       font-weight: 800;
-      font-size: 20px;
+      font-size: 22px;
       color: white;
-      box-shadow: 0 0 20px rgba(2, 132, 199, 0.4);
+      box-shadow: 0 4px 20px rgba(229, 57, 53, 0.35);
+      letter-spacing: -1px;
     }
 
     .title-group h1 {
-      font-size: 18px;
+      font-size: 17px;
       font-weight: 800;
       letter-spacing: -0.3px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
 
     .title-group p {
-      font-size: 12px;
+      font-size: 11.5px;
       color: var(--text-muted);
+      margin-top: 1px;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
     }
 
     .system-status {
@@ -84,11 +106,12 @@
       gap: 8px;
       padding: 6px 14px;
       border-radius: 20px;
-      background: rgba(16, 185, 129, 0.15);
+      background: rgba(16, 185, 129, 0.12);
       border: 1px solid rgba(16, 185, 129, 0.3);
-      font-size: 12px;
-      font-weight: 600;
+      font-size: 11.5px;
+      font-weight: 700;
       color: #34d399;
+      letter-spacing: 0.3px;
     }
 
     .pulse-dot {
@@ -106,18 +129,19 @@
     }
 
     main {
-      padding: 32px;
-      max-width: 1300px;
+      padding: 28px 32px;
+      max-width: 1360px;
       margin: 0 auto;
       width: 100%;
       flex: 1;
     }
 
+    /* ─── Nœuds Topologiques ────────────────────────────────────────── */
     .grid-4 {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
       gap: 18px;
-      margin-bottom: 28px;
+      margin-bottom: 24px;
     }
 
     .node-card {
@@ -125,13 +149,31 @@
       border: 1px solid var(--card-border);
       border-radius: 16px;
       padding: 20px;
-      backdrop-filter: blur(10px);
-      transition: transform 0.2s, border-color 0.2s;
+      backdrop-filter: blur(12px);
+      transition: all 0.25s ease;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .node-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, var(--card-border), transparent);
+    }
+
+    .node-card.active-primary::before {
+      background: linear-gradient(90deg, var(--logo-red), var(--primary));
     }
 
     .node-card:hover {
-      transform: translateY(-2px);
-      border-color: rgba(255, 255, 255, 0.15);
+      transform: translateY(-3px);
+      border-color: var(--card-border-hover);
+      box-shadow: 0 12px 24px -10px rgba(0, 102, 204, 0.2);
     }
 
     .node-header {
@@ -142,7 +184,7 @@
     }
 
     .node-title {
-      font-size: 14px;
+      font-size: 13.5px;
       font-weight: 700;
       display: flex;
       align-items: center;
@@ -150,61 +192,138 @@
     }
 
     .status-tag {
-      font-size: 11px;
-      font-weight: 600;
+      font-size: 10.5px;
+      font-weight: 700;
       padding: 3px 8px;
       border-radius: 6px;
-      font-family: 'JetBrains Mono', monospace;
+      font-family: var(--font-mono);
+      letter-spacing: 0.4px;
     }
 
     .status-tag.online {
-      background: rgba(16, 185, 129, 0.2);
+      background: rgba(16, 185, 129, 0.15);
       color: #34d399;
       border: 1px solid rgba(16, 185, 129, 0.3);
     }
 
     .status-tag.offline {
-      background: rgba(239, 68, 68, 0.2);
+      background: rgba(239, 68, 68, 0.15);
       color: #f87171;
       border: 1px solid rgba(239, 68, 68, 0.3);
     }
 
     .node-details {
-      font-size: 12.5px;
+      font-size: 12px;
       color: var(--text-muted);
       line-height: 1.5;
+      min-height: 36px;
     }
 
     .metric-row {
       margin-top: 14px;
-      padding-top: 12px;
+      padding-top: 10px;
       border-top: 1px solid rgba(255, 255, 255, 0.05);
       display: flex;
       justify-content: space-between;
-      font-size: 12px;
+      align-items: center;
+      font-size: 11.5px;
     }
 
+    .tag-count {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 600;
+      background: rgba(0, 102, 204, 0.18);
+      color: var(--primary-light);
+      padding: 2px 7px;
+      border-radius: 6px;
+      border: 1px solid rgba(0, 102, 204, 0.25);
+    }
+
+    .node-link {
+      color: var(--primary-light);
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: color 0.2s;
+    }
+    .node-link:hover {
+      color: white;
+      text-decoration: underline;
+    }
+
+    /* ─── Statistiques Globales Données ──────────────────────────────── */
+    .counters-bar {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+
+    .counter-card {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .counter-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      background: rgba(0, 102, 204, 0.15);
+      border: 1px solid rgba(0, 102, 204, 0.25);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+
+    .counter-info h4 {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .counter-info .count-val {
+      font-size: 18px;
+      font-weight: 800;
+      font-family: var(--font-mono);
+      color: var(--text);
+    }
+
+    /* ─── Barre d'actions PRA / PCA ─────────────────────────────────── */
     .actions-bar {
-      background: var(--card-bg);
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.85) 0%, rgba(30, 41, 59, 0.7) 100%);
       border: 1px solid var(--card-border);
       border-radius: 16px;
-      padding: 20px;
-      margin-bottom: 28px;
+      padding: 20px 24px;
+      margin-bottom: 26px;
       display: flex;
       flex-wrap: wrap;
-      gap: 12px;
+      gap: 16px;
       align-items: center;
       justify-content: space-between;
     }
 
     .actions-title h3 {
       font-size: 15px;
-      font-weight: 700;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
 
     .actions-title p {
       font-size: 12px;
       color: var(--text-muted);
+      margin-top: 2px;
     }
 
     .button-group {
@@ -214,60 +333,79 @@
     }
 
     button, .btn {
-      font-family: inherit;
-      font-size: 13px;
-      font-weight: 600;
-      padding: 10px 18px;
+      font-family: var(--font-sans);
+      font-size: 12.5px;
+      font-weight: 700;
+      padding: 9px 16px;
       border-radius: 10px;
       border: none;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      transition: all 0.2s;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
       text-decoration: none;
     }
 
     .btn-primary {
-      background: var(--primary);
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
       color: white;
-      box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);
+      box-shadow: 0 4px 14px rgba(0, 102, 204, 0.35);
     }
-    .btn-primary:hover { background: #0369a1; }
+    .btn-primary:hover {
+      background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 100%);
+      transform: translateY(-1px);
+    }
 
     .btn-reconcile {
-      background: #0f766e;
+      background: linear-gradient(135deg, var(--success) 0%, var(--success-dark) 100%);
       color: white;
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
     }
-    .btn-reconcile:hover { background: #115e59; }
+    .btn-reconcile:hover {
+      background: #059669;
+      transform: translateY(-1px);
+    }
 
     .btn-secondary {
       background: rgba(255, 255, 255, 0.08);
       color: var(--text);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.12);
     }
-    .btn-secondary:hover { background: rgba(255, 255, 255, 0.12); }
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.14);
+      color: white;
+      transform: translateY(-1px);
+    }
 
     .btn-danger {
-      background: rgba(239, 68, 68, 0.2);
-      color: #f87171;
-      border: 1px solid rgba(239, 68, 68, 0.3);
-      padding: 6px 12px;
-      font-size: 11.5px;
+      background: rgba(229, 57, 53, 0.15);
+      color: #ff6b6b;
+      border: 1px solid rgba(229, 57, 53, 0.3);
+      padding: 5px 12px;
+      font-size: 11px;
+      font-weight: 700;
     }
-    .btn-danger:hover { background: rgba(239, 68, 68, 0.3); }
+    .btn-danger:hover {
+      background: rgba(229, 57, 53, 0.3);
+      color: white;
+    }
 
+    /* ─── Table des Snapshots PRA ───────────────────────────────────── */
     .section-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 14px;
+      margin-bottom: 12px;
     }
 
     .section-header h2 {
-      font-size: 15px;
-      font-weight: 700;
+      font-size: 14px;
+      font-weight: 800;
       letter-spacing: -0.2px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
 
     .table-container {
@@ -275,50 +413,47 @@
       border: 1px solid var(--card-border);
       border-radius: 16px;
       overflow: hidden;
-      margin-bottom: 28px;
+      margin-bottom: 26px;
+      backdrop-filter: blur(12px);
     }
 
     table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 13px;
+      font-size: 12.5px;
     }
 
     th {
-      background: rgba(15, 23, 42, 0.6);
-      padding: 14px 18px;
+      background: rgba(11, 17, 32, 0.7);
+      padding: 12px 18px;
       text-align: left;
-      font-weight: 600;
+      font-weight: 700;
       color: var(--text-muted);
       border-bottom: 1px solid var(--card-border);
+      font-size: 11.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
 
     td {
-      padding: 14px 18px;
+      padding: 13px 18px;
       border-bottom: 1px solid rgba(255, 255, 255, 0.04);
     }
 
     tr:last-child td { border-bottom: none; }
     tr:hover td { background: rgba(255, 255, 255, 0.02); }
 
-    .tag-count {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 11px;
-      background: rgba(2, 132, 199, 0.15);
-      color: var(--primary-light);
-      padding: 2px 6px;
-      border-radius: 4px;
-    }
-
+    /* ─── Journal d'événements ───────────────────────────────────────── */
     .logs-panel {
       background: var(--card-bg);
       border: 1px solid var(--card-border);
       border-radius: 16px;
-      padding: 18px;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 12px;
-      max-height: 240px;
+      padding: 16px;
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      max-height: 220px;
       overflow-y: auto;
+      backdrop-filter: blur(12px);
     }
 
     .log-entry {
@@ -326,55 +461,102 @@
       border-bottom: 1px solid rgba(255, 255, 255, 0.03);
       display: flex;
       gap: 12px;
+      align-items: flex-start;
     }
 
-    .log-time { color: var(--text-muted); }
-    .log-type { font-weight: 600; color: var(--primary-light); }
-    .log-msg { color: var(--text); }
+    .log-entry:last-child { border-bottom: none; }
+    .log-time { color: var(--text-muted); white-space: nowrap; }
+    .log-type { font-weight: 700; color: var(--primary-light); white-space: nowrap; }
+    .log-type.SNAPSHOT { color: #a78bfa; }
+    .log-type.RECONCILE { color: #34d399; }
+    .log-type.RESTORE { color: #f87171; }
+    .log-msg { color: var(--text); word-break: break-all; }
 
-    /* Modal */
+    /* ─── Toast Feedback Notification ──────────────────────────────── */
+    #toastContainer {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 200;
+    }
+
+    .toast {
+      background: #1e293b;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-left: 4px solid var(--primary);
+      border-radius: 12px;
+      padding: 12px 18px;
+      color: white;
+      font-size: 12.5px;
+      font-weight: 600;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      animation: slideIn 0.3s ease;
+      min-width: 280px;
+    }
+
+    .toast.success { border-left-color: var(--success); }
+    .toast.error { border-left-color: var(--danger); }
+
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    /* ─── Modal ─────────────────────────────────────────────────────── */
     .modal-overlay {
       position: fixed;
       inset: 0;
-      background: rgba(0, 0, 0, 0.7);
-      backdrop-filter: blur(6px);
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(8px);
       display: flex;
       align-items: center;
       justify-content: center;
       z-index: 100;
       visibility: hidden;
       opacity: 0;
-      transition: 0.2s;
+      transition: all 0.2s ease;
     }
     .modal-overlay.active {
       visibility: visible;
       opacity: 1;
     }
     .modal {
-      background: #1e293b;
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: #0f172a;
+      border: 1px solid rgba(255, 255, 255, 0.12);
       border-radius: 18px;
       padding: 26px;
       width: 100%;
       max-width: 480px;
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 24px 48px rgba(0, 0, 0, 0.6);
     }
-    .modal h3 { font-size: 17px; margin-bottom: 12px; }
+    .modal h3 { font-size: 16px; font-weight: 800; margin-bottom: 8px; }
     .modal input {
       width: 100%;
-      background: #0f172a;
+      background: #1e293b;
       border: 1px solid rgba(255, 255, 255, 0.15);
       border-radius: 8px;
       padding: 10px 14px;
       color: white;
       font-family: inherit;
-      margin-top: 8px;
-      margin-bottom: 16px;
+      font-size: 13px;
+      margin-top: 6px;
+      margin-bottom: 14px;
+    }
+    .modal input:focus {
+      outline: none;
+      border-color: var(--primary-light);
     }
     .modal-actions {
       display: flex;
       justify-content: flex-end;
       gap: 10px;
+      margin-top: 10px;
     }
   </style>
 </head>
@@ -388,23 +570,28 @@
         <p>M@LINTIC Multi-Node Topology & Disaster Recovery Center</p>
       </div>
     </div>
-    <div class="system-status" id="globalStatus">
-      <div class="pulse-dot"></div>
-      <span>SUPERVISION ACTIVE</span>
+    <div class="header-actions">
+      <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 11.5px;" onclick="fetchStatus(true)">
+        🔄 Actualiser
+      </button>
+      <div class="system-status" id="globalStatus">
+        <div class="pulse-dot"></div>
+        <span>SUPERVISION ACTIVE</span>
+      </div>
     </div>
   </header>
 
   <main>
     <!-- Topologie 4 Nœuds -->
     <div class="grid-4" id="nodesGrid">
-      <div class="node-card">
+      <div class="node-card active-primary">
         <div class="node-header">
           <div class="node-title">🖥️ Docker Core API (LAN)</div>
-          <span class="status-tag online">LOCAL</span>
+          <span class="status-tag online" id="dockerTag">LOCAL</span>
         </div>
-        <div class="node-details" id="dockerDetails">Chargement des métriques...</div>
+        <div class="node-details" id="dockerDetails">Vérification de l'API locale...</div>
         <div class="metric-row">
-          <span>Latence :</span>
+          <span>Latence API :</span>
           <span class="tag-count" id="dockerLatency">-- ms</span>
         </div>
       </div>
@@ -414,9 +601,9 @@
           <div class="node-title">☁️ Supabase Cloud (PG)</div>
           <span class="status-tag online" id="supabaseTag">CLOUD</span>
         </div>
-        <div class="node-details" id="supabaseDetails">Vérification PostgreSQL...</div>
+        <div class="node-details" id="supabaseDetails">Vérification PostgreSQL Cloud...</div>
         <div class="metric-row">
-          <span>Latence API :</span>
+          <span>Latence DB :</span>
           <span class="tag-count" id="supabaseLatency">-- ms</span>
         </div>
       </div>
@@ -424,12 +611,14 @@
       <div class="node-card">
         <div class="node-header">
           <div class="node-title">⚡ Vercel Edge (Web)</div>
-          <span class="status-tag online">CDN</span>
+          <span class="status-tag online" id="vercelTag">CDN</span>
         </div>
         <div class="node-details" id="vercelDetails">SPA Flutter active</div>
         <div class="metric-row">
-          <span>Réseau :</span>
-          <span class="tag-count">Multi-Appareils</span>
+          <span>Accès Web :</span>
+          <a class="node-link" href="https://malintic-app.vercel.app" target="_blank" id="vercelLink">
+            malintic-app.vercel.app ↗
+          </a>
         </div>
       </div>
 
@@ -440,8 +629,49 @@
         </div>
         <div class="node-details" id="ngrokDetails">Passerelle télétravail</div>
         <div class="metric-row">
-          <span>Accès :</span>
-          <span class="tag-count" id="ngrokUrl">Automatique</span>
+          <span>Tunnel Public :</span>
+          <span id="ngrokLinkContainer">
+            <span class="tag-count" id="ngrokUrl">Automatique</span>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bandeau Compteurs Données Centralisées -->
+    <div class="counters-bar">
+      <div class="counter-card">
+        <div class="counter-icon">🎓</div>
+        <div class="counter-info">
+          <h4>Formations</h4>
+          <div class="count-val" id="cntFormations">0</div>
+        </div>
+      </div>
+      <div class="counter-card">
+        <div class="counter-icon">👥</div>
+        <div class="counter-info">
+          <h4>Comptes</h4>
+          <div class="count-val" id="cntUsers">0</div>
+        </div>
+      </div>
+      <div class="counter-card">
+        <div class="counter-icon">📝</div>
+        <div class="counter-info">
+          <h4>Inscriptions</h4>
+          <div class="count-val" id="cntInscriptions">0</div>
+        </div>
+      </div>
+      <div class="counter-card">
+        <div class="counter-icon">💳</div>
+        <div class="counter-info">
+          <h4>Paiements</h4>
+          <div class="count-val" id="cntPayments">0</div>
+        </div>
+      </div>
+      <div class="counter-card">
+        <div class="counter-icon">📅</div>
+        <div class="counter-info">
+          <h4>Séances</h4>
+          <div class="count-val" id="cntSeances">0</div>
         </div>
       </div>
     </div>
@@ -449,7 +679,7 @@
     <!-- Barre d'actions PRA / PCA -->
     <div class="actions-bar">
       <div class="actions-title">
-        <h3>Actions de Haute Disponibilité & Reprise (PRA / PCA)</h3>
+        <h3>🛡️ Actions de Haute Disponibilité & Reprise (PRA / PCA)</h3>
         <p>Déclenchez des sauvegardes à chaud ou synchronisez manuellement les nœuds</p>
       </div>
       <div class="button-group">
@@ -467,7 +697,7 @@
 
     <!-- Table des Snapshots PRA -->
     <div class="section-header">
-      <h2>Points de Restauration Archivés (PRA) — Rotation des 10 Derniers</h2>
+      <h2>💾 Points de Restauration Archivés (PRA) — Rotation des 10 Derniers</h2>
       <span class="tag-count" id="snapshotsCount">0 point(s)</span>
     </div>
     <div class="table-container">
@@ -478,7 +708,7 @@
             <th>Label</th>
             <th>Motif / Déclencheur</th>
             <th>Taille</th>
-            <th>Documents</th>
+            <th>Documents Inclus</th>
             <th>Action</th>
           </tr>
         </thead>
@@ -494,7 +724,7 @@
 
     <!-- Journal d'événements -->
     <div class="section-header">
-      <h2>Journal des Événements & Télémétrie Superviseur</h2>
+      <h2>📋 Journal des Événements & Télémétrie Superviseur</h2>
     </div>
     <div class="logs-panel" id="logsPanel">
       <div class="log-entry">
@@ -505,16 +735,18 @@
     </div>
   </main>
 
+  <div id="toastContainer"></div>
+
   <!-- Modal Création Snapshot -->
   <div class="modal-overlay" id="snapshotModal">
     <div class="modal">
       <h3>📸 Créer un Instantané PRA</h3>
-      <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 14px;">
+      <p style="font-size: 12.5px; color: var(--text-muted); margin-bottom: 14px;">
         Capture l'état complet de toutes les bases de données (formations, utilisateurs, inscriptions, paiements, séances).
       </p>
-      <label style="font-size: 12px; font-weight: 600;">Label :</label>
+      <label style="font-size: 11.5px; font-weight: 700; text-transform: uppercase; color: var(--text-muted);">Label :</label>
       <input type="text" id="snapLabel" placeholder="ex: avant_cloture_sfp5">
-      <label style="font-size: 12px; font-weight: 600;">Motif :</label>
+      <label style="font-size: 11.5px; font-weight: 700; text-transform: uppercase; color: var(--text-muted);">Motif :</label>
       <input type="text" id="snapReason" placeholder="ex: Sauvegarde manuelle Superviseur">
       <div class="modal-actions">
         <button class="btn-secondary" onclick="closeSnapshotModal()">Annuler</button>
@@ -524,17 +756,35 @@
   </div>
 
   <script>
-    async function fetchStatus() {
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️';
+      toast.innerHTML = `<span>${icon}</span> <span>${message}</span>`;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.transition = 'opacity 0.3s, transform 0.3s';
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(10px)';
+        setTimeout(() => toast.remove(), 300);
+      }, 4000);
+    }
+
+    async function fetchStatus(isManual = false) {
       try {
         const res = await fetch('/api/supervisor/status');
         if (!res.ok) return;
         const data = await res.json();
 
-        // 1. Docker
+        // 1. Docker API
         document.getElementById('dockerDetails').innerText = data.nodes.docker.details;
         document.getElementById('dockerLatency').innerText = (data.nodes.docker.latencyMs ?? '--') + ' ms';
+        const docTag = document.getElementById('dockerTag');
+        docTag.className = 'status-tag ' + (data.nodes.docker.isOnline ? 'online' : 'offline');
+        docTag.innerText = data.nodes.docker.isOnline ? 'OPÉRATIONNEL' : 'HORS-LIGNE';
 
-        // 2. Supabase
+        // 2. Supabase Cloud
         document.getElementById('supabaseDetails').innerText = data.nodes.supabase.details;
         document.getElementById('supabaseLatency').innerText = (data.nodes.supabase.latencyMs ?? '--') + ' ms';
         const supaTag = document.getElementById('supabaseTag');
@@ -546,9 +796,20 @@
 
         // 4. Ngrok
         document.getElementById('ngrokDetails').innerText = data.nodes.ngrok.details;
+        const ngrokContainer = document.getElementById('ngrokLinkContainer');
         if (data.nodes.ngrok.publicUrl) {
-          document.getElementById('ngrokUrl').innerText = data.nodes.ngrok.publicUrl.replace('https://', '');
+          ngrokContainer.innerHTML = `<a class="node-link" href="${data.nodes.ngrok.publicUrl}" target="_blank">${data.nodes.ngrok.publicUrl.replace('https://', '')} ↗</a>`;
+        } else {
+          ngrokContainer.innerHTML = `<span class="tag-count">${data.nodes.ngrok.details}</span>`;
         }
+
+        // Compteurs Données
+        const c = data.counts || {};
+        document.getElementById('cntFormations').innerText = c.formations ?? 0;
+        document.getElementById('cntUsers').innerText = c.users ?? 0;
+        document.getElementById('cntInscriptions').innerText = c.inscriptions ?? 0;
+        document.getElementById('cntPayments').innerText = c.payments ?? 0;
+        document.getElementById('cntSeances').innerText = c.seances ?? 0;
 
         // Snapshots Table
         const snaps = data.snapshots || [];
@@ -567,7 +828,7 @@
                 <td><span class="tag-count">${s.label}</span></td>
                 <td style="color: var(--text-muted);">${s.reason || 'Auto'}</td>
                 <td>${sizeKb}</td>
-                <td style="font-size: 11.5px; color: var(--text-muted);">${countsStr || '--'}</td>
+                <td style="font-size: 11px; color: var(--text-muted);">${countsStr || '--'}</td>
                 <td>
                   <button class="btn-danger" onclick="restoreSnapshot('${s.filename}')">Restaurer</button>
                 </td>
@@ -579,13 +840,20 @@
         // Logs
         const logsPanel = document.getElementById('logsPanel');
         if (data.logs && data.logs.length > 0) {
-          logsPanel.innerHTML = data.logs.map(l => `
-            <div class="log-entry">
-              <span class="log-time">${new Date(l.timestamp).toLocaleTimeString()}</span>
-              <span class="log-type">[${l.type.toUpperCase()}]</span>
-              <span class="log-msg">${l.message}</span>
-            </div>
-          `).join('');
+          logsPanel.innerHTML = data.logs.map(l => {
+            const typeClass = (l.type || '').toUpperCase();
+            return `
+              <div class="log-entry">
+                <span class="log-time">${new Date(l.timestamp).toLocaleTimeString()}</span>
+                <span class="log-type ${typeClass}">[${typeClass}]</span>
+                <span class="log-msg">${l.message}</span>
+              </div>
+            `;
+          }).join('');
+        }
+
+        if (isManual) {
+          showToast('État des nœuds actualisé.', 'success');
         }
       } catch (e) {
         console.error('Superviseur poll error:', e);
@@ -593,8 +861,10 @@
     }
 
     function openSnapshotModal() {
-      document.getElementById('snapLabel').value = 'manuel_' + new Date().getHours() + 'h' + new Date().getMinutes();
-      document.getElementById('snapReason').value = 'Sauvegarde superviseur';
+      const now = new Date();
+      const pad = (n) => String(n).padStart(2, '0');
+      document.getElementById('snapLabel').value = 'manuel_' + pad(now.getHours()) + 'h' + pad(now.getMinutes());
+      document.getElementById('snapReason').value = 'Sauvegarde manuelle Superviseur';
       document.getElementById('snapshotModal').classList.add('active');
     }
 
@@ -613,13 +883,13 @@
           body: JSON.stringify({ label, reason }),
         });
         if (res.ok) {
-          alert('Snapshot PRA créé avec succès !');
+          showToast('Snapshot PRA créé avec succès !', 'success');
           fetchStatus();
         } else {
-          alert('Erreur lors de la création du snapshot.');
+          showToast('Erreur lors de la création du snapshot.', 'error');
         }
       } catch (_) {
-        alert('Erreur réseau.');
+        showToast('Erreur réseau lors de la création.', 'error');
       }
     }
 
@@ -627,18 +897,18 @@
       try {
         const res = await fetch('/api/supervisor/reconcile', { method: 'POST' });
         if (res.ok) {
-          alert('Réconciliation Docker <-> Supabase exécutée avec succès !');
+          showToast('Réconciliation Docker <-> Supabase exécutée avec succès !', 'success');
           fetchStatus();
         } else {
-          alert('Erreur lors de la réconciliation.');
+          showToast('Erreur lors de la réconciliation.', 'error');
         }
       } catch (_) {
-        alert('Erreur réseau.');
+        showToast('Erreur réseau.', 'error');
       }
     }
 
     async function restoreSnapshot(filename) {
-      if (!confirm(`Restaurer le point PRA « ${filename} » ? Les données actuelles seront écrasées et re-synchronisées vers Supabase.`)) {
+      if (!confirm(`Restaurer le point PRA « ${filename} » ?\n\nLes données actuelles locales seront remplacées et synchronisées vers Supabase.`)) {
         return;
       }
       try {
@@ -648,18 +918,18 @@
           body: JSON.stringify({ filename }),
         });
         if (res.ok) {
-          alert('Restauration PRA effectuée avec succès !');
+          showToast('Restauration PRA effectuée avec succès !', 'success');
           fetchStatus();
         } else {
-          alert('Erreur lors de la restauration.');
+          showToast('Erreur lors de la restauration.', 'error');
         }
       } catch (_) {
-        alert('Erreur réseau.');
+        showToast('Erreur réseau.', 'error');
       }
     }
 
     fetchStatus();
-    setInterval(fetchStatus, 5000);
+    setInterval(fetchStatus, 4000);
   </script>
 </body>
 </html>

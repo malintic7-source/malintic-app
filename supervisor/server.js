@@ -39,7 +39,7 @@ app.get('/api/supervisor/status', async (req, res) => {
   const startDocker = Date.now();
   try {
     const apiRes = await globalThis.fetch(`${API_URL}/api/pca/status`, {
-      headers: { 'Accept': 'application/json' },
+      headers: { 'Accept': 'application/json', 'x-supervisor-auth': 'true' },
       signal: AbortSignal.timeout ? AbortSignal.timeout(3000) : undefined,
     });
     dockerNode.latencyMs = Date.now() - startDocker;
@@ -126,6 +126,7 @@ app.get('/api/supervisor/status', async (req, res) => {
   let snapshots = [];
   try {
     const snapRes = await globalThis.fetch(`${API_URL}/api/pra/snapshots`, {
+      headers: { 'Accept': 'application/json', 'x-supervisor-auth': 'true' },
       signal: AbortSignal.timeout ? AbortSignal.timeout(3000) : undefined,
     });
     if (snapRes.ok) {
