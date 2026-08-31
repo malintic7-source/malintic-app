@@ -9,16 +9,15 @@
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #070d18;
+      --bg: #060c18;
       --bg-surface: #0f172a;
-      --card-bg: rgba(15, 23, 42, 0.75);
+      --card-bg: rgba(15, 23, 42, 0.78);
       --card-border: rgba(255, 255, 255, 0.08);
-      --card-border-hover: rgba(0, 102, 204, 0.4);
+      --card-border-hover: rgba(0, 102, 204, 0.5);
       --primary: #0066cc;
       --primary-dark: #004499;
       --primary-light: #3385e0;
       --logo-red: #e53935;
-      --logo-red-dark: #c62828;
       --success: #10b981;
       --success-dark: #059669;
       --warning: #f59e0b;
@@ -39,16 +38,16 @@
       display: flex;
       flex-direction: column;
       background-image: 
-        radial-gradient(circle at 10% 10%, rgba(229, 57, 53, 0.12) 0px, transparent 40%),
-        radial-gradient(circle at 90% 15%, rgba(0, 102, 204, 0.18) 0px, transparent 45%),
-        radial-gradient(circle at 50% 90%, rgba(16, 185, 129, 0.08) 0px, transparent 50%);
+        radial-gradient(circle at 5% 5%, rgba(229, 57, 53, 0.12) 0px, transparent 40%),
+        radial-gradient(circle at 95% 10%, rgba(0, 102, 204, 0.18) 0px, transparent 45%),
+        radial-gradient(circle at 50% 95%, rgba(16, 185, 129, 0.08) 0px, transparent 50%);
       background-attachment: fixed;
     }
 
     header {
       padding: 16px 32px;
       border-bottom: 1px solid var(--card-border);
-      background: rgba(11, 17, 32, 0.85);
+      background: rgba(10, 16, 30, 0.88);
       backdrop-filter: blur(16px);
       display: flex;
       justify-content: space-between;
@@ -97,7 +96,7 @@
     .header-actions {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 14px;
     }
 
     .system-status {
@@ -130,7 +129,7 @@
 
     main {
       padding: 28px 32px;
-      max-width: 1360px;
+      max-width: 1380px;
       margin: 0 auto;
       width: 100%;
       flex: 1;
@@ -149,8 +148,8 @@
       border: 1px solid var(--card-border);
       border-radius: 16px;
       padding: 20px;
-      backdrop-filter: blur(12px);
-      transition: all 0.25s ease;
+      backdrop-filter: blur(14px);
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
       display: flex;
       flex-direction: column;
       justify-content: space-between;
@@ -173,7 +172,7 @@
     .node-card:hover {
       transform: translateY(-3px);
       border-color: var(--card-border-hover);
-      box-shadow: 0 12px 24px -10px rgba(0, 102, 204, 0.2);
+      box-shadow: 0 12px 28px -10px rgba(0, 102, 204, 0.25);
     }
 
     .node-header {
@@ -246,6 +245,7 @@
       display: inline-flex;
       align-items: center;
       gap: 4px;
+      font-weight: 600;
       transition: color 0.2s;
     }
     .node-link:hover {
@@ -256,31 +256,37 @@
     /* ─── Statistiques Globales Données ──────────────────────────────── */
     .counters-bar {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
       gap: 14px;
       margin-bottom: 24px;
     }
 
     .counter-card {
-      background: rgba(15, 23, 42, 0.6);
+      background: rgba(15, 23, 42, 0.65);
       border: 1px solid var(--card-border);
       border-radius: 14px;
       padding: 14px 18px;
       display: flex;
       align-items: center;
       gap: 14px;
+      backdrop-filter: blur(10px);
+      transition: transform 0.2s;
+    }
+    .counter-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(255, 255, 255, 0.15);
     }
 
     .counter-icon {
-      width: 38px;
-      height: 38px;
+      width: 40px;
+      height: 40px;
       border-radius: 10px;
       background: rgba(0, 102, 204, 0.15);
       border: 1px solid rgba(0, 102, 204, 0.25);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 18px;
+      font-size: 19px;
     }
 
     .counter-info h4 {
@@ -292,7 +298,7 @@
     }
 
     .counter-info .count-val {
-      font-size: 18px;
+      font-size: 19px;
       font-weight: 800;
       font-family: var(--font-mono);
       color: var(--text);
@@ -300,7 +306,7 @@
 
     /* ─── Barre d'actions PRA / PCA ─────────────────────────────────── */
     .actions-bar {
-      background: linear-gradient(135deg, rgba(15, 23, 42, 0.85) 0%, rgba(30, 41, 59, 0.7) 100%);
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.88) 0%, rgba(30, 41, 59, 0.75) 100%);
       border: 1px solid var(--card-border);
       border-radius: 16px;
       padding: 20px 24px;
@@ -310,6 +316,7 @@
       gap: 16px;
       align-items: center;
       justify-content: space-between;
+      backdrop-filter: blur(14px);
     }
 
     .actions-title h3 {
@@ -378,16 +385,30 @@
       transform: translateY(-1px);
     }
 
+    .btn-action-small {
+      padding: 5px 10px;
+      font-size: 11px;
+      font-weight: 700;
+      border-radius: 6px;
+    }
+
+    .btn-download {
+      background: rgba(0, 102, 204, 0.18);
+      color: var(--primary-light);
+      border: 1px solid rgba(0, 102, 204, 0.3);
+    }
+    .btn-download:hover {
+      background: rgba(0, 102, 204, 0.35);
+      color: white;
+    }
+
     .btn-danger {
       background: rgba(229, 57, 53, 0.15);
       color: #ff6b6b;
       border: 1px solid rgba(229, 57, 53, 0.3);
-      padding: 5px 12px;
-      font-size: 11px;
-      font-weight: 700;
     }
     .btn-danger:hover {
-      background: rgba(229, 57, 53, 0.3);
+      background: rgba(229, 57, 53, 0.35);
       color: white;
     }
 
@@ -414,7 +435,7 @@
       border-radius: 16px;
       overflow: hidden;
       margin-bottom: 26px;
-      backdrop-filter: blur(12px);
+      backdrop-filter: blur(14px);
     }
 
     table {
@@ -424,13 +445,13 @@
     }
 
     th {
-      background: rgba(11, 17, 32, 0.7);
+      background: rgba(10, 16, 30, 0.75);
       padding: 12px 18px;
       text-align: left;
       font-weight: 700;
       color: var(--text-muted);
       border-bottom: 1px solid var(--card-border);
-      font-size: 11.5px;
+      font-size: 11px;
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
@@ -453,7 +474,7 @@
       font-size: 11.5px;
       max-height: 220px;
       overflow-y: auto;
-      backdrop-filter: blur(12px);
+      backdrop-filter: blur(14px);
     }
 
     .log-entry {
@@ -572,7 +593,7 @@
     </div>
     <div class="header-actions">
       <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 11.5px;" onclick="fetchStatus(true)">
-        🔄 Actualiser
+        🔄 Actualiser (R)
       </button>
       <div class="system-status" id="globalStatus">
         <div class="pulse-dot"></div>
@@ -684,13 +705,13 @@
       </div>
       <div class="button-group">
         <button class="btn-primary" onclick="openSnapshotModal()">
-          📸 Créer un Snapshot PRA
+          📸 Créer un Snapshot PRA (S)
         </button>
         <button class="btn-reconcile" onclick="triggerReconcile()">
           🔄 Forcer la Réconciliation 2-Way
         </button>
         <a class="btn btn-secondary" href="/api/supervisor/export" target="_blank">
-          📥 Exporter Archive JSON
+          📥 Exporter Archive Complète
         </a>
       </div>
     </div>
@@ -709,7 +730,7 @@
             <th>Motif / Déclencheur</th>
             <th>Taille</th>
             <th>Documents Inclus</th>
-            <th>Action</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody id="snapshotsTableBody">
@@ -773,7 +794,8 @@
 
     async function fetchStatus(isManual = false) {
       try {
-        const res = await fetch('/api/supervisor/status');
+        const url = isManual ? '/api/supervisor/status?force=true' : '/api/supervisor/status';
+        const res = await fetch(url);
         if (!res.ok) return;
         const data = await res.json();
 
@@ -793,6 +815,9 @@
 
         // 3. Vercel
         document.getElementById('vercelDetails').innerText = data.nodes.vercel.details;
+        const vercelTag = document.getElementById('vercelTag');
+        vercelTag.className = 'status-tag ' + (data.nodes.vercel.isOnline ? 'online' : 'offline');
+        vercelTag.innerText = data.nodes.vercel.isOnline ? 'CDN ACTIF' : 'HORS-LIGNE';
 
         // 4. Ngrok
         document.getElementById('ngrokDetails').innerText = data.nodes.ngrok.details;
@@ -830,7 +855,14 @@
                 <td>${sizeKb}</td>
                 <td style="font-size: 11px; color: var(--text-muted);">${countsStr || '--'}</td>
                 <td>
-                  <button class="btn-danger" onclick="restoreSnapshot('${s.filename}')">Restaurer</button>
+                  <div style="display: flex; gap: 6px;">
+                    <a class="btn btn-action-small btn-download" href="/api/supervisor/snapshot/download?filename=${encodeURIComponent(s.filename)}">
+                      📥 JSON
+                    </a>
+                    <button class="btn btn-action-small btn-danger" onclick="restoreSnapshot('${s.filename}')">
+                      Restauration
+                    </button>
+                  </div>
                 </td>
               </tr>
             `;
@@ -884,7 +916,7 @@
         });
         if (res.ok) {
           showToast('Snapshot PRA créé avec succès !', 'success');
-          fetchStatus();
+          fetchStatus(true);
         } else {
           showToast('Erreur lors de la création du snapshot.', 'error');
         }
@@ -898,7 +930,7 @@
         const res = await fetch('/api/supervisor/reconcile', { method: 'POST' });
         if (res.ok) {
           showToast('Réconciliation Docker <-> Supabase exécutée avec succès !', 'success');
-          fetchStatus();
+          fetchStatus(true);
         } else {
           showToast('Erreur lors de la réconciliation.', 'error');
         }
@@ -919,7 +951,7 @@
         });
         if (res.ok) {
           showToast('Restauration PRA effectuée avec succès !', 'success');
-          fetchStatus();
+          fetchStatus(true);
         } else {
           showToast('Erreur lors de la restauration.', 'error');
         }
@@ -928,8 +960,20 @@
       }
     }
 
+    // Raccourcis clavier
+    document.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'INPUT') return;
+      if (e.key === 'r' || e.key === 'R') {
+        e.preventDefault();
+        fetchStatus(true);
+      } else if (e.key === 's' || e.key === 'S') {
+        e.preventDefault();
+        openSnapshotModal();
+      }
+    });
+
     fetchStatus();
-    setInterval(fetchStatus, 4000);
+    setInterval(fetchStatus, 5000);
   </script>
 </body>
 </html>
