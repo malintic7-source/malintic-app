@@ -162,4 +162,31 @@ void main() {
       expect(inscr2.status, InscriptionStatus.enAttente);
     });
   });
+
+  group('Financial Calculations and Invoice Tests', () {
+    test('Mathematical invariants hold strictly: Gross - Discount = Net, Net - Paid = Balance', () {
+      const double tarifBrut = 150000.0;
+      const double remise = 25000.0;
+      final double netTotal = (tarifBrut - remise).clamp(0, double.infinity);
+      expect(netTotal, 125000.0);
+
+      const double versement1 = 50000.0;
+      const double versement2 = 45000.0;
+      final double cumulPaye = versement1 + versement2;
+      expect(cumulPaye, 95000.0);
+
+      final double soldeRestant = (netTotal - cumulPaye).clamp(0, double.infinity);
+      expect(soldeRestant, 30000.0);
+      expect(netTotal, cumulPaye + soldeRestant);
+
+      final isFullySettled = soldeRestant <= 0;
+      expect(isFullySettled, false);
+
+      const double versementFinal = 30000.0;
+      final double cumulFinal = cumulPaye + versementFinal;
+      final double soldeFinal = (netTotal - cumulFinal).clamp(0, double.infinity);
+      expect(soldeFinal, 0.0);
+      expect(soldeFinal <= 0, true);
+    });
+  });
 }

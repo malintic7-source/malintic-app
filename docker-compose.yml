@@ -73,8 +73,7 @@ services:
       - "4040:4040"
     environment:
       NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN:-}
-      NGROK_DOMAIN: ${NGROK_DOMAIN:-}
-    command: http --url=${NGROK_DOMAIN:?NGROK_DOMAIN doit être défini dans .env} http://malintic_app:80
+    command: http malintic_app:80
     networks:
       - malintic_network
 

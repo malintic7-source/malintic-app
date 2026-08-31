@@ -22,8 +22,8 @@ echo [OK] Flutter detecte.
 
 :: 2. Compilation Flutter Web Release
 echo.
-echo [2/3] Compilation du paquet Flutter Web Release (Optimisation SPA)...
-call flutter build web --release
+echo [2/3] Compilation du paquet Flutter Web Release avec Supabase Cloud...
+call flutter build web --release --dart-define=SUPABASE_URL=https://mzixlwnrsqoxolzafmjb.supabase.co --dart-define=SUPABASE_ANON_KEY=sb_publishable_X9Srmcc9dIppUO8Hl0EDAw_C-giTCqt --dart-define=SUPABASE_ENABLED=true
 if %ERRORLEVEL% neq 0 (
     echo [ERREUR] La compilation Flutter Web a echoue.
     pause

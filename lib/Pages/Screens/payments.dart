@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:gestion_formations/Models/formation.dart';
+import 'package:gestion_formations/Models/inscription.dart';
 import 'package:gestion_formations/Models/payment.dart';
 import 'package:gestion_formations/Models/user.dart';
 import 'package:gestion_formations/Services/db_services.dart';
 import 'package:gestion_formations/Services/invoice_service.dart';
+import 'package:gestion_formations/Services/pdf_service.dart';
 import 'package:gestion_formations/Services/pdf_helper.dart';
 import 'package:gestion_formations/config/theme.dart';
 
@@ -299,7 +301,19 @@ class _PaymentsPageState extends State<PaymentsPage> with TickerProviderStateMix
           OutlinedButton.icon(
             onPressed: () {
               Navigator.of(context).pop();
-              _downloadReceipt(payment);
+              _downloadReceipt(payment, directPrint: true);
+            },
+            icon: const Icon(Icons.print_rounded, size: 16),
+            label: const Text('Imprimer'),
+          ),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primary,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () {
+              Navigator.of(context).pop();
+              _downloadReceipt(payment, directPrint: false);
             },
             icon: const Icon(Icons.download_rounded, size: 16),
             label: const Text('Télécharger Reçu'),
@@ -319,56 +333,83 @@ class _PaymentsPageState extends State<PaymentsPage> with TickerProviderStateMix
     );
   }
 
-  Future<void> _downloadReceipt(Payment payment) async {
+  Future<void> _downloadReceipt(Payment payment, {bool directPrint = false}) async {
     try {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('📄 Génération du reçu PDF en cours...'),
-          duration: Duration(seconds: 2),
+        SnackBar(
+          content: Text(directPrint ? '🖨️ Préparation de l\'impression du reçu certifié...' : '📄 Génération du reçu officiel certifié en cours...'),
+          duration: const Duration(seconds: 2),
         ),
       );
 
-      final inscription = _db.getInscriptions().where((i) => i.id == payment.inscriptionId).firstOrNull;
-      final formation = inscription != null ? _db.getFormationById(inscription.formationId) : null;
-      final formationTitle = formation?.titre ?? 'Formation M@LI-NTIC';
-      final modules = inscription?.modules ?? [];
+      final inscription = _db.getInscriptionById(payment.inscriptionId) ??
+          _db.getInscriptions().where((i) =>
+              i.id == payment.inscriptionId ||
+              (i.etudiantId == widget.user.id && i.formationId == payment.formationId)).firstOrNull ??
+          Inscription(
+            id: payment.inscriptionId,
+            etudiantId: widget.user.id,
+            formationId: payment.formationId,
+            status: InscriptionStatus.acceptee,
+            dateInscription: payment.dateCreation,
+            paiementEffectue: true,
+            prenom: widget.user.prenom,
+            nom: widget.user.nom,
+            email: widget.user.email,
+            telephone: widget.user.phone,
+          );
 
-      final totalPaiements = _db.getPayments()
-          .where((p) => p.inscriptionId == payment.inscriptionId && p.status == PaymentStatus.effectue)
-          .fold<double>(0, (sum, p) => sum + p.montant);
+      final formation = _db.getFormationById(payment.formationId) ??
+          (inscription.formationId.isNotEmpty ? _db.getFormationById(inscription.formationId) : null) ??
+          Formation(
+            id: payment.formationId,
+            titre: 'Formation M@LI-NTIC',
+            description: '',
+            modules: [],
+            formateurIds: [],
+            prix: payment.montant,
+            type: FormationType.presentielle,
+            status: FormationStatus.enCours,
+            dureeSemaines: 4,
+            horaires: [],
+            dateCreation: DateTime.now(),
+          );
 
-      final montantTotal = formation != null ? (formation.type == FormationType.enligne ? formation.prixEnLigne ?? formation.prix : formation.prix) : payment.montant;
-      final montantRestant = (montantTotal - totalPaiements) > 0 ? (montantTotal - totalPaiements) : 0.0;
+      final totalDue = _db.getInscriptionTotalDue(inscription.id);
+      final paid = _db.getInscriptionPaidAmount(inscription.id);
+      final balance = _db.getInscriptionBalance(inscription.id);
+      final matricule = widget.user.matricule?.isNotEmpty == true
+          ? widget.user.matricule!
+          : (widget.user.id.startsWith('MAT-')
+              ? widget.user.id
+              : 'MAT-${widget.user.id.length > 6 ? widget.user.id.substring(widget.user.id.length - 6) : widget.user.id}');
 
-      final pdfBytes = await InvoiceService.generateInvoicePDF(
-        studentName: '${widget.user.prenom} ${widget.user.nom}',
-        email: widget.user.email,
-        phone: widget.user.phone,
-        formationTitle: formationTitle,
-        modules: modules,
-        montantTotal: montantTotal,
-        montantPaye: payment.montant,
-        montantRestant: montantRestant,
-        statut: _getStatusLabel(payment.status),
-        paymentHistory: [
-          {
-            'trancheNumero': payment.trancheNumero,
-            'nombreTranches': payment.nombreTranches,
-            'montant': payment.montant,
-            'date': payment.dateCreation.toIso8601String(),
-            'methode': _getMethodLabel(payment.methode),
-            'statut': _getStatusLabel(payment.status),
-          }
-        ],
+      final pdfBytes = await PdfService().generatePaymentReceiptPdf(
+        payment: payment,
+        inscription: inscription,
+        formation: formation,
+        studentMatricule: matricule,
+        totalInscriptionDue: totalDue > 0 ? totalDue : formation.prix,
+        cumulativePaid: paid > 0 ? paid : payment.montant,
+        remainingBalance: balance,
       );
 
-      final fileName = 'Recu_Paiement_${payment.id}';
-      await PdfHelper.downloadPDF(pdfBytes, fileName: fileName);
+      if (directPrint) {
+        await PdfService().directPrintPdf(
+          pdfBytes: pdfBytes,
+          name: 'Recu_Paiement_${payment.referenceTransaction ?? payment.id}.pdf',
+        );
+      } else {
+        await PdfService().printOrDownloadPdf(
+          pdfBytes: pdfBytes,
+          filename: 'Recu_Paiement_${payment.referenceTransaction ?? payment.id}.pdf',
+        );
+      }
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('✅ Reçu PDF téléchargé avec succès !'),
+        SnackBar(
+          content: Text(directPrint ? '🖨️ Boîte de dialogue d\'impression ouverte !' : '✅ Reçu officiel téléchargé avec succès !'),
           backgroundColor: AppTheme.success,
         ),
       );
@@ -376,7 +417,7 @@ class _PaymentsPageState extends State<PaymentsPage> with TickerProviderStateMix
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('❌ Erreur de génération du PDF: $e'),
+          content: Text('❌ Erreur de génération du reçu PDF: $e'),
           backgroundColor: AppTheme.error,
         ),
       );

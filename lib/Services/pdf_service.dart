@@ -2358,6 +2358,17 @@ class PdfService {
     await Printing.sharePdf(bytes: pdfBytes, filename: filename);
   }
 
+  /// Triggers direct printing / printer dialog layout
+  Future<void> directPrintPdf({
+    required Uint8List pdfBytes,
+    String? name,
+  }) async {
+    await Printing.layoutPdf(
+      onLayout: (format) async => pdfBytes,
+      name: name ?? 'Document_Malintic.pdf',
+    );
+  }
+
   String _formatDate(DateTime dt) {
     final d = dt.day.toString().padLeft(2, '0');
     final m = dt.month.toString().padLeft(2, '0');

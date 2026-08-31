@@ -13,6 +13,7 @@ import 'package:gestion_formations/Services/auth_provider.dart';
 import 'package:gestion_formations/Services/invoice_service.dart';
 import 'package:gestion_formations/Services/pdf_service.dart';
 import 'package:gestion_formations/Widgets/pro_data_table.dart';
+import 'package:gestion_formations/Widgets/export_accounting_dialog.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class AdminPaiements extends StatefulWidget {
@@ -26,7 +27,6 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
   final LocalDataService _db = LocalDataService();
   late AnimationController _fadeController;
   StreamSubscription<void>? _dataSub;
-  Timer? _refreshTimer;
 
   int _selectedTab = 0; // 0: Suivi par Stagiaire & Tranches, 1: Historique des Transactions
   String? _selectedStudentId;
@@ -66,17 +66,12 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
     _dataSub = _db.watchAllDataChanges().listen((_) {
       if (mounted) setState(() {});
     });
-
-    _refreshTimer = Timer.periodic(const Duration(seconds: 4), (_) {
-      if (mounted) setState(() {});
-    });
   }
 
   @override
   void dispose() {
     _fadeController.dispose();
     _dataSub?.cancel();
-    _refreshTimer?.cancel();
     _amountController.dispose();
     _discountController.dispose();
     _installmentController.dispose();
@@ -202,9 +197,9 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),
-                    icon: const Icon(Icons.picture_as_pdf_rounded, size: 18),
-                    label: Text('Rapport PDF', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w700)),
-                    onPressed: _generatePaymentReport,
+                    icon: const Icon(Icons.receipt_long_rounded, size: 18),
+                    label: Text('Exports & Rapports', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w700)),
+                    onPressed: () => ExportAccountingDialog.show(context),
                   ),
                   const SizedBox(width: 8),
                   Container(
@@ -1720,6 +1715,8 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
           ? selectedModules
           : (formation?.estStage == true ? const <String>[] : formation?.modules ?? const <String>[]);
       final history = _db.getPaymentsForInscription(inscription.id);
+      final base = _db.getInscriptionBaseTotal(inscription.id);
+      final discount = _db.getInscriptionDiscountTotal(inscription.id);
       final totalDue = _db.getInscriptionTotalDue(inscription.id);
       final paid = _db.getInscriptionPaidAmount(inscription.id);
       final balance = _db.getInscriptionBalance(inscription.id);
@@ -1733,6 +1730,8 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
         phone: inscription.telephone ?? student?.phone ?? '',
         formationTitle: formation?.titre ?? 'Formation M@LI-NTIC',
         modules: modules,
+        montantBrut: base,
+        remise: discount,
         montantTotal: totalDue,
         montantPaye: paid,
         montantRestant: balance,
@@ -1809,7 +1808,10 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
 
     final rawPaymentsList = payments.map((p) {
       final student = _db.getUserById(p.etudiantId);
-      final inscription = _db.getInscriptions().where((i) => i.id == p.etudiantId || (student != null && (i.telephone == student.phone || (i.prenom == student.prenom && i.nom == student.nom)))).firstOrNull;
+      final inscription = _db.getInscriptionById(p.inscriptionId) ??
+          _db.getInscriptions().where((i) =>
+              i.etudiantId == p.etudiantId ||
+              (student != null && (i.telephone == student.phone || (i.prenom == student.prenom && i.nom == student.nom)))).firstOrNull;
       final formation = _db.getFormationById(p.formationId) ?? (inscription != null ? _db.getFormationById(inscription.formationId) : null);
 
       final studentName = student?.nomComplet ??

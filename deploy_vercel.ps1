@@ -18,10 +18,13 @@ if (-not (Get-Command flutter -ErrorAction SilentlyContinue)) {
 }
 Write-Host "[OK] Flutter detecte." -ForegroundColor Green
 
-# 2. Compilation Flutter Web Release
+# 2. Compilation Flutter Web Release avec configuration Supabase
 Write-Host ""
-Write-Host "[2/3] Compilation du paquet Flutter Web Release..." -ForegroundColor Yellow
-flutter build web --release
+Write-Host "[2/3] Compilation du paquet Flutter Web Release avec Supabase Cloud..." -ForegroundColor Yellow
+flutter build web --release `
+    --dart-define=SUPABASE_URL=https://mzixlwnrsqoxolzafmjb.supabase.co `
+    --dart-define=SUPABASE_ANON_KEY=sb_publishable_X9Srmcc9dIppUO8Hl0EDAw_C-giTCqt `
+    --dart-define=SUPABASE_ENABLED=true
 if ($LASTEXITCODE -ne 0) {
     Write-Host "[ERREUR] La compilation Flutter Web a echoue." -ForegroundColor Red
     exit 1

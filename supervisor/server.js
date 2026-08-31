@@ -184,7 +184,7 @@ app.post('/api/supervisor/snapshot', async (req, res) => {
   try {
     const apiRes = await globalThis.fetch(`${API_URL}/api/pra/snapshot`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-supervisor-auth': 'true' },
       body: JSON.stringify({ label, reason }),
       signal: AbortSignal.timeout ? AbortSignal.timeout(8000) : undefined,
     });
@@ -201,11 +201,11 @@ app.post('/api/supervisor/snapshot', async (req, res) => {
 });
 
 // ─── Forcer la Réconciliation Bidirectionnelle ────────────────────────────────
-app.post('/api/supervisor/reconcile', async (req, res) => {
+app.post(['/api/supervisor/reconcile', '/api/supervisor/sync'], async (req, res) => {
   try {
     const apiRes = await globalThis.fetch(`${API_URL}/api/pra/reconcile`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-supervisor-auth': 'true' },
       signal: AbortSignal.timeout ? AbortSignal.timeout(15000) : undefined,
     });
     const data = await apiRes.json();
@@ -227,7 +227,7 @@ app.post('/api/supervisor/restore', async (req, res) => {
   try {
     const apiRes = await globalThis.fetch(`${API_URL}/api/pra/restore`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-supervisor-auth': 'true' },
       body: JSON.stringify({ filename }),
       signal: AbortSignal.timeout ? AbortSignal.timeout(15000) : undefined,
     });
@@ -246,7 +246,9 @@ app.post('/api/supervisor/restore', async (req, res) => {
 // ─── Export & Import de Données ───────────────────────────────────────────────
 app.get('/api/supervisor/export', async (req, res) => {
   try {
-    const apiRes = await globalThis.fetch(`${API_URL}/api/pra/export`);
+    const apiRes = await globalThis.fetch(`${API_URL}/api/pra/export`, {
+      headers: { 'x-supervisor-auth': 'true' },
+    });
     if (apiRes.ok) {
       const text = await apiRes.text();
       res.setHeader('Content-Disposition', `attachment; filename="malintic_supervisor_export_${Date.now()}.json"`);

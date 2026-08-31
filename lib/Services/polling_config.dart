@@ -38,8 +38,8 @@ class PollingConfig {
   final bool enableDebugLogs;
 
   PollingConfig({
-    this.minInterval = const Duration(seconds: 2),
-    this.maxInterval = const Duration(minutes: 1),
+    this.minInterval = const Duration(seconds: 12),
+    this.maxInterval = const Duration(minutes: 2),
     this.backoffMultiplier = 1.5,
     this.successCountBeforeReset = 3,
     this.requestTimeout = const Duration(seconds: 15),
@@ -53,23 +53,23 @@ class PollingConfig {
           'backoffMultiplier must be > 1.0',
         );
 
-  /// Preset: Production (charge serveur minimale)
+  /// Preset: Production (charge serveur minimale & affichage stable)
   factory PollingConfig.production() => PollingConfig(
-        minInterval: const Duration(seconds: 5),    // Plus espacé
-        maxInterval: const Duration(minutes: 5),     // Max 5 min
-        backoffMultiplier: 2.0,                      // Backoff plus agressif
-        successCountBeforeReset: 5,                  // Reset après 5 succès
+        minInterval: const Duration(seconds: 15),
+        maxInterval: const Duration(minutes: 5),
+        backoffMultiplier: 2.0,
+        successCountBeforeReset: 5,
         requestTimeout: const Duration(seconds: 20),
       );
 
-  /// Preset: Development (temps réel)
+  /// Preset: Development
   factory PollingConfig.development() => PollingConfig(
-        minInterval: const Duration(seconds: 1),
-        maxInterval: const Duration(seconds: 10),
+        minInterval: const Duration(seconds: 10),
+        maxInterval: const Duration(seconds: 45),
         backoffMultiplier: 1.3,
         successCountBeforeReset: 2,
         requestTimeout: const Duration(seconds: 10),
-        enableDebugLogs: true,
+        enableDebugLogs: false,
       );
 
   /// Preset: HighLatency (réseau lent/instable)

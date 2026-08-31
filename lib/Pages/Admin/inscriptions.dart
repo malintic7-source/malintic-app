@@ -114,17 +114,12 @@ class _AdminInscriptionsState extends State<AdminInscriptions> with TickerProvid
     _dataSub = _db.watchAllDataChanges().listen((_) {
       if (mounted) setState(() {});
     });
-
-    _refreshTimer = Timer.periodic(const Duration(seconds: 4), (_) {
-      if (mounted) setState(() {});
-    });
   }
 
   @override
   void dispose() {
     _fadeController.dispose();
     _dataSub?.cancel();
-    _refreshTimer?.cancel();
     super.dispose();
   }
 

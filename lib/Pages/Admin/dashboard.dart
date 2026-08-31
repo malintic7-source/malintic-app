@@ -2,16 +2,21 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:gestion_formations/config/theme.dart';
 import 'package:gestion_formations/Models/user.dart';
 import 'package:gestion_formations/Models/inscription.dart';
 import 'package:gestion_formations/Models/payment.dart';
 import 'package:gestion_formations/Models/formation.dart';
 import 'package:gestion_formations/Services/db_services.dart';
+import 'package:gestion_formations/Services/invoice_service.dart';
+import 'package:gestion_formations/Services/pdf_service.dart';
 import 'package:gestion_formations/Services/payment_report_service.dart';
 import 'package:gestion_formations/Services/pdf_helper.dart';
 import 'package:gestion_formations/Widgets/chart_widgets.dart';
 import 'package:gestion_formations/Widgets/share_formation_dialog.dart';
+import 'package:gestion_formations/Widgets/export_accounting_dialog.dart';
+import 'package:gestion_formations/Widgets/quick_formation_preset_dialog.dart';
 
 class AdminDashboard extends StatefulWidget {
   final User user;
@@ -26,7 +31,6 @@ class AdminDashboard extends StatefulWidget {
 class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStateMixin {
   final LocalDataService _db = LocalDataService();
   late AnimationController _fadeController;
-  Timer? _refreshTimer;
   StreamSubscription<void>? _dataSub;
 
   @override
@@ -41,17 +45,12 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
     _dataSub = _db.watchAllDataChanges().listen((_) {
       if (mounted) setState(() {});
     });
-
-    _refreshTimer = Timer.periodic(const Duration(seconds: 4), (_) {
-      if (mounted) setState(() {});
-    });
   }
 
   @override
   void dispose() {
     _fadeController.dispose();
     _dataSub?.cancel();
-    _refreshTimer?.cancel();
     super.dispose();
   }
 
@@ -434,11 +433,18 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
         },
       },
       {
-        'label': 'Rapport Financier PDF',
-        'icon': Icons.picture_as_pdf_rounded,
+        'label': 'Modèles Formation 1-Clic',
+        'icon': Icons.auto_awesome_rounded,
+        'color': const Color(0xFF7E22CE),
+        'bg': const Color(0xFFFAF5FF),
+        'onTap': () => QuickFormationPresetDialog.show(context),
+      },
+      {
+        'label': 'Exports & Rapports',
+        'icon': Icons.receipt_long_rounded,
         'color': const Color(0xFFDC2626),
         'bg': const Color(0xFFFEF2F2),
-        'onTap': _exportFinancialSummaryPdf,
+        'onTap': () => ExportAccountingDialog.show(context),
       },
     ];
 
@@ -1182,7 +1188,7 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
 
   Widget _buildPaymentDueAlertsSection(bool isMobile) {
     final acceptedInscriptions = _db.getInscriptions().where((i) => i.status == InscriptionStatus.acceptee).toList();
-    final debtors = acceptedInscriptions.where((i) => _db.getInscriptionBalance(i.id) > 0).take(5).toList();
+    final debtors = acceptedInscriptions.where((i) => _db.getInscriptionBalance(i.id) > 0).take(6).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1192,17 +1198,31 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
           children: [
             Row(
               children: [
-                const Icon(Icons.warning_amber_rounded, color: AppTheme.warningDark, size: 22),
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: AppTheme.warning.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.warning_amber_rounded, color: AppTheme.warningDark, size: 20),
+                ),
                 const SizedBox(width: 8),
                 Text(
-                  '⏰ Relances & Solde Dû par Stagiaire',
-                  style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w800, color: AppTheme.textPrimary),
+                  '⏰ Relances & Suivi des Impayés',
+                  style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w800, color: AppTheme.textPrimary),
                 ),
               ],
             ),
-            Text(
-              '${debtors.length} alerte(s)',
-              style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w700, color: AppTheme.warningDark),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: debtors.isEmpty ? AppTheme.success.withValues(alpha: 0.12) : AppTheme.warning.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                '${debtors.length} dossier(s) en attente',
+                style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w700, color: debtors.isEmpty ? AppTheme.success : AppTheme.warningDark),
+              ),
             ),
           ],
         ),
@@ -1210,12 +1230,21 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
         if (debtors.isEmpty)
           Container(
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(color: AppTheme.success.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(14)),
+            decoration: BoxDecoration(
+              color: AppTheme.success.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppTheme.success.withValues(alpha: 0.2)),
+            ),
             child: Row(
               children: [
-                const Icon(Icons.check_circle_rounded, color: AppTheme.success),
+                const Icon(Icons.check_circle_rounded, color: AppTheme.success, size: 22),
                 const SizedBox(width: 10),
-                Text('Tous les étudiants inscrits sont à jour de leur règlement !', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.success)),
+                Expanded(
+                  child: Text(
+                    'Parfait ! Tous les étudiants inscrits sont à 100% à jour de leur règlement.',
+                    style: GoogleFonts.poppins(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppTheme.success),
+                  ),
+                ),
               ],
             ),
           )
@@ -1228,53 +1257,125 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
               final ins = debtors[idx];
               final student = _db.getUserById(ins.etudiantId);
               final formation = _db.getFormationById(ins.formationId);
+              final totalDue = _db.getInscriptionTotalDue(ins.id);
+              final paid = _db.getInscriptionPaidAmount(ins.id);
               final balance = _db.getInscriptionBalance(ins.id);
+              final progressPct = totalDue > 0 ? (paid / totalDue).clamp(0.0, 1.0) : 0.0;
 
               final studentName = student != null ? '${student.prenom} ${student.nom}' : (ins.prenom ?? 'Stagiaire');
-              final phone = student?.phone ?? ins.telephone ?? '';
+              final phone = (student?.phone ?? ins.telephone ?? '').replaceAll(RegExp(r'\s+'), '');
+              final formationTitle = formation?.titre ?? 'Formation M@LI-NTIC';
 
               return Container(
-                margin: const EdgeInsets.only(bottom: 8),
+                margin: const EdgeInsets.only(bottom: 10),
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AppTheme.warning.withValues(alpha: 0.3)),
+                  border: Border.all(color: AppTheme.warning.withValues(alpha: 0.25)),
                   boxShadow: AppTheme.cardShadow,
                 ),
-                child: Row(
+                child: Column(
                   children: [
-                    CircleAvatar(
-                      backgroundColor: AppTheme.warning.withValues(alpha: 0.15),
-                      child: Text(studentName.isNotEmpty ? studentName[0].toUpperCase() : 'S', style: GoogleFonts.poppins(fontWeight: FontWeight.w800, color: AppTheme.warningDark)),
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          backgroundColor: AppTheme.warning.withValues(alpha: 0.15),
+                          child: Text(
+                            studentName.isNotEmpty ? studentName[0].toUpperCase() : 'S',
+                            style: GoogleFonts.poppins(fontWeight: FontWeight.w800, color: AppTheme.warningDark),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                studentName,
+                                style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              Text(
+                                formationTitle,
+                                style: GoogleFonts.poppins(fontSize: 11, color: AppTheme.textSecondary),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              'Solde: ${balance.toStringAsFixed(0)} FCFA',
+                              style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w800, color: AppTheme.accent),
+                            ),
+                            Text(
+                              'Payé: ${paid.toStringAsFixed(0)} / ${totalDue.toStringAsFixed(0)} F',
+                              style: GoogleFonts.poppins(fontSize: 10, color: AppTheme.textMuted, fontWeight: FontWeight.w500),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(studentName, style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
-                          Text(formation?.titre ?? 'Formation', style: GoogleFonts.poppins(fontSize: 11, color: AppTheme.textSecondary)),
-                        ],
+                    const SizedBox(height: 8),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: progressPct,
+                        backgroundColor: AppTheme.warning.withValues(alpha: 0.15),
+                        valueColor: AlwaysStoppedAnimation<Color>(progressPct >= 0.75 ? AppTheme.success : AppTheme.warning),
+                        minHeight: 4,
                       ),
                     ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
                       children: [
-                        Text('Reste: ${balance.toStringAsFixed(0)} FCFA', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w800, color: AppTheme.accent)),
-                        const SizedBox(height: 4),
+                        // WhatsApp Direct Relance
+                        if (phone.isNotEmpty)
+                          TextButton.icon(
+                            style: TextButton.styleFrom(
+                              foregroundColor: const Color(0xFF25D366),
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            icon: const Icon(Icons.chat_bubble_outline_rounded, size: 14),
+                            label: Text('WhatsApp', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w700)),
+                            onPressed: () async {
+                              final cleanPhone = phone.startsWith('+') ? phone.substring(1) : (phone.startsWith('00') ? phone.substring(2) : '223$phone');
+                              final msg = Uri.encodeComponent(
+                                'Bonjour $studentName, le centre M@LI-NTIC vous informe qu\'il vous reste un solde de ${balance.toStringAsFixed(0)} FCFA pour votre inscription à la formation "$formationTitle". Merci de contacter la comptabilité pour régulariser votre dossier et éditer votre reçu officiel.',
+                              );
+                              final waUrl = Uri.parse('https://wa.me/$cleanPhone?text=$msg');
+                              if (await canLaunchUrl(waUrl)) {
+                                await launchUrl(waUrl, mode: LaunchMode.externalApplication);
+                              } else {
+                                if (context.mounted) {
+                                  Clipboard.setData(ClipboardData(text: phone));
+                                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Numéro $phone copié !'), backgroundColor: AppTheme.success));
+                                }
+                              }
+                            },
+                          ),
+                        const SizedBox(width: 6),
+                        // Copier / Appel
                         OutlinedButton.icon(
                           style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            side: const BorderSide(color: AppTheme.success),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            side: BorderSide(color: AppTheme.primary.withValues(alpha: 0.3)),
                             minimumSize: Size.zero,
                             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                           ),
-                          icon: const Icon(Icons.phone, size: 12, color: AppTheme.success),
-                          label: Text(phone.isNotEmpty ? phone : 'Relancer', style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w700, color: AppTheme.success)),
+                          icon: const Icon(Icons.phone_rounded, size: 12, color: AppTheme.primary),
+                          label: Text(phone.isNotEmpty ? phone : 'Appeler', style: GoogleFonts.poppins(fontSize: 10.5, fontWeight: FontWeight.w600, color: AppTheme.primary)),
                           onPressed: () {
                             Clipboard.setData(ClipboardData(text: phone));
-                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Numéro $phone copié pour relance !'), backgroundColor: AppTheme.success));
+                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Contact $studentName ($phone) copié !'), backgroundColor: AppTheme.success));
                           },
                         ),
                       ],

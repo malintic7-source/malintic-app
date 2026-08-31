@@ -10,6 +10,8 @@ import 'package:gestion_formations/Services/db_services.dart';
 import 'package:gestion_formations/Services/imagekit_service.dart';
 import 'package:gestion_formations/Services/pdf_service.dart';
 import 'package:gestion_formations/Widgets/share_formation_dialog.dart';
+import 'package:gestion_formations/Widgets/quick_formation_preset_dialog.dart';
+import 'package:gestion_formations/Widgets/export_accounting_dialog.dart';
 
 class _ModuleItemData {
   final TextEditingController nameCtrl;
@@ -39,16 +41,20 @@ class AdminFormations extends StatefulWidget {
 
 class _AdminFormationsState extends State<AdminFormations>
     with TickerProviderStateMixin {
-  final searchController = TextEditingController();
   final LocalDataService _db = LocalDataService();
+  final ImageKitService _imageKit = ImageKitService();
+  final TextEditingController searchController = TextEditingController();
+  final TextEditingController _cohortNameCtrl = TextEditingController();
+
   String selectedStatus = 'Tous';
   String selectedSort = 'Date création';
   String selectedFormationKind = 'Tous';
+  String _filterType = 'Tous';
+  String _filterStatus = 'Tous';
+  String _searchQuery = '';
   final Set<String> _expandedFormationIds = {};
   late AnimationController _fadeController;
   StreamSubscription<void>? _dataSub;
-  Timer? _refreshTimer;
-
   @override
   void initState() {
     super.initState();
@@ -61,32 +67,37 @@ class _AdminFormationsState extends State<AdminFormations>
     _dataSub = _db.watchAllDataChanges().listen((_) {
       if (mounted) setState(() {});
     });
-
-    _refreshTimer = Timer.periodic(const Duration(seconds: 4), (_) {
-      if (mounted) setState(() {});
-    });
   }
 
   @override
   void dispose() {
     _fadeController.dispose();
     _dataSub?.cancel();
-    _refreshTimer?.cancel();
     searchController.dispose();
     super.dispose();
   }
 
   Future<void> _generateBrochurePdf(Formation formation) async {
     try {
-      final pdfBytes = await PdfService().generateFormationBrochurePdf(formation);
+      final bytes = await PdfService().generateFormationBrochurePdf(formation);
       await PdfService().printOrDownloadPdf(
-        pdfBytes: pdfBytes,
+        pdfBytes: bytes,
         filename: 'Brochure_${formation.titre.replaceAll(' ', '_')}.pdf',
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Brochure PDF téléchargée avec succès'),
+          backgroundColor: AppTheme.success,
+        ),
       );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur génération brochure PDF: $e'), backgroundColor: AppTheme.error),
+        SnackBar(
+          content: Text('Erreur: ${e.toString()}'),
+          backgroundColor: AppTheme.error,
+        ),
       );
     }
   }
@@ -143,7 +154,18 @@ class _AdminFormationsState extends State<AdminFormations>
                     ),
                   ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 8),
+                OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppTheme.primary,
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  icon: const Icon(Icons.auto_awesome_rounded, size: 16),
+                  label: Text('Modèles', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w700)),
+                  onPressed: () => QuickFormationPresetDialog.show(context),
+                ),
+                const SizedBox(width: 8),
                 Container(
                   decoration: BoxDecoration(
                     gradient: AppTheme.heroGradient,
@@ -195,7 +217,7 @@ class _AdminFormationsState extends State<AdminFormations>
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Gérez le catalogue et les sessions de formations',
+                      'Gérez le catalogue, modules, tarifs et sessions de formations',
                       style: GoogleFonts.poppins(
                         fontSize: 13,
                         color: AppTheme.textSecondary,
@@ -204,36 +226,65 @@ class _AdminFormationsState extends State<AdminFormations>
                     ),
                   ],
                 ),
-                Container(
-                  decoration: BoxDecoration(
-                    gradient: AppTheme.heroGradient,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: AppTheme.heroShadow,
-                  ),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: () => _showCreateFormationDialog(context),
-                      borderRadius: BorderRadius.circular(12),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.add_rounded, color: Colors.white, size: 20),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Créer',
-                              style: GoogleFonts.poppins(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 14,
-                              ),
+                Row(
+                  children: [
+                    OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppTheme.textPrimary,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        side: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      icon: const Icon(Icons.how_to_reg_rounded, size: 18, color: AppTheme.accent),
+                      label: Text('Émargement PDF', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600)),
+                      onPressed: () => ExportAccountingDialog.show(context),
+                    ),
+                    const SizedBox(width: 10),
+                    ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFF3E8FF),
+                        foregroundColor: const Color(0xFF7E22CE),
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      icon: const Icon(Icons.auto_awesome_rounded, size: 18, color: Color(0xFF7E22CE)),
+                      label: Text('Modèles (1-Clic)', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w700)),
+                      onPressed: () => QuickFormationPresetDialog.show(context),
+                    ),
+                    const SizedBox(width: 10),
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: AppTheme.heroGradient,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: AppTheme.heroShadow,
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () => _showCreateFormationDialog(context),
+                          borderRadius: BorderRadius.circular(12),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.add_rounded, color: Colors.white, size: 20),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Créer une formation',
+                                  style: GoogleFonts.poppins(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
+                          ),
                         ),
                       ),
                     ),
-                  ),
+                  ],
                 ),
               ],
             ),
@@ -539,12 +590,31 @@ class _AdminFormationsState extends State<AdminFormations>
                   ),
                 ],
               ),
-              InkWell(
-                onTap: () => _showCohortsManagementDialog(context, formation),
-                child: Text(
-                  'Gérer les cohortes >',
-                  style: GoogleFonts.poppins(fontSize: 10.5, fontWeight: FontWeight.w700, color: AppTheme.primary),
-                ),
+              Row(
+                children: [
+                  InkWell(
+                    onTap: () => ExportAccountingDialog.show(context, preselectedFormation: formation),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.how_to_reg_rounded, size: 13, color: AppTheme.accent),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Émargement PDF',
+                          style: GoogleFonts.poppins(fontSize: 10.5, fontWeight: FontWeight.w700, color: AppTheme.accent),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  InkWell(
+                    onTap: () => _showCohortsManagementDialog(context, formation),
+                    child: Text(
+                      'Gérer les cohortes >',
+                      style: GoogleFonts.poppins(fontSize: 10.5, fontWeight: FontWeight.w700, color: AppTheme.primary),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

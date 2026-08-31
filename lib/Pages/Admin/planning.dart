@@ -9,6 +9,7 @@ import 'package:gestion_formations/Models/formation.dart';
 import 'package:gestion_formations/Models/user.dart';
 import 'package:gestion_formations/Services/db_services.dart';
 import 'package:gestion_formations/Services/pdf_service.dart';
+import 'package:gestion_formations/Widgets/export_accounting_dialog.dart';
 
 class AdminPlanning extends StatefulWidget {
   const AdminPlanning({super.key});
@@ -54,17 +55,12 @@ class _AdminPlanningState extends State<AdminPlanning>
     _dataSub = _db.watchAllDataChanges().listen((_) {
       if (mounted) setState(() {});
     });
-
-    _refreshTimer = Timer.periodic(const Duration(seconds: 4), (_) {
-      if (mounted) setState(() {});
-    });
   }
 
   @override
   void dispose() {
     _fadeController.dispose();
     _dataSub?.cancel();
-    _refreshTimer?.cancel();
     _searchController.dispose();
     super.dispose();
   }
@@ -327,7 +323,30 @@ class _AdminPlanningState extends State<AdminPlanning>
                   ],
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppTheme.textPrimary,
+                  side: BorderSide(color: Colors.grey.shade300),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isMobile ? 10 : 14,
+                    vertical: isMobile ? 10 : 13,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: () => ExportAccountingDialog.show(context),
+                icon: const Icon(Icons.how_to_reg_rounded, size: 18, color: AppTheme.accent),
+                label: Text(
+                  isMobile ? 'Émargement' : 'Feuille d\'Émargement',
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
               ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.primary,

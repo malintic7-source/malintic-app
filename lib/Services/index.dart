@@ -34,4 +34,5 @@ export 'invoice_service.dart';
 // Business Logic
 export 'notifications_services.dart';
 export 'payment_report_service.dart';
+export 'accounting_export_service.dart';
 export 'poles_d_services.dart';

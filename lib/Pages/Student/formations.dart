@@ -426,9 +426,10 @@ class _StudentFormationsState extends State<StudentFormations> with TickerProvid
                     );
                   }).toList(),
                 ),
-                SizedBox(height: 16),
+                const SizedBox(height: 16),
                 _buildFormateurs(formationId, modulesWithHours),
-                SizedBox(height: 16),
+                _buildFinancialProgressCard(formationId),
+                const SizedBox(height: 14),
                 _buildAttestationSection(
                   _db.getFormationById(formationId) ??
                       Formation(
@@ -450,6 +451,101 @@ class _StudentFormationsState extends State<StudentFormations> with TickerProvid
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildFinancialProgressCard(String formationId) {
+    final inscription = _db.getInscriptions().where((i) {
+      final isUser = i.etudiantId == widget.user.id ||
+          (i.email != null && i.email!.trim().toLowerCase() == widget.user.email.trim().toLowerCase());
+      return isUser && i.formationId == formationId && i.status == InscriptionStatus.acceptee;
+    }).firstOrNull;
+
+    if (inscription == null) return const SizedBox.shrink();
+
+    final totalDue = _db.getInscriptionTotalDue(inscription.id);
+    final paid = _db.getInscriptionPaidAmount(inscription.id);
+    final balance = _db.getInscriptionBalance(inscription.id);
+    final isSettled = balance <= 0 || inscription.paiementEffectue;
+    final payPct = totalDue > 0 ? (paid / totalDue).clamp(0.0, 1.0) : 1.0;
+
+    return Container(
+      margin: const EdgeInsets.only(top: 14),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isSettled ? const Color(0xFFF0FDF4) : const Color(0xFFFFFBEB),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: isSettled ? const Color(0xFF86EFAC) : const Color(0xFFFDE68A),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    isSettled ? Icons.check_circle_rounded : Icons.account_balance_wallet_rounded,
+                    size: 16,
+                    color: isSettled ? const Color(0xFF16A34A) : const Color(0xFFD97706),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'État du Règlement',
+                    style: GoogleFonts.poppins(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w700,
+                      color: isSettled ? const Color(0xFF166534) : const Color(0xFF92400E),
+                    ),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: isSettled ? const Color(0xFFDCFCE7) : const Color(0xFFFEF3C7),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  isSettled ? '✅ Soldé à 100%' : 'Reste : ${balance.toStringAsFixed(0)} FCFA',
+                  style: GoogleFonts.poppins(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w700,
+                    color: isSettled ? const Color(0xFF15803D) : const Color(0xFFB45309),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: payPct,
+              minHeight: 5,
+              backgroundColor: isSettled ? const Color(0xFFBBF7D0) : const Color(0xFFFED7AA),
+              valueColor: AlwaysStoppedAnimation(isSettled ? const Color(0xFF16A34A) : const Color(0xFFEA580C)),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Réglé : ${paid.toStringAsFixed(0)} FCFA',
+                style: GoogleFonts.poppins(fontSize: 10, color: Colors.black54, fontWeight: FontWeight.w500),
+              ),
+              Text(
+                'Total Dû : ${totalDue.toStringAsFixed(0)} FCFA',
+                style: GoogleFonts.poppins(fontSize: 10, color: Colors.black54, fontWeight: FontWeight.w500),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

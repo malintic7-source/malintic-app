@@ -471,6 +471,8 @@ class LocalDataService {
         http.get(_supabaseUri('notifications'), headers: headers),
       ]).timeout(const Duration(seconds: 15));
 
+      bool hasDataChanged = false;
+
       if (results[0].statusCode == 200) {
         final list = jsonDecode(results[0].body) as List<dynamic>;
         final formations = list
@@ -478,11 +480,16 @@ class LocalDataService {
             .map((m) => SupabaseMapper.formationFromRow(Map<String, dynamic>.from(m)))
             .toList();
         if (formations.isNotEmpty) {
-          _formations
-            ..clear()
-            ..addAll(formations);
-          _saveFormationsToStorage();
-          _formationsController.add(List.unmodifiable(_formations));
+          final oldHash = _formations.map((f) => '${f.id}:${f.nombreInscrits}:${f.prix}').join(',');
+          final newHash = formations.map((f) => '${f.id}:${f.nombreInscrits}:${f.prix}').join(',');
+          if (oldHash != newHash) {
+            _formations
+              ..clear()
+              ..addAll(formations);
+            _saveFormationsToStorage(notify: false);
+            _formationsController.add(List.unmodifiable(_formations));
+            hasDataChanged = true;
+          }
         }
       }
 
@@ -502,11 +509,16 @@ class LocalDataService {
             )
             .toList();
         if (validUsers.isNotEmpty) {
-          _users
-            ..clear()
-            ..addAll(validUsers);
-          _saveUsersToStorage();
-          _usersController.add(List.unmodifiable(_users));
+          final oldHash = _users.map((u) => '${u.id}:${u.doitChangerMotDePasse}:${u.estActif}').join(',');
+          final newHash = validUsers.map((u) => '${u.id}:${u.doitChangerMotDePasse}:${u.estActif}').join(',');
+          if (oldHash != newHash) {
+            _users
+              ..clear()
+              ..addAll(validUsers);
+            _saveUsersToStorage(notify: false);
+            _usersController.add(List.unmodifiable(_users));
+            hasDataChanged = true;
+          }
         }
       }
 
@@ -526,11 +538,16 @@ class LocalDataService {
               !deletedUserIds.contains(i.id) &&
               (email.isEmpty || !deletedUserEmails.contains(email));
         }).toList();
-        _inscriptions
-          ..clear()
-          ..addAll(validInscriptions);
-        _saveInscriptionsToStorage();
-        _inscriptionsController.add(List.unmodifiable(_inscriptions));
+        final oldHash = _inscriptions.map((i) => '${i.id}:${i.status}:${i.paiementEffectue}').join(',');
+        final newHash = validInscriptions.map((i) => '${i.id}:${i.status}:${i.paiementEffectue}').join(',');
+        if (oldHash != newHash) {
+          _inscriptions
+            ..clear()
+            ..addAll(validInscriptions);
+          _saveInscriptionsToStorage(notify: false);
+          _inscriptionsController.add(List.unmodifiable(_inscriptions));
+          hasDataChanged = true;
+        }
       }
 
       if (results[3].statusCode == 200) {
@@ -539,11 +556,16 @@ class LocalDataService {
             .whereType<Map>()
             .map((m) => SupabaseMapper.paymentFromRow(Map<String, dynamic>.from(m)))
             .toList();
-        _payments
-          ..clear()
-          ..addAll(payments);
-        _savePaymentsToStorage();
-        _paymentsController.add(List.unmodifiable(_payments));
+        final oldHash = _payments.map((p) => '${p.id}:${p.montant}:${p.status}').join(',');
+        final newHash = payments.map((p) => '${p.id}:${p.montant}:${p.status}').join(',');
+        if (oldHash != newHash) {
+          _payments
+            ..clear()
+            ..addAll(payments);
+          _savePaymentsToStorage(notify: false);
+          _paymentsController.add(List.unmodifiable(_payments));
+          hasDataChanged = true;
+        }
       }
 
       if (results[4].statusCode == 200) {
@@ -552,11 +574,16 @@ class LocalDataService {
             .whereType<Map>()
             .map((m) => SupabaseMapper.seanceFromRow(Map<String, dynamic>.from(m)))
             .toList();
-        _seances
-          ..clear()
-          ..addAll(seances);
-        _saveSeancesToStorage();
-        _seancesController.add(List.unmodifiable(_seances));
+        final oldHash = _seances.map((s) => s.id).join(',');
+        final newHash = seances.map((s) => s.id).join(',');
+        if (oldHash != newHash) {
+          _seances
+            ..clear()
+            ..addAll(seances);
+          _saveSeancesToStorage(notify: false);
+          _seancesController.add(List.unmodifiable(_seances));
+          hasDataChanged = true;
+        }
       }
 
       if (results[5].statusCode == 200) {
@@ -565,11 +592,14 @@ class LocalDataService {
             .whereType<Map>()
             .map((m) => SupabaseMapper.auditLogFromRow(Map<String, dynamic>.from(m)))
             .toList();
-        _auditLogs
-          ..clear()
-          ..addAll(logs);
-        _saveAuditLogsToStorage();
-        _auditLogsController.add(List.unmodifiable(_auditLogs));
+        if (logs.length != _auditLogs.length) {
+          _auditLogs
+            ..clear()
+            ..addAll(logs);
+          _saveAuditLogsToStorage(notify: false);
+          _auditLogsController.add(List.unmodifiable(_auditLogs));
+          hasDataChanged = true;
+        }
       }
 
       if (results[6].statusCode == 200) {
@@ -578,12 +608,17 @@ class LocalDataService {
             .whereType<Map>()
             .map((m) => SupabaseMapper.notificationFromRow(Map<String, dynamic>.from(m)))
             .toList();
-        if (notifications.isNotEmpty) {
+        if (notifications.isNotEmpty && notifications.length != _notifications.length) {
           _notifications
             ..clear()
             ..addAll(notifications);
           _notificationsController.add(List.unmodifiable(_notifications));
+          hasDataChanged = true;
         }
+      }
+
+      if (hasDataChanged) {
+        _notifyDataChanged();
       }
     } catch (e) {
       debugPrint('[Malintic] Erreur sync Supabase: $e');
@@ -994,44 +1029,52 @@ class LocalDataService {
     }
   }
 
-  void _saveFormationsToStorage() {
+  void _saveFormationsToStorage({bool notify = true}) {
     try {
       final list = _formations.map((f) => f.toMap()).toList();
       _localStorage.setItem('app_saved_formations', jsonEncode(list));
-      _notifyDataChanged();
+      if (notify) _notifyDataChanged();
     } catch (e) { debugPrint('[Malintic] Erreur sauvegarde formations: $e'); }
   }
 
-  void _saveUsersToStorage() {
+  void _saveUsersToStorage({bool notify = true}) {
     try {
       final list = _users.map((u) => u.toMap()).toList();
       _localStorage.setItem('app_saved_users', jsonEncode(list));
-      _notifyDataChanged();
+      if (notify) _notifyDataChanged();
     } catch (e) { debugPrint('[Malintic] Erreur sauvegarde users: $e'); }
   }
 
-  void _saveInscriptionsToStorage() {
+  void _saveInscriptionsToStorage({bool notify = true}) {
     try {
       final list = _inscriptions.map((i) => i.toMap()).toList();
       _localStorage.setItem('app_saved_inscriptions', jsonEncode(list));
-      _notifyDataChanged();
+      if (notify) _notifyDataChanged();
     } catch (e) { debugPrint('[Malintic] Erreur sauvegarde inscriptions: $e'); }
   }
 
-  void _savePaymentsToStorage() {
+  void _savePaymentsToStorage({bool notify = true}) {
     try {
       final list = _payments.map((p) => p.toMap()).toList();
       _localStorage.setItem('app_saved_payments', jsonEncode(list));
-      _notifyDataChanged();
+      if (notify) _notifyDataChanged();
     } catch (e) { debugPrint('[Malintic] Erreur sauvegarde paiements: $e'); }
   }
 
-  void _saveSeancesToStorage() {
+  void _saveSeancesToStorage({bool notify = true}) {
     try {
       final list = _seances.map((s) => s.toMap()).toList();
       _localStorage.setItem('app_saved_seances', jsonEncode(list));
-      _notifyDataChanged();
+      if (notify) _notifyDataChanged();
     } catch (e) { debugPrint('[Malintic] Erreur sauvegarde séances: $e'); }
+  }
+
+  void _saveAuditLogsToStorage({bool notify = true}) {
+    try {
+      final list = _auditLogs.map((l) => l.toMap()).toList();
+      _localStorage.setItem('app_saved_audit_logs', jsonEncode(list));
+      if (notify) _notifyDataChanged();
+    } catch (e) { debugPrint('[Malintic] Erreur sauvegarde logs: $e'); }
   }
 
   // Reactive Data Controllers
@@ -2908,18 +2951,20 @@ class LocalDataService {
       final existingDiscount = getInscriptionDiscountTotal(
         payment.inscriptionId,
       );
+      final effectiveDiscount = payment.remise > existingDiscount
+          ? payment.remise
+          : existingDiscount;
       final totalDue =
-          (base -
-                  (payment.remise > existingDiscount
-                      ? payment.remise
-                      : existingDiscount))
+          (base - effectiveDiscount)
               .clamp(0, double.infinity)
               .toDouble();
-      final proposedPaid =
-          getInscriptionPaidAmount(payment.inscriptionId) + payment.montant;
-      if (proposedPaid > totalDue) {
+      final alreadyPaid = getInscriptionPaidAmount(payment.inscriptionId);
+      final proposedPaid = alreadyPaid + payment.montant;
+      // Tolérance epsilon de 0.01 pour éviter les erreurs d'arrondis IEEE 754
+      if (proposedPaid > totalDue + 0.01) {
+        final soldeRestant = (totalDue - alreadyPaid).clamp(0, double.infinity);
         throw StateError(
-          'Le versement dépasse le solde restant de ${((totalDue - getInscriptionPaidAmount(payment.inscriptionId)).clamp(0, double.infinity)).toStringAsFixed(0)} FCFA.',
+          'Le versement de ${payment.montant.toStringAsFixed(0)} FCFA dépasse le solde restant (${soldeRestant.toStringAsFixed(0)} FCFA).',
         );
       }
     }
@@ -2989,6 +3034,7 @@ class LocalDataService {
   }
 
   Future<void> deletePayment(String id) async {
+    final payment = _payments.where((p) => p.id == id).firstOrNull;
     _recordDeletedDoc('payments', id);
     _payments.removeWhere((p) => p.id == id);
     _paymentsController.add(List.unmodifiable(_payments));
@@ -2996,6 +3042,14 @@ class LocalDataService {
     try {
       await _deleteRemoteDoc('payments', id);
     } catch (_) {}
+
+    if (payment != null && payment.inscriptionId.isNotEmpty) {
+      await updateInscriptionPaymentStatus(
+        payment.inscriptionId,
+        getInscriptionPaidAmount(payment.inscriptionId) >=
+            getInscriptionTotalDue(payment.inscriptionId),
+      );
+    }
   }
 
   List<Payment> getPaymentsForInscription(String inscriptionId) {
@@ -3004,7 +3058,8 @@ class LocalDataService {
     return _payments.where((payment) {
       if (deletedPaymentIds.contains(payment.id)) return false;
       if (payment.inscriptionId == inscriptionId) return true;
-      if (targetInsc != null &&
+      if (payment.inscriptionId.isEmpty &&
+          targetInsc != null &&
           targetInsc.formationId.isNotEmpty &&
           payment.formationId == targetInsc.formationId &&
           ((targetInsc.etudiantId.isNotEmpty && payment.etudiantId == targetInsc.etudiantId) ||
@@ -3034,10 +3089,9 @@ class LocalDataService {
       return basePrice;
     }
 
-    // Si une sélection partielle de modules est spécifiée et que des prix individuels existent pour une formation modulaire standard
+    // Si une sélection de modules est spécifiée et que des prix individuels existent
     if (moduleIds != null &&
         moduleIds.isNotEmpty &&
-        moduleIds.length < formation.modules.length &&
         formation.modulePrices.isNotEmpty) {
       final hasPrices = moduleIds.any(
         (module) => formation.modulePrices.containsKey(module),
@@ -3047,7 +3101,9 @@ class LocalDataService {
           0,
           (total, module) => total + (formation.modulePrices[module] ?? 0),
         );
-        if (modulesTotal > 0) return modulesTotal;
+        if (modulesTotal > 0 && (moduleIds.length < formation.modules.length || basePrice == 0)) {
+          return modulesTotal;
+        }
       }
     }
 
@@ -3122,10 +3178,6 @@ class LocalDataService {
       return true;
     }).toList();
 
-    final totalReceived = activePayments
-        .where((p) => p.status == PaymentStatus.effectue)
-        .fold<double>(0, (sum, p) => sum + p.montant);
-
     // Inscriptions comptabilisées : acceptées ou avec acompte/paiement
     final billableInscriptions = activeInscriptions.where((i) =>
         i.status == InscriptionStatus.acceptee ||
@@ -3134,6 +3186,11 @@ class LocalDataService {
     final totalDue = billableInscriptions.fold<double>(
       0,
       (sum, ins) => sum + getInscriptionTotalDue(ins.id),
+    );
+
+    final totalReceived = billableInscriptions.fold<double>(
+      0,
+      (sum, ins) => sum + getInscriptionPaidAmount(ins.id),
     );
 
     final totalBalance = billableInscriptions.fold<double>(
@@ -3307,7 +3364,7 @@ class LocalDataService {
           .where((p) => p.id != updated.id && p.status == PaymentStatus.effectue)
           .fold<double>(0, (s, p) => s + p.montant);
       final proposedPaid = alreadyPaidWithoutThis + updated.montant;
-      if (proposedPaid > totalDue) {
+      if (proposedPaid > totalDue + 0.01) {
         throw StateError('La validation dépasse le solde de l’inscription.');
       }
     }
@@ -3808,15 +3865,6 @@ class LocalDataService {
     _seancesController.add(List.unmodifiable(_seances));
     try {
       await _deleteRemoteDoc('seances', id);
-    } catch (_) {}
-  }
-
-  void _saveAuditLogsToStorage() {
-    try {
-      _localStorage.setItem(
-        'app_saved_audit_logs',
-        jsonEncode(_auditLogs.map((a) => a.toMap()).toList()),
-      );
     } catch (_) {}
   }
 
