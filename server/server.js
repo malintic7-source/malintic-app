@@ -1835,15 +1835,72 @@ app.delete('/api/:collection/:id', requireEmployee, (req, res) => {
   if (!canWriteCollection(session, collection)) {
     return res.status(403).json({ error: 'Vous ne disposez pas des droits nécessaires pour cette action.' });
   }
-  state[collection] = state[collection].filter((item) => String(item.id) !== id);
+
+  // 1. Récupération préalable pour traçabilité immuable
+  const targetDoc = (state[collection] || []).find((item) => String(item.id) === id);
+
+  // 2. Suppression de la collection active
+  state[collection] = (state[collection] || []).filter((item) => String(item.id) !== id);
+
+  // 3. Cascade Utilisateur -> Inscriptions & Paiements liés (ne comptent plus dans les totaux actifs)
   if (collection === 'users') {
+    const userInscIds = (state.inscriptions || [])
+      .filter((ins) => String(ins.etudiantId) === id || String(ins.id) === id)
+      .map((ins) => String(ins.id));
     state.inscriptions = (state.inscriptions || []).filter((ins) => String(ins.etudiantId) !== id && String(ins.id) !== id);
+    for (const inscId of userInscIds) {
+      if (_deletedDocIds.inscriptions) _deletedDocIds.inscriptions.add(inscId);
+      enqueueSyncDocument('inscriptions', { id: inscId }, true);
+      state.payments = (state.payments || []).filter((p) => String(p.inscriptionId) !== inscId);
+    }
   }
-  // Enregistrer le tombstone de suppression pour éviter la réapparition lors du pull Supabase
+
+  // 4. Cascade Inscription -> Paiements liés
+  if (collection === 'inscriptions') {
+    const linkedPayments = (state.payments || []).filter((p) => String(p.inscriptionId) === id);
+    if (linkedPayments.length > 0) {
+      state.payments = (state.payments || []).filter((p) => String(p.inscriptionId) !== id);
+      for (const p of linkedPayments) {
+        if (_deletedDocIds.payments) _deletedDocIds.payments.add(String(p.id));
+        enqueueSyncDocument('payments', { id: p.id }, true);
+      }
+    }
+  }
+
+  // 5. Enregistrer le tombstone de suppression pour éviter la réapparition lors du pull Supabase
   if (_deletedDocIds[collection]) {
     _deletedDocIds[collection].add(id);
   }
   enqueueSyncDocument(collection, { id }, true);
+
+  // 6. Traçabilité complète dans le journal d'audit
+  let desc = `Suppression de l'élément [${collection}] ID: ${id}`;
+  if (targetDoc) {
+    if (collection === 'users') {
+      desc = `Suppression du compte : ${targetDoc.prenom || ''} ${targetDoc.nom || ''} (${targetDoc.email || 'N/A'}, Rôle: ${targetDoc.role})`;
+    } else if (collection === 'formations') {
+      desc = `Suppression de la formation : « ${targetDoc.titre || ''} » (Tarif: ${targetDoc.prix || 0} FCFA)`;
+    } else if (collection === 'inscriptions') {
+      desc = `Suppression de l'inscription : ${targetDoc.prenom || ''} ${targetDoc.nom || ''} (Formation: ${targetDoc.formationId}, Statut: ${targetDoc.status})`;
+    } else if (collection === 'payments') {
+      desc = `Suppression de la transaction : ${targetDoc.montant || 0} FCFA (Réf: ${targetDoc.reference || 'N/A'}, Inscription: ${targetDoc.inscriptionId})`;
+    } else if (collection === 'seances') {
+      desc = `Suppression de la séance : « ${targetDoc.titre || targetDoc.moduleTitle || id} »`;
+    }
+  }
+
+  recordAuditLog(state, {
+    userNom: session?.nom || session?.prenom ? `${session.prenom || ''} ${session.nom || ''}`.trim() : 'Administrateur',
+    userRole: session?.role || 'admin',
+    userId: session?.userId || null,
+    userEmail: session?.email || null,
+    action: 'SUPPRESSION',
+    description: desc,
+    targetId: id,
+    targetType: collection,
+    severity: 'warning',
+  });
+
   writeState(state);
   res.status(204).end();
 });
