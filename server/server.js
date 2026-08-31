@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const zlib = require('zlib');
+const os = require('os');
 
 const app = express();
 app.disable('x-powered-by');
@@ -114,6 +115,33 @@ app.use((req, res, next) => {
     return;
   }
   next();
+});
+
+// ─── Health & System Info ───────────────────────────────────────────────────
+app.get(['/api/health', '/api/v1/health'], (req, res) => {
+  res.json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    uptime: Math.floor(process.uptime()),
+  });
+});
+
+app.get(['/api/system/network-info', '/api/v1/system/network-info'], (req, res) => {
+  const interfaces = os.networkInterfaces();
+  const detectedIps = [];
+  for (const name of Object.keys(interfaces)) {
+    for (const iface of interfaces[name]) {
+      if (iface.family === 'IPv4' && !iface.internal) {
+        detectedIps.push(iface.address);
+      }
+    }
+  }
+  res.json({
+    detectedIps,
+    port: Number(process.env.PORT || 5001),
+    appPort: 80,
+    ngrokDomain: process.env.NGROK_DOMAIN || null,
+  });
 });
 
 const dataDir = process.env.DATA_DIR || '/data';

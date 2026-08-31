@@ -33,11 +33,12 @@ class ShareFormationDialog extends StatefulWidget {
 class _ShareFormationDialogState extends State<ShareFormationDialog> {
   final GlobalKey _qrKey = GlobalKey();
   int _selectedMode = 0; // 0 = Vercel (Internet), 1 = Local (Wi-Fi / LAN)
-  // URL Vercel fixe — lien public officiel pour les apprenants
-  static const String _vercelBase = 'https://malintic-app.vercel.app';
-  String _publicBase = _vercelBase;
-  String _localBase = 'http://192.168.1.10:8080';
+  
+  static const String _defaultVercelBase = 'https://malintic-app.vercel.app';
+  String _publicBase = _defaultVercelBase;
+  String _localBase = 'http://localhost';
   final TextEditingController _customIpController = TextEditingController();
+  bool _isLoadingNetwork = false;
 
   @override
   void initState() {
@@ -52,56 +53,61 @@ class _ShareFormationDialogState extends State<ShareFormationDialog> {
   }
 
   Future<void> _initUrls() async {
-    // L'URL publique est toujours Vercel (fixe, pas de ngrok ici)
-    // Ngrok est réservé aux administrateurs système (accès au backend)
-    _publicBase = _vercelBase;
-
-    // Détection de l'IP locale pour le mode LAN (Wi-Fi bureau)
+    setState(() => _isLoadingNetwork = true);
     try {
       final currentHost = Uri.base.host.toLowerCase();
       final currentPort = Uri.base.port;
 
-      // Si on est sur le réseau local, utiliser l'hôte courant
-      if (currentHost.startsWith('192.168.') ||
-          currentHost.startsWith('10.') ||
-          currentHost.startsWith('172.') ||
-          currentHost == 'localhost' ||
-          currentHost.startsWith('127.')) {
-        final portSuffix = (currentPort != 80 && currentPort != 443 && currentPort != 0)
-            ? ':$currentPort'
-            : ':8080';
-        _localBase = 'http://$currentHost$portSuffix';
-        _customIpController.text = currentHost;
+      // 1. Détection base Vercel / Internet
+      if (currentHost.contains('vercel.app')) {
+        _publicBase = Uri.base.origin;
       } else {
-        // Essayer l'API locale pour récupérer l'IP du réseau LAN
-        final response = await http.get(
-          Uri.parse('/api/system/network-info'),
-        ).timeout(
-          const Duration(seconds: 3),
-          onTimeout: () => http.Response('{}', 408),
-        );
+        _publicBase = _defaultVercelBase;
+      }
 
-        if (response.statusCode == 200) {
-          final data = jsonDecode(response.body) as Map<String, dynamic>;
-          final detectedIps = data['detectedIps'] as List<dynamic>?;
-          if (detectedIps != null && detectedIps.isNotEmpty) {
-            final realIps = detectedIps
-                .map((e) => e.toString())
-                .where((ip) => !ip.startsWith('172.') && !ip.startsWith('127.'))
-                .toList();
-            if (realIps.isNotEmpty) {
-              _localBase = 'http://${realIps.first}:8080';
-              _customIpController.text = realIps.first;
+      // 2. Détection base locale / LAN
+      String detectedLocalHost = currentHost.isNotEmpty ? currentHost : 'localhost';
+      String portSuffix = '';
+      if (currentPort != 80 && currentPort != 443 && currentPort != 0) {
+        portSuffix = ':$currentPort';
+      }
+
+      _localBase = 'http://$detectedLocalHost$portSuffix';
+      _customIpController.text = '$detectedLocalHost$portSuffix';
+
+      // Si nous sommes sur localhost ou 127.0.0.1, interroger l'API pour obtenir la vraie IP LAN Wi-Fi
+      if (detectedLocalHost == 'localhost' || detectedLocalHost.startsWith('127.')) {
+        try {
+          final apiUri = Uri.parse('/api/system/network-info');
+          final response = await http.get(apiUri).timeout(
+            const Duration(seconds: 2),
+            onTimeout: () => http.Response('{}', 408),
+          );
+
+          if (response.statusCode == 200) {
+            final data = jsonDecode(response.body) as Map<String, dynamic>;
+            final detectedIps = data['detectedIps'] as List<dynamic>?;
+            if (detectedIps != null && detectedIps.isNotEmpty) {
+              final realIps = detectedIps
+                  .map((e) => e.toString())
+                  .where((ip) => !ip.startsWith('172.') && !ip.startsWith('127.'))
+                  .toList();
+              if (realIps.isNotEmpty) {
+                final lanIp = realIps.first;
+                final finalPort = (currentPort != 80 && currentPort != 443 && currentPort != 0)
+                    ? ':$currentPort'
+                    : '';
+                _localBase = 'http://$lanIp$finalPort';
+                _customIpController.text = '$lanIp$finalPort';
+              }
             }
           }
-        }
+        } catch (_) {}
       }
-    } catch (_) {
-      // Fallback gracieux — IP locale par défaut
-    }
+    } catch (_) {}
 
     if (mounted) {
-      setState(() {});
+      setState(() => _isLoadingNetwork = false);
     }
   }
 
@@ -114,7 +120,7 @@ class _ShareFormationDialogState extends State<ShareFormationDialog> {
         '${widget.formation.description}\n\n'
         '💰 *Tarif:* ${widget.formation.prix} FCFA\n'
         '⏱️ *Durée:* ${widget.formation.dureeSemaines} semaine(s)\n\n'
-        '👉 *Inscrivez-vous ici:*\n$_publicUrl';
+        '👉 *Inscrivez-vous ici:*\n$_activeUrl';
     final whatsappUri = Uri.parse('https://wa.me/?text=${Uri.encodeComponent(text)}');
     if (await canLaunchUrl(whatsappUri)) {
       await launchUrl(whatsappUri, mode: LaunchMode.externalApplication);
@@ -128,7 +134,7 @@ class _ShareFormationDialogState extends State<ShareFormationDialog> {
       SnackBar(
         content: Row(
           children: [
-            const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+            const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
             const SizedBox(width: 8),
             Expanded(child: Text('📋 $label copié dans le presse-papier !')),
           ],
@@ -150,7 +156,10 @@ class _ShareFormationDialogState extends State<ShareFormationDialog> {
       final bytes = byteData?.buffer.asUint8List();
       if (bytes != null) {
         final modeName = _selectedMode == 0 ? 'public' : 'local';
-        await saveFile(bytes, 'qr_formation_${widget.formation.titre.toLowerCase().replaceAll(' ', '_')}_$modeName.png');
+        await saveFile(
+          bytes,
+          'qr_formation_${widget.formation.titre.toLowerCase().replaceAll(' ', '_')}_$modeName.png',
+        );
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -167,7 +176,7 @@ class _ShareFormationDialogState extends State<ShareFormationDialog> {
     }
   }
 
-  Widget _buildFormationPhoto({double size = 46, double radius = 12}) {
+  Widget _buildFormationPhoto({double size = 42, double radius = 10}) {
     final imageUrl = widget.formation.imageUrl?.trim() ?? '';
     if (imageUrl.isNotEmpty) {
       if (imageUrl.startsWith('data:image')) {
@@ -215,121 +224,69 @@ class _ShareFormationDialogState extends State<ShareFormationDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final isMobile = MediaQuery.of(context).size.width < 600;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final textColor = isDark ? Colors.white : AppTheme.textPrimary;
+    final subtextColor = isDark ? Colors.white70 : AppTheme.textSecondary;
+    final isOnlineMode = _selectedMode == 0;
 
-    return AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      titlePadding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
-      title: Row(
-        children: [
-          _buildFormationPhoto(size: 44, radius: 10),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Partager la formation',
-                  style: GoogleFonts.poppins(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.black87,
-                  ),
-                ),
-                Text(
-                  widget.formation.titre,
-                  style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.black54,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.close_rounded, size: 20, color: Colors.black45),
-            onPressed: () => Navigator.pop(context),
-          ),
-        ],
-      ),
-      content: SizedBox(
-        width: 520,
-        child: SingleChildScrollView(
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+      backgroundColor: cardBg,
+      elevation: 16,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 440),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Formation Snapshot Card with Photo
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF8FAFC),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
-                ),
-                child: Row(
-                  children: [
-                    _buildFormationPhoto(size: 52, radius: 10),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            widget.formation.titre,
-                            style: GoogleFonts.poppins(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.black87,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+              // 1. En-tête compact
+              Row(
+                children: [
+                  _buildFormationPhoto(size: 40, radius: 8),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Partager la formation',
+                          style: GoogleFonts.poppins(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: textColor,
                           ),
-                          const SizedBox(height: 2),
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.primary.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  '${widget.formation.prix} FCFA',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
-                                    color: AppTheme.primary,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                '${widget.formation.dureeSemaines} sem.',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w500,
-                                  color: Colors.black54,
-                                ),
-                              ),
-                            ],
+                        ),
+                        Text(
+                          widget.formation.titre,
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: subtextColor,
                           ),
-                        ],
-                      ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.close_rounded, size: 20, color: subtextColor),
+                    onPressed: () => Navigator.pop(context),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ],
               ),
               const SizedBox(height: 14),
-              // Segmented Control (Public vs Local)
+
+              // 2. Sélecteur de Mode (Vercel vs LAN)
               Container(
-                padding: const EdgeInsets.all(4),
+                padding: const EdgeInsets.all(3),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF1F5F9),
+                  color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
@@ -339,17 +296,19 @@ class _ShareFormationDialogState extends State<ShareFormationDialog> {
                         onTap: () => setState(() => _selectedMode = 0),
                         borderRadius: BorderRadius.circular(9),
                         child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          padding: const EdgeInsets.symmetric(vertical: 9),
+                          duration: const Duration(milliseconds: 180),
+                          padding: const EdgeInsets.symmetric(vertical: 8),
                           decoration: BoxDecoration(
-                            color: _selectedMode == 0 ? Colors.white : Colors.transparent,
+                            color: isOnlineMode
+                                ? (isDark ? const Color(0xFF1E293B) : Colors.white)
+                                : Colors.transparent,
                             borderRadius: BorderRadius.circular(9),
-                            boxShadow: _selectedMode == 0
+                            boxShadow: isOnlineMode
                                 ? [
                                     BoxShadow(
-                                      color: Colors.black.withValues(alpha: 0.05),
-                                      blurRadius: 6,
-                                      offset: const Offset(0, 2),
+                                      color: Colors.black.withValues(alpha: 0.06),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 1),
                                     ),
                                   ]
                                 : [],
@@ -359,16 +318,16 @@ class _ShareFormationDialogState extends State<ShareFormationDialog> {
                             children: [
                               Icon(
                                 Icons.public_rounded,
-                                size: 16,
-                                color: _selectedMode == 0 ? const Color(0xFF16A34A) : Colors.black54,
+                                size: 15,
+                                color: isOnlineMode ? const Color(0xFF16A34A) : subtextColor,
                               ),
                               const SizedBox(width: 6),
                               Text(
-                                'Vercel (Internet)',
+                                'Lien En Ligne (Vercel)',
                                 style: GoogleFonts.poppins(
-                                  fontSize: 12,
-                                  fontWeight: _selectedMode == 0 ? FontWeight.w700 : FontWeight.w500,
-                                  color: _selectedMode == 0 ? const Color(0xFF16A34A) : Colors.black54,
+                                  fontSize: 11.5,
+                                  fontWeight: isOnlineMode ? FontWeight.w700 : FontWeight.w500,
+                                  color: isOnlineMode ? const Color(0xFF16A34A) : subtextColor,
                                 ),
                               ),
                             ],
@@ -381,17 +340,19 @@ class _ShareFormationDialogState extends State<ShareFormationDialog> {
                         onTap: () => setState(() => _selectedMode = 1),
                         borderRadius: BorderRadius.circular(9),
                         child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          padding: const EdgeInsets.symmetric(vertical: 9),
+                          duration: const Duration(milliseconds: 180),
+                          padding: const EdgeInsets.symmetric(vertical: 8),
                           decoration: BoxDecoration(
-                            color: _selectedMode == 1 ? Colors.white : Colors.transparent,
+                            color: !isOnlineMode
+                                ? (isDark ? const Color(0xFF1E293B) : Colors.white)
+                                : Colors.transparent,
                             borderRadius: BorderRadius.circular(9),
-                            boxShadow: _selectedMode == 1
+                            boxShadow: !isOnlineMode
                                 ? [
                                     BoxShadow(
-                                      color: Colors.black.withValues(alpha: 0.05),
-                                      blurRadius: 6,
-                                      offset: const Offset(0, 2),
+                                      color: Colors.black.withValues(alpha: 0.06),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 1),
                                     ),
                                   ]
                                 : [],
@@ -400,17 +361,17 @@ class _ShareFormationDialogState extends State<ShareFormationDialog> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Icon(
-                                Icons.lan_rounded,
-                                size: 16,
-                                color: _selectedMode == 1 ? AppTheme.primary : Colors.black54,
+                                Icons.wifi_rounded,
+                                size: 15,
+                                color: !isOnlineMode ? AppTheme.primary : subtextColor,
                               ),
                               const SizedBox(width: 6),
                               Text(
-                                'Lien Local (Wi-Fi / LAN)',
+                                'Wi-Fi Bureau (LAN)',
                                 style: GoogleFonts.poppins(
-                                  fontSize: 12,
-                                  fontWeight: _selectedMode == 1 ? FontWeight.w700 : FontWeight.w500,
-                                  color: _selectedMode == 1 ? AppTheme.primary : Colors.black54,
+                                  fontSize: 11.5,
+                                  fontWeight: !isOnlineMode ? FontWeight.w700 : FontWeight.w500,
+                                  color: !isOnlineMode ? AppTheme.primary : subtextColor,
                                 ),
                               ),
                             ],
@@ -421,173 +382,166 @@ class _ShareFormationDialogState extends State<ShareFormationDialog> {
                   ],
                 ),
               ),
-              const SizedBox(height: 16),
-              // QR Code View
-              RepaintBoundary(
-                key: _qrKey,
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: _selectedMode == 0 ? const Color(0xFFBBF7D0) : const Color(0xFFBFDBFE),
-                      width: 2,
+              const SizedBox(height: 14),
+
+              // 3. QR Code Centré & Responsive
+              Center(
+                child: RepaintBoundary(
+                  key: _qrKey,
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: isOnlineMode ? const Color(0xFFBBF7D0) : const Color(0xFFBFDBFE),
+                        width: 2,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.04),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.04),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        QrImageView(
+                          data: _activeUrl,
+                          version: QrVersions.auto,
+                          size: 170,
+                          backgroundColor: Colors.white,
+                          embeddedImage: const AssetImage('images/Malintic.png'),
+                          embeddedImageStyle: const QrEmbeddedImageStyle(
+                            size: Size(26, 26),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: isOnlineMode ? const Color(0xFFDCFCE7) : const Color(0xFFDBEAFE),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                isOnlineMode ? Icons.public_rounded : Icons.wifi_rounded,
+                                size: 12,
+                                color: isOnlineMode ? const Color(0xFF166534) : const Color(0xFF1E40AF),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                isOnlineMode
+                                    ? 'Scan pour inscription en ligne'
+                                    : 'Scan pour inscription sur le Wi-Fi local',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: isOnlineMode ? const Color(0xFF166534) : const Color(0xFF1E40AF),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  child: Column(
-                    children: [
-                      QrImageView(
-                        data: _activeUrl,
-                        version: QrVersions.auto,
-                        size: isMobile ? 180 : 200,
-                        backgroundColor: Colors.white,
-                        embeddedImage: const AssetImage('images/Malintic.png'),
-                        embeddedImageStyle: const QrEmbeddedImageStyle(
-                          size: Size(28, 28),
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              // 4. Carte Unique du Lien Actif (sans redondance ni scroll forcé)
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: isOnlineMode
+                      ? (isDark ? const Color(0xFF064E3B).withValues(alpha: 0.25) : const Color(0xFFF0FDF4))
+                      : (isDark ? const Color(0xFF1E3A8A).withValues(alpha: 0.25) : const Color(0xFFEFF6FF)),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isOnlineMode ? const Color(0xFF86EFAC) : const Color(0xFF93C5FD),
+                    width: 1.2,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          isOnlineMode ? Icons.public_rounded : Icons.wifi_rounded,
+                          size: 15,
+                          color: isOnlineMode ? const Color(0xFF16A34A) : AppTheme.primary,
                         ),
-                      ),
-                      const SizedBox(height: 4),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: _selectedMode == 0 ? const Color(0xFFDCFCE7) : const Color(0xFFDBEAFE),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          _selectedMode == 0 ? '🌐 Scan pour inscription en ligne' : '🏢 Scan pour inscription sur le Wi-Fi local',
+                        const SizedBox(width: 6),
+                        Text(
+                          isOnlineMode ? 'Lien Inscription En Ligne :' : 'Lien Bureau (Wi-Fi / LAN) :',
                           style: GoogleFonts.poppins(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                            color: _selectedMode == 0 ? const Color(0xFF166534) : const Color(0xFF1E40AF),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: isOnlineMode ? const Color(0xFF166534) : AppTheme.primaryDark,
                           ),
                         ),
+                        const Spacer(),
+                        InkWell(
+                          onTap: () => _copyLink(_activeUrl, isOnlineMode ? 'Lien En Ligne' : 'Lien Wi-Fi'),
+                          borderRadius: BorderRadius.circular(6),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: isOnlineMode
+                                  ? const Color(0xFF16A34A).withValues(alpha: 0.15)
+                                  : AppTheme.primary.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.copy_rounded,
+                                  size: 12,
+                                  color: isOnlineMode ? const Color(0xFF16A34A) : AppTheme.primary,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Copier',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: isOnlineMode ? const Color(0xFF16A34A) : AppTheme.primary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 5),
+                    SelectableText(
+                      _activeUrl,
+                      style: GoogleFonts.poppins(
+                        fontSize: 11,
+                        color: isOnlineMode ? const Color(0xFF15803D) : AppTheme.primary,
+                        fontWeight: FontWeight.w600,
                       ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              // 1. Encadré Lien Public
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: _selectedMode == 0 ? const Color(0xFFF0FDF4) : const Color(0xFFF8FAFC),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: _selectedMode == 0 ? const Color(0xFF86EFAC) : const Color(0xFFE2E8F0),
-                    width: _selectedMode == 0 ? 1.5 : 1,
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.public_rounded, size: 16, color: Color(0xFF16A34A)),
-                        const SizedBox(width: 6),
-                        Text(
-                          'Lien Vercel — Inscription en ligne :',
-                          style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w700, color: const Color(0xFF166534)),
-                        ),
-                        const Spacer(),
-                        InkWell(
-                          onTap: () => _copyLink(_publicUrl, 'Lien Public'),
-                          borderRadius: BorderRadius.circular(6),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.copy_rounded, size: 13, color: Color(0xFF16A34A)),
-                                const SizedBox(width: 4),
-                                Text(
-                                  'Copier',
-                                  style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w700, color: const Color(0xFF16A34A)),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
                     ),
-                    const SizedBox(height: 4),
-                    SelectableText(
-                      _publicUrl,
-                      style: GoogleFonts.poppins(fontSize: 11, color: const Color(0xFF15803D), fontWeight: FontWeight.w500),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 10),
-              // 2. Encadré Lien Local
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: _selectedMode == 1 ? const Color(0xFFEFF6FF) : const Color(0xFFF8FAFC),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: _selectedMode == 1 ? const Color(0xFF93C5FD) : const Color(0xFFE2E8F0),
-                    width: _selectedMode == 1 ? 1.5 : 1,
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.lan_rounded, size: 16, color: AppTheme.primary),
-                        const SizedBox(width: 6),
-                        Text(
-                          'Lien Local Bureau (Wi-Fi / LAN) :',
-                          style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w700, color: AppTheme.primaryDark),
-                        ),
-                        const Spacer(),
-                        InkWell(
-                          onTap: () => _copyLink(_localUrl, 'Lien Local Wi-Fi'),
-                          borderRadius: BorderRadius.circular(6),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.copy_rounded, size: 13, color: AppTheme.primary),
-                                const SizedBox(width: 4),
-                                Text(
-                                  'Copier',
-                                  style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w700, color: AppTheme.primary),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    SelectableText(
-                      _localUrl,
-                      style: GoogleFonts.poppins(fontSize: 11, color: AppTheme.primary, fontWeight: FontWeight.w500),
-                    ),
-                    if (_selectedMode == 1) ...[
+                    if (!isOnlineMode) ...[
                       const SizedBox(height: 8),
                       Row(
                         children: [
                           Expanded(
                             child: SizedBox(
-                              height: 32,
+                              height: 30,
                               child: TextField(
                                 controller: _customIpController,
                                 style: GoogleFonts.poppins(fontSize: 11),
                                 decoration: InputDecoration(
-                                  hintText: 'Ex: 192.168.1.10 ou 10.0.0.5',
-                                  labelText: 'IP / Port du réseau local',
+                                  hintText: 'Ex: 192.168.1.15 ou localhost',
+                                  labelText: 'IP / Hôte du réseau local',
                                   labelStyle: GoogleFonts.poppins(fontSize: 10),
                                   contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
                                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
@@ -599,10 +553,8 @@ class _ShareFormationDialogState extends State<ShareFormationDialog> {
                                     setState(() {
                                       if (clean.startsWith('http://') || clean.startsWith('https://')) {
                                         _localBase = clean;
-                                      } else if (clean.contains(':')) {
-                                        _localBase = 'http://$clean';
                                       } else {
-                                        _localBase = 'http://$clean:8080';
+                                        _localBase = 'http://$clean';
                                       }
                                     });
                                   }
@@ -612,9 +564,16 @@ class _ShareFormationDialogState extends State<ShareFormationDialog> {
                           ),
                           const SizedBox(width: 6),
                           IconButton(
-                            icon: const Icon(Icons.refresh_rounded, size: 18, color: AppTheme.primary),
-                            tooltip: 'Redétecter le réseau',
+                            icon: _isLoadingNetwork
+                                ? const SizedBox(
+                                    width: 14,
+                                    height: 14,
+                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                  )
+                                : const Icon(Icons.refresh_rounded, size: 17, color: AppTheme.primary),
+                            tooltip: 'Détecter automatiquement l\'IP Wi-Fi',
                             onPressed: _initUrls,
+                            visualDensity: VisualDensity.compact,
                           ),
                         ],
                       ),
@@ -622,62 +581,76 @@ class _ShareFormationDialogState extends State<ShareFormationDialog> {
                   ],
                 ),
               ),
+              const SizedBox(height: 16),
+
+              // 5. Boutons d'actions principaux
+              Row(
+                children: [
+                  Expanded(
+                    flex: 4,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF25D366),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        elevation: 0,
+                      ),
+                      icon: const Icon(Icons.chat_rounded, size: 16),
+                      label: Text(
+                        'WhatsApp',
+                        style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 12.5),
+                      ),
+                      onPressed: _shareWhatsApp,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    flex: 3,
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: textColor,
+                        side: BorderSide(color: isDark ? Colors.white24 : const Color(0xFFCBD5E1)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                      ),
+                      icon: const Icon(Icons.download_rounded, size: 15),
+                      label: Text(
+                        'QR Code',
+                        style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 11.5),
+                      ),
+                      onPressed: _downloadQrCode,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    flex: 3,
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppTheme.primary,
+                        side: const BorderSide(color: AppTheme.primary),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                      ),
+                      icon: const Icon(Icons.open_in_new_rounded, size: 15),
+                      label: Text(
+                        'Ouvrir',
+                        style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 11.5),
+                      ),
+                      onPressed: () async {
+                        final uri = Uri.parse(_activeUrl);
+                        if (await canLaunchUrl(uri)) {
+                          await launchUrl(uri, mode: LaunchMode.externalApplication);
+                        }
+                      },
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
         ),
       ),
-      actionsAlignment: MainAxisAlignment.spaceBetween,
-      actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-      actions: [
-        // WhatsApp button
-        ElevatedButton.icon(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF25D366),
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            elevation: 0,
-          ),
-          icon: const Icon(Icons.chat_rounded, size: 18),
-          label: Text('WhatsApp', style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 13)),
-          onPressed: _shareWhatsApp,
-        ),
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Download QR code
-            OutlinedButton.icon(
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.black87,
-                side: const BorderSide(color: Color(0xFFCBD5E1)),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-              ),
-              icon: const Icon(Icons.download_rounded, size: 16),
-              label: Text('QR Code', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 12)),
-              onPressed: _downloadQrCode,
-            ),
-            const SizedBox(width: 8),
-            // Test / Open in browser
-            OutlinedButton.icon(
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppTheme.primary,
-                side: const BorderSide(color: AppTheme.primary),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-              ),
-              icon: const Icon(Icons.open_in_new_rounded, size: 16),
-              label: Text('Ouvrir', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 12)),
-              onPressed: () async {
-                final uri = Uri.parse(_activeUrl);
-                if (await canLaunchUrl(uri)) {
-                  await launchUrl(uri, mode: LaunchMode.externalApplication);
-                }
-              },
-            ),
-          ],
-        ),
-      ],
     );
   }
 }
