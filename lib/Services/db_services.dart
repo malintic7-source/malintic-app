@@ -16,7 +16,7 @@ import 'package:gestion_formations/Services/polling_config.dart';
 
 class LocalDataService {
   static final LocalDataService _instance = LocalDataService._internal();
-  static const _cacheSchemaVersion = '5';
+  static const _cacheSchemaVersion = '6';
   static const _cacheSchemaKey = 'malintic_cache_schema';
   factory LocalDataService() => _instance;
 
@@ -59,8 +59,6 @@ class LocalDataService {
   String? _lastStateEtag;
 
   void _invalidateObsoleteCache() {
-    // Version 2 stops browser-to-server merging. Discard the old persisted
-    // collections once so records deleted on the server cannot appear again.
     if (_localStorage.getItem(_cacheSchemaKey) == _cacheSchemaVersion) return;
     const cachedCollections = [
       'app_saved_users',
@@ -70,6 +68,15 @@ class LocalDataService {
       'app_saved_seances',
       'app_saved_notifications',
       'app_saved_audit_logs',
+      'app_deleted_ids_users',
+      'app_deleted_ids_user_emails',
+      'app_deleted_ids_inscriptions',
+      'app_deleted_ids_formations',
+      'app_deleted_ids_payments',
+      'app_deleted_ids_seances',
+      'app_deleted_ids_notifications',
+      'app_deleted_ids_audit_logs',
+      'app_deleted_docs',
     ];
     for (final key in cachedCollections) {
       _localStorage.removeItem(key);

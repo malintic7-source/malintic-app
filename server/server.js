@@ -583,6 +583,46 @@ function reconcileAndDeduplicate(state) {
     }
   }
 
+  // 4. Clean Audit Logs of deleted, purged or phantom test entities
+  const validUserIds = new Set((state.users || []).map((u) => String(u.id)));
+  const validInscIds = new Set((state.inscriptions || []).map((i) => String(i.id)));
+  const validFormIds = new Set((state.formations || []).map((f) => String(f.id)));
+  const validPayIds = new Set((state.payments || []).map((p) => String(p.id)));
+
+  if (Array.isArray(state.audit_logs)) {
+    const prevLogsLen = state.audit_logs.length;
+    state.audit_logs = state.audit_logs.filter((log) => {
+      if (!log) return false;
+      if (log.targetType === 'user' && log.targetId && !validUserIds.has(String(log.targetId))) return false;
+      if (log.targetType === 'inscriptions' && log.targetId && !validInscIds.has(String(log.targetId))) return false;
+      if (log.targetType === 'formations' && log.targetId && !validFormIds.has(String(log.targetId))) return false;
+      if (log.targetType === 'payments' && log.targetId && !validPayIds.has(String(log.targetId))) return false;
+
+      const desc = (log.description || '').toLowerCase();
+      if (desc.includes('nouvel etudiant') || desc.includes('nouvel.etudiant') || desc.includes('nicujicot')) return false;
+      return true;
+    });
+    if (state.audit_logs.length !== prevLogsLen) modified = true;
+  }
+
+  // 5. Clean Notifications of deleted, purged or phantom test entities
+  if (Array.isArray(state.notifications)) {
+    const prevNotifsLen = state.notifications.length;
+    state.notifications = state.notifications.filter((n) => {
+      if (!n) return false;
+      const desc = (n.description || '').toLowerCase();
+      if (desc.includes('nouvel etudiant') || desc.includes('nouvel.etudiant') || desc.includes('moussa traore')) return false;
+
+      const targetUsers = n.target_user_ids || n.targetUserIds || [];
+      if (targetUsers.length > 0) {
+        const hasActiveTarget = targetUsers.some((uid) => validUserIds.has(String(uid)));
+        if (!hasActiveTarget) return false;
+      }
+      return true;
+    });
+    if (state.notifications.length !== prevNotifsLen) modified = true;
+  }
+
   return modified;
 }
 
@@ -1380,6 +1420,19 @@ app.use('/api/v1/*', (req, res, next) => {
 app.get('/api/health', (_, res) => res.json({ status: 'ok' }));
 app.get('/api/v1/health', (_, res) => res.json({ status: 'ok' }));
 
+app.get('/api/pca/status', (req, res) => {
+  const state = readState();
+  const counts = Object.fromEntries(collections.map((name) => [name, (state[name] || []).length]));
+  const mem = process.memoryUsage();
+  res.json({
+    uptimeSeconds: Math.floor(process.uptime()),
+    memoryUsageMb: Math.round(mem.heapUsed / 1024 / 1024),
+    activeSessions: sessions.size,
+    counts,
+    timestamp: new Date().toISOString(),
+  });
+});
+
 app.get('/api/system/network-info', requireAdministrator, (req, res) => {
   const os = require('os');
   const interfaces = os.networkInterfaces();
@@ -2043,6 +2096,17 @@ app.delete('/api/:collection/:id', requireEmployee, (req, res) => {
 });
 
 const port = Number(process.env.PORT || 5001);
+
+// Initialiser, dédupliquer et purger l'état dès le démarrage
+try {
+  _stateCache = null;
+  _stateCacheDirty = true;
+  const initialBootstrapState = readState();
+  console.log(`[BOOT] Base de données chargée et vérifiée : ${initialBootstrapState.users.length} utilisateurs, ${initialBootstrapState.formations.length} formations, ${initialBootstrapState.inscriptions.length} inscriptions, ${initialBootstrapState.payments.length} paiements, ${initialBootstrapState.notifications.length} notifications, ${initialBootstrapState.audit_logs.length} logs.`);
+} catch (e) {
+  console.error(`[BOOT] Erreur initialisation état:`, e.message);
+}
+
 app.listen(port, () => {
   console.log(`API Malintic opérationnelle sur le port ${port}`);
 

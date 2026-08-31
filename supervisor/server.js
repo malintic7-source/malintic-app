@@ -113,6 +113,7 @@ async function refreshTopologyStatus() {
 
   // 4. Local Database & Volume PRA Node
   let dbNode = { name: 'Base & Volume PRA (Local)', isOnline: false, latencyMs: 1, details: 'Vérification...' };
+  let dbCounts = null;
   try {
     const dbPath = path.join(DATA_DIR, 'database.json');
     if (fs.existsSync(dbPath)) {
@@ -120,6 +121,18 @@ async function refreshTopologyStatus() {
       const sizeKb = (stats.size / 1024).toFixed(1);
       dbNode.isOnline = true;
       dbNode.details = `Volume actif (/data/database.json : ${sizeKb} KB)`;
+      try {
+        const dbContent = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
+        dbCounts = {
+          users: (dbContent.users || []).length,
+          formations: (dbContent.formations || []).length,
+          inscriptions: (dbContent.inscriptions || []).length,
+          payments: (dbContent.payments || []).length,
+          notifications: (dbContent.notifications || []).length,
+          audit_logs: (dbContent.audit_logs || []).length,
+          seances: (dbContent.seances || []).length,
+        };
+      } catch (_) {}
     } else {
       dbNode.isOnline = true;
       dbNode.details = `Base en mémoire prête pour persistance`;
@@ -169,7 +182,7 @@ async function refreshTopologyStatus() {
     lastChecked: new Date().toISOString(),
     durationMs: Date.now() - startAll,
     nodes: { docker_app: appNode, docker_api: dockerNode, ngrok: ngrokNode, database: dbNode },
-    counts: apiPcaData?.counts || _cachedStatus.counts,
+    counts: apiPcaData?.counts || dbCounts || _cachedStatus.counts,
     snapshots,
   };
 }
