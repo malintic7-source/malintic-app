@@ -91,8 +91,7 @@ app.get('/api/supervisor/status', async (req, res) => {
       method: 'HEAD',
       signal: AbortSignal.timeout ? AbortSignal.timeout(3000) : undefined,
     });
-    vercelNode.latencyMs = Date.now() - startVercel;
-    vercelNode.isOnline = vRes.ok || vRes.status === 200 || vRes.status === 304 || vRes.status === 308;
+    vercelNode.isOnline = vRes.ok || [200, 301, 302, 304, 307, 308].includes(vRes.status);
     vercelNode.details = vercelNode.isOnline ? `Actif (${VERCEL_URL})` : `Code ${vRes.status}`;
   } catch (e) {
     vercelNode.isOnline = true; // Mode fallback web
