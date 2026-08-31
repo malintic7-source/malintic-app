@@ -1,0 +1,59 @@
+name: M@LINTIC-APP CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, master, dev, staging ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  quality-and-tests:
+    name: 🧪 Quality Check & Automated Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🎯 Setup Flutter SDK
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: 📦 Install Flutter Dependencies
+        run: flutter pub get
+
+      - name: 🔍 Run Static Code Analysis (Linter)
+        run: flutter analyze
+
+      - name: 🧪 Execute All Test Suites (Unit & E2E Simulations)
+        run: flutter test --coverage
+
+      - name: 🌐 Build Flutter Web (Production Verification)
+        run: flutter build web --release --no-web-resources-cdn
+
+  server-audit:
+    name: 🛡️ Backend Server Security & Syntax Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: server/package.json
+
+      - name: 📦 Install Server Dependencies
+        working-directory: ./server
+        run: npm ci --omit=dev || npm install --omit=dev
+
+      - name: 🔍 Syntax Validation
+        working-directory: ./server
+        run: node -c server.js
