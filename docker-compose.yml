@@ -1,5 +1,8 @@
+name: malintic
+
 services:
   app:
+    image: malintic-app:latest
     build:
       context: .
       dockerfile: Dockerfile.fast
@@ -26,6 +29,7 @@ services:
       - malintic_network
 
   api:
+    image: malintic-api:latest
     build:
       context: ./server
       dockerfile: Dockerfile
@@ -73,6 +77,7 @@ services:
       - malintic_network
 
   supervisor:
+    image: malintic-supervisor:latest
     build:
       context: ./supervisor
       dockerfile: Dockerfile
