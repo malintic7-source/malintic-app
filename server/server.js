@@ -144,17 +144,43 @@ app.get(['/api/health', '/api/v1/health'], (req, res) => {
 });
 
 app.get(['/api/system/network-info', '/api/v1/system/network-info'], (req, res) => {
-  const interfaces = os.networkInterfaces();
   const detectedIps = [];
+
+  // 1. Détection via variables d'environnement (Windows Host LAN/Wi-Fi IP)
+  const envHostIp = (process.env.HOST_LAN_IP || process.env.LAN_IP || '').trim();
+  if (envHostIp && !detectedIps.includes(envHostIp)) {
+    detectedIps.push(envHostIp);
+  }
+
+  // 2. Extraire l'IP ou l'hôte de la requête (si l'administrateur a ouvert l'app via son IP LAN)
+  const hostHeader = (req.headers['x-forwarded-host'] || req.headers.host || '').split(':')[0].trim();
+  if (hostHeader && hostHeader !== 'localhost' && hostHeader !== '127.0.0.1' && !hostHeader.startsWith('172.') && !detectedIps.includes(hostHeader)) {
+    detectedIps.push(hostHeader);
+  }
+
+  // 3. Scanner les interfaces locales (en excluant les adresses loopback, Docker 172.x et APIPA 169.254.x)
+  const interfaces = os.networkInterfaces();
+  const secondaryIps = [];
   for (const name of Object.keys(interfaces)) {
     for (const iface of interfaces[name]) {
       if (iface.family === 'IPv4' && !iface.internal) {
-        detectedIps.push(iface.address);
+        const addr = iface.address;
+        if (addr.startsWith('192.168.') || addr.startsWith('10.')) {
+          if (!detectedIps.includes(addr)) detectedIps.push(addr);
+        } else if (!addr.startsWith('127.') && !addr.startsWith('169.254.')) {
+          if (!secondaryIps.includes(addr)) secondaryIps.push(addr);
+        }
       }
     }
   }
+
+  for (const ip of secondaryIps) {
+    if (!detectedIps.includes(ip)) detectedIps.push(ip);
+  }
+
   res.json({
     detectedIps,
+    primaryIp: detectedIps[0] || 'localhost',
     port: Number(process.env.PORT || 5001),
     appPort: 80,
     ngrokDomain: process.env.NGROK_DOMAIN || null,

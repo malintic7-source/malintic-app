@@ -1,87 +1,6 @@
 {
   "users": [
     {
-      "id": "admin_mamadou",
-      "email": "mamadou@mntic.ml",
-      "nom": "TOURE",
-      "prenom": "Mamadou",
-      "phone": "+223 70 00 00 01",
-      "matricule": "ADM-2026-001",
-      "role": "admin",
-      "password_hash": "scrypt$c5e5f991ec9c516941fc42351de02fb4$da86b7f166a27b824166de2e815131131876a49d95dabb7e9953c90808370d96f6f3b7e6491f331e7e094f3d1025a5f531fff9d115d3c8cc587ba8199e61db99",
-      "photo_url": null,
-      "specialite": null,
-      "sexe": "Homme",
-      "est_actif": true,
-      "assigned_formations": [],
-      "date_creation": "2026-08-01T00:00:00+00:00",
-      "date_modification": "2026-08-30T07:53:53.522+00:00",
-      "photoUrl": null,
-      "assignedFormations": [],
-      "estActif": true,
-      "doit_changer_mot_de_passe": false,
-      "doitChangerMotDePasse": true,
-      "dateCreation": "2026-08-01T00:00:00+00:00",
-      "dateModification": "2026-08-30T07:53:53.522+00:00",
-      "created_at": "2026-08-27T02:00:46.207254+00:00",
-      "updated_at": "2026-08-27T02:00:46.207254+00:00",
-      "must_change_password": true
-    },
-    {
-      "id": "dg_souleymane",
-      "email": "soulbico@mntic.ml",
-      "nom": "TRAORE",
-      "prenom": "SOULEYMANE",
-      "phone": "+223 76 00 00 01",
-      "matricule": "DIR-2026-001",
-      "role": "dg",
-      "password_hash": "scrypt$ce1b2d9502ee0516f7a213f13c4f3058$3f965b5bc017a04fee551476b042da6993a4ea93b9cda031207c38f88a0267633e6140333434609c69737dad2e8b9bd6145c5c0b33461ea08fe430151db5459c",
-      "photo_url": null,
-      "specialite": null,
-      "sexe": "Homme",
-      "est_actif": true,
-      "assigned_formations": [],
-      "date_creation": "2026-08-01T00:00:00+00:00",
-      "date_modification": null,
-      "photoUrl": null,
-      "assignedFormations": [],
-      "estActif": true,
-      "doit_changer_mot_de_passe": false,
-      "doitChangerMotDePasse": true,
-      "dateCreation": "2026-08-01T00:00:00+00:00",
-      "dateModification": null,
-      "created_at": "2026-08-27T02:00:46.207254+00:00",
-      "updated_at": "2026-08-27T02:00:46.207254+00:00",
-      "must_change_password": true
-    },
-    {
-      "id": "daf_amadou",
-      "email": "amadou@mntic.ml",
-      "nom": "TALL",
-      "prenom": "Amadou",
-      "phone": "+223 76 00 00 02",
-      "matricule": "DAF-2026-001",
-      "role": "daf",
-      "password_hash": "scrypt$c8878f13e473b6a504d07ed616ea104e$258b37ed56181ccccd580635bfe8292d35a2f911d7f2e30c16c7c33be36389fc92ad37e693344514c36973cc4890b749be4b46825d81c5869b87fa2b753ae1d2",
-      "photo_url": null,
-      "specialite": null,
-      "sexe": "Homme",
-      "est_actif": true,
-      "assigned_formations": [],
-      "date_creation": "2026-08-01T00:00:00+00:00",
-      "date_modification": null,
-      "photoUrl": null,
-      "assignedFormations": [],
-      "estActif": true,
-      "doit_changer_mot_de_passe": false,
-      "doitChangerMotDePasse": true,
-      "dateCreation": "2026-08-01T00:00:00+00:00",
-      "dateModification": null,
-      "created_at": "2026-08-27T02:00:46.207254+00:00",
-      "updated_at": "2026-08-27T02:00:46.207254+00:00",
-      "must_change_password": true
-    },
-    {
       "id": "it_ibrahim",
       "email": "ibrahim@mntic.ml",
       "nom": "GUITTEYE",
@@ -106,34 +25,8 @@
       "dateModification": null,
       "created_at": "2026-08-27T02:00:46.207254+00:00",
       "updated_at": "2026-08-27T02:00:46.207254+00:00",
-      "must_change_password": true
-    },
-    {
-      "id": "assistant_oumou",
-      "email": "mntictic@gmail.com",
-      "nom": "TRAORE",
-      "prenom": "Oumou",
-      "phone": "+223 76 00 00 04",
-      "matricule": "AST-2026-001",
-      "role": "assistant",
-      "password_hash": "scrypt$9f7db723253287a48c21d035d76d209e$59b6c77148c92d80ac21f1be81b2a64baf3ce9152e02d77f8158f455f09dfc6ba44bbbb345de219fa8676743eca62993343d93254cc23fbb6f48bbc6fc12e614",
-      "photo_url": null,
-      "specialite": null,
-      "sexe": "Femme",
-      "est_actif": true,
-      "assigned_formations": [],
-      "date_creation": "2026-08-01T00:00:00+00:00",
-      "date_modification": null,
-      "photoUrl": null,
-      "assignedFormations": [],
-      "estActif": true,
-      "doit_changer_mot_de_passe": false,
-      "doitChangerMotDePasse": true,
-      "dateCreation": "2026-08-01T00:00:00+00:00",
-      "dateModification": null,
-      "created_at": "2026-08-27T02:00:46.207254+00:00",
-      "updated_at": "2026-08-27T02:00:46.207254+00:00",
-      "must_change_password": true
+      "must_change_password": true,
+      "passwordHash": "scrypt$9361fe8b7170005dbaed0336c60c0c20$f83181d22a7871af8c454431d1be9205fea4b1eddd7b7d6fa21919ffe50650973d2bfec47d8533ac026799b403efba4970e90b3f9c5b178b0bee2b4832970c38"
     },
     {
       "id": "usr_1787505240623",
@@ -160,7 +53,36 @@
       "dateModification": "2026-08-23T17:26:30.269+00:00",
       "created_at": "2026-08-27T02:00:46.207254+00:00",
       "updated_at": "2026-08-27T02:00:46.207254+00:00",
-      "must_change_password": false
+      "must_change_password": false,
+      "passwordHash": "scrypt$98267bfce5d41266959b8203a61fde80$886bb7b110d3cf3493e256f761780cbf810f0314ca10c053e8c9607f087a1720fdc00b2238cc658096af0d2392e208bdf5187b5fbb295a9e495f02fca5632188"
+    },
+    {
+      "id": "assistant_oumou",
+      "email": "mntictic@gmail.com",
+      "nom": "TRAORE",
+      "prenom": "Oumou",
+      "phone": "+223 76 00 00 04",
+      "matricule": "AST-2026-001",
+      "role": "assistant",
+      "password_hash": "scrypt$9f7db723253287a48c21d035d76d209e$59b6c77148c92d80ac21f1be81b2a64baf3ce9152e02d77f8158f455f09dfc6ba44bbbb345de219fa8676743eca62993343d93254cc23fbb6f48bbc6fc12e614",
+      "photo_url": null,
+      "specialite": null,
+      "sexe": "Femme",
+      "est_actif": true,
+      "assigned_formations": [],
+      "date_creation": "2026-08-01T00:00:00+00:00",
+      "date_modification": null,
+      "photoUrl": null,
+      "assignedFormations": [],
+      "estActif": true,
+      "doit_changer_mot_de_passe": false,
+      "doitChangerMotDePasse": true,
+      "dateCreation": "2026-08-01T00:00:00+00:00",
+      "dateModification": null,
+      "created_at": "2026-08-27T02:00:46.207254+00:00",
+      "updated_at": "2026-08-27T02:00:46.207254+00:00",
+      "must_change_password": true,
+      "passwordHash": "scrypt$9f7db723253287a48c21d035d76d209e$59b6c77148c92d80ac21f1be81b2a64baf3ce9152e02d77f8158f455f09dfc6ba44bbbb345de219fa8676743eca62993343d93254cc23fbb6f48bbc6fc12e614"
     },
     {
       "id": "usr_1787449737315",
@@ -223,7 +145,92 @@
       "dateModification": "2026-08-23T01:48:58.6+00:00",
       "created_at": "2026-08-27T02:00:46.207254+00:00",
       "updated_at": "2026-08-27T02:00:46.207254+00:00",
-      "must_change_password": false
+      "must_change_password": false,
+      "passwordHash": "scrypt$75ebc6c45d31093d8eb6cf4d07b6c2de$ac6e3b0fbc34c680610446520310c543907bea130ae634583c594845e58d6e16821f80bf0f0ca226f36a066e07ba432c8725f0457b093d7a50c72a6d47da0595"
+    },
+    {
+      "id": "admin_mamadou",
+      "email": "mamadou@mntic.ml",
+      "nom": "TOURE",
+      "prenom": "Mamadou",
+      "phone": "+223 70 00 00 01",
+      "matricule": "ADM-2026-001",
+      "role": "admin",
+      "password_hash": "scrypt$c5e5f991ec9c516941fc42351de02fb4$da86b7f166a27b824166de2e815131131876a49d95dabb7e9953c90808370d96f6f3b7e6491f331e7e094f3d1025a5f531fff9d115d3c8cc587ba8199e61db99",
+      "photo_url": null,
+      "specialite": null,
+      "sexe": "Homme",
+      "est_actif": true,
+      "assigned_formations": [],
+      "date_creation": "2026-08-01T00:00:00+00:00",
+      "date_modification": "2026-08-30T07:53:53.522+00:00",
+      "photoUrl": null,
+      "assignedFormations": [],
+      "estActif": true,
+      "doit_changer_mot_de_passe": false,
+      "doitChangerMotDePasse": false,
+      "dateCreation": "2026-08-01T00:00:00+00:00",
+      "dateModification": "2026-08-31T01:15:57.466Z",
+      "created_at": "2026-08-27T02:00:46.207254+00:00",
+      "updated_at": "2026-08-27T02:00:46.207254+00:00",
+      "must_change_password": false,
+      "passwordHash": "scrypt$48f594f814707c6dc35bd07fabffc215$ec46b8d3b7bcf593a8c9c78084ee30955bb092f43d72f5f5c18a29860f02b418f5a38284560ec2f7ad41e644d415f7fbbfd945147131c6b2f191823207fed3a9"
+    },
+    {
+      "id": "dg_souleymane",
+      "email": "soulbico@mntic.ml",
+      "nom": "TRAORE",
+      "prenom": "SOULEYMANE",
+      "phone": "+223 76 00 00 01",
+      "matricule": "DIR-2026-001",
+      "role": "dg",
+      "password_hash": "scrypt$ce1b2d9502ee0516f7a213f13c4f3058$3f965b5bc017a04fee551476b042da6993a4ea93b9cda031207c38f88a0267633e6140333434609c69737dad2e8b9bd6145c5c0b33461ea08fe430151db5459c",
+      "photo_url": null,
+      "specialite": null,
+      "sexe": "Homme",
+      "est_actif": true,
+      "assigned_formations": [],
+      "date_creation": "2026-08-01T00:00:00+00:00",
+      "date_modification": null,
+      "photoUrl": null,
+      "assignedFormations": [],
+      "estActif": true,
+      "doit_changer_mot_de_passe": false,
+      "doitChangerMotDePasse": true,
+      "dateCreation": "2026-08-01T00:00:00+00:00",
+      "dateModification": null,
+      "created_at": "2026-08-27T02:00:46.207254+00:00",
+      "updated_at": "2026-08-27T02:00:46.207254+00:00",
+      "must_change_password": true,
+      "passwordHash": "scrypt$ce1b2d9502ee0516f7a213f13c4f3058$3f965b5bc017a04fee551476b042da6993a4ea93b9cda031207c38f88a0267633e6140333434609c69737dad2e8b9bd6145c5c0b33461ea08fe430151db5459c"
+    },
+    {
+      "id": "daf_amadou",
+      "email": "amadou@mntic.ml",
+      "nom": "TALL",
+      "prenom": "Amadou",
+      "phone": "+223 76 00 00 02",
+      "matricule": "DAF-2026-001",
+      "role": "daf",
+      "password_hash": "scrypt$c8878f13e473b6a504d07ed616ea104e$258b37ed56181ccccd580635bfe8292d35a2f911d7f2e30c16c7c33be36389fc92ad37e693344514c36973cc4890b749be4b46825d81c5869b87fa2b753ae1d2",
+      "photo_url": null,
+      "specialite": null,
+      "sexe": "Homme",
+      "est_actif": true,
+      "assigned_formations": [],
+      "date_creation": "2026-08-01T00:00:00+00:00",
+      "date_modification": null,
+      "photoUrl": null,
+      "assignedFormations": [],
+      "estActif": true,
+      "doit_changer_mot_de_passe": false,
+      "doitChangerMotDePasse": true,
+      "dateCreation": "2026-08-01T00:00:00+00:00",
+      "dateModification": null,
+      "created_at": "2026-08-27T02:00:46.207254+00:00",
+      "updated_at": "2026-08-27T02:00:46.207254+00:00",
+      "must_change_password": true,
+      "passwordHash": "scrypt$c8878f13e473b6a504d07ed616ea104e$258b37ed56181ccccd580635bfe8292d35a2f911d7f2e30c16c7c33be36389fc92ad37e693344514c36973cc4890b749be4b46825d81c5869b87fa2b753ae1d2"
     },
     {
       "id": "etudiant_1787880896668",
@@ -278,7 +285,8 @@
       "dateModification": "2026-08-28T01:34:56.668+00:00",
       "created_at": "2026-08-28T14:20:38.7206+00:00",
       "updated_at": "2026-08-28T14:20:38.7206+00:00",
-      "must_change_password": false
+      "must_change_password": false,
+      "passwordHash": null
     },
     {
       "id": "etudiant_1787878639578",
@@ -353,7 +361,8 @@
       "dateModification": "2026-08-28T00:57:19.578+00:00",
       "created_at": "2026-08-28T14:20:38.520494+00:00",
       "updated_at": "2026-08-28T14:20:38.520494+00:00",
-      "must_change_password": false
+      "must_change_password": false,
+      "passwordHash": null
     },
     {
       "id": "etudiant_1787967449385",
@@ -408,7 +417,8 @@
       "dateModification": "2026-08-29T01:37:29.385+00:00",
       "created_at": "2026-08-29T01:37:29.522858+00:00",
       "updated_at": "2026-08-29T01:37:29.522858+00:00",
-      "must_change_password": false
+      "must_change_password": false,
+      "passwordHash": "00000000"
     },
     {
       "id": "admin_malintic",
@@ -435,7 +445,8 @@
       "dateModification": null,
       "created_at": "2026-08-30T01:38:38.002111+00:00",
       "updated_at": "2026-08-30T01:38:38.002111+00:00",
-      "must_change_password": true
+      "must_change_password": true,
+      "passwordHash": null
     },
     {
       "id": "admin_1787693051652",
@@ -546,14 +557,15 @@
       "dateModification": "2026-08-28T02:12:23.865+00:00",
       "created_at": "2026-08-28T02:12:24.868681+00:00",
       "updated_at": "2026-08-28T02:12:24.868681+00:00",
-      "must_change_password": false
+      "must_change_password": false,
+      "passwordHash": null
     }
   ],
   "formations": [
     {
       "id": "form_2",
       "titre": "Développement Web Fullstack React & Node.js",
-      "description": "Formation complète aux technologies Web modernes : Frontend React.js, Backend Node.js/Express, API RESTful et bases de données SQL & NoSQL.",
+      "description": "Formation complète pour concevoir des applications web modernes et évolutives.",
       "prix": 180000,
       "modules": [
         "HTML5/CSS3/JavaScript ES6",
@@ -584,16 +596,16 @@
       "nombre_inscrits": 0,
       "date_creation": "2026-08-01T00:00:00+00:00",
       "module_prices": {
-        "HTML5/CSS3/JavaScript ES6": 40000,
-        "React.js & Hooks": 45000,
-        "Node.js & Express": 45000,
-        "Bases de données SQL & NoSQL": 35000
+        "React.js & Hooks": 55000,
+        "Node.js & Express": 50000,
+        "HTML5/CSS3/JavaScript ES6": 35000,
+        "Bases de données SQL & NoSQL": 45000
       },
       "modulePrices": {
-        "HTML5/CSS3/JavaScript ES6": 40000,
-        "React.js & Hooks": 45000,
-        "Node.js & Express": 45000,
-        "Bases de données SQL & NoSQL": 35000
+        "React.js & Hooks": 55000,
+        "Node.js & Express": 50000,
+        "HTML5/CSS3/JavaScript ES6": 35000,
+        "Bases de données SQL & NoSQL": 45000
       },
       "moduleFormateurIds": {},
       "modules_bonus": [],
@@ -624,7 +636,7 @@
     {
       "id": "cYATeSYfngBQmK7gTcoB",
       "titre": "Système de Vidéosurveillance (SVS)",
-      "description": "Formation pratique et approfondie à l'installation, au paramétrage et à la maintenance des systèmes de vidéosurveillance moderne.",
+      "description": "Formation pratique sur les systèmes de vidéosurveillance analogique et IP.",
       "prix": 80000,
       "modules": [
         "svs · analogique",
@@ -632,10 +644,10 @@
       ],
       "formateur_ids": [],
       "module_formateur_ids": {},
-      "type": "mixte",
+      "type": "presentielle",
       "status": "enCours",
       "duree_semaines": 4,
-      "duree_heures": "40h",
+      "duree_heures": "30h",
       "horaires": [
         {
           "jour": "Samedi & Dimanche",
@@ -653,12 +665,12 @@
       "nombre_inscrits": 0,
       "date_creation": "2026-08-01T00:00:00+00:00",
       "module_prices": {
-        "svs · analogique": 40000,
-        "svs · ip": 40000
+        "svs · ip": 45000,
+        "svs · analogique": 45000
       },
       "modulePrices": {
-        "svs · analogique": 40000,
-        "svs · ip": 40000
+        "svs · ip": 45000,
+        "svs · analogique": 45000
       },
       "moduleFormateurIds": {},
       "modules_bonus": [],
@@ -671,7 +683,7 @@
       "prix_en_ligne": 60000,
       "prixEnLigne": 60000,
       "dureeSemaines": 4,
-      "dureeHeures": "40h",
+      "dureeHeures": "30h",
       "date_debut": "2026-08-20T00:00:00+00:00",
       "dateDebut": "2026-08-20T00:00:00+00:00",
       "date_fin": "2026-09-20T00:00:00+00:00",
@@ -689,7 +701,7 @@
     {
       "id": "form_1",
       "titre": "Développement Mobile Flutter",
-      "description": "Conception et publication d'applications mobiles performantes multiplateformes (Android & iOS) avec Flutter, Dart et backend REST/Firebase.",
+      "description": "Apprenez à créer des applications iOS et Android performantes et réactives avec Flutter et Dart.",
       "prix": 150000,
       "modules": [
         "Bases de Dart",
@@ -700,9 +712,9 @@
       "formateur_ids": [],
       "module_formateur_ids": {},
       "type": "mixte",
-      "status": "programmee",
-      "duree_semaines": 12,
-      "duree_heures": "80h",
+      "status": "enCours",
+      "duree_semaines": 8,
+      "duree_heures": "40h",
       "horaires": [
         {
           "jour": "Mardi & Jeudi",
@@ -721,15 +733,15 @@
       "date_creation": "2026-08-01T00:00:00+00:00",
       "module_prices": {
         "Bases de Dart": 35000,
-        "Widgets et UI Material 3": 35000,
-        "Gestion d'état": 35000,
-        "Intégration API REST": 35000
+        "Gestion d'état": 40000,
+        "Intégration API REST": 40000,
+        "Widgets et UI Material 3": 45000
       },
       "modulePrices": {
         "Bases de Dart": 35000,
-        "Widgets et UI Material 3": 35000,
-        "Gestion d'état": 35000,
-        "Intégration API REST": 35000
+        "Gestion d'état": 40000,
+        "Intégration API REST": 40000,
+        "Widgets et UI Material 3": 45000
       },
       "moduleFormateurIds": {},
       "modules_bonus": [],
@@ -741,8 +753,8 @@
       "formateurIds": [],
       "prix_en_ligne": 120000,
       "prixEnLigne": 120000,
-      "dureeSemaines": 12,
-      "dureeHeures": "80h",
+      "dureeSemaines": 8,
+      "dureeHeures": "40h",
       "date_debut": "2026-09-01T00:00:00+00:00",
       "dateDebut": "2026-09-01T00:00:00+00:00",
       "date_fin": "2026-11-30T00:00:00+00:00",
@@ -764,24 +776,24 @@
       "prix": 100000,
       "modules": [
         "Base de données + IA",
-        "Initiation en Windows Server",
-        "Initiation au Réseau téléphonique Voip",
-        "Initiation en Sécurité Informatique",
+        "Initiation à Windows Server",
+        "Initiation au Réseau Téléphonique VoIP",
+        "Initiation à la Sécurité Informatique",
         "Maintenance Informatique",
-        "Système de vidéosurveillance Analogique",
+        "Système de Vidéosurveillance Analogique",
         "Initiation au Réseau Informatique",
         "Initiation au Système de Panneau Solaire (SPS)",
         "Adobe Photoshop",
         "Adobe Première Pro",
-        "CapCut / VN + IA (Vidéo)",
+        "CapCut / VN + IA (Vidéos)",
         "Canva + IA (Affiches)",
         "Sage 100 comptabilité Générale",
-        "IMITECH (Initiation en entrepreneuriat: Business Model Canvas...)",
+        "IMITECH (Initiation en entrepreneuriat : Business Model Canvas)",
         "Word et Excel",
         "Community Management",
         "Intelligence Artificielle (IA)",
         "Internet des Objets (IOT)",
-        "Création d'applications (Flutter – Dart – Firebase...)"
+        "Création d’applications (Flutter)"
       ],
       "formateur_ids": [],
       "module_formateur_ids": {},
@@ -806,46 +818,46 @@
       "nombre_inscrits": 0,
       "date_creation": "2026-08-01T00:00:00+00:00",
       "module_prices": {
-        "Base de données + IA": 33000,
-        "Initiation à Windows Server": 28000,
-        "Initiation au Réseau Téléphonique VoIP": 26000,
-        "Initiation à la Sécurité Informatique": 30000,
-        "Maintenance Informatique": 29000,
-        "Système de Vidéosurveillance Analogique": 27000,
-        "Initiation au Réseau Informatique": 28000,
-        "Initiation au Système de Panneau Solaire (SPS)": 28000,
+        "Word et Excel": 20000,
         "Adobe Photoshop": 22000,
         "Adobe Première Pro": 22000,
-        "CapCut / VN + IA (Vidéos)": 22000,
-        "Canva + IA (Affiches)": 20000,
-        "Sage 100 comptabilité Générale": 28000,
-        "IMITECH (Initiation en entrepreneuriat : Business Model Canvas)": 25000,
-        "Word et Excel": 20000,
         "Community Management": 23000,
-        "Intelligence Artificielle (IA)": 32000,
+        "Base de données + IA": 33000,
+        "Canva + IA (Affiches)": 20000,
+        "Maintenance Informatique": 29000,
         "Internet des Objets (IOT)": 28000,
-        "Création d’applications (Flutter)": 33000
+        "CapCut / VN + IA (Vidéos)": 22000,
+        "Initiation à Windows Server": 28000,
+        "Intelligence Artificielle (IA)": 32000,
+        "Sage 100 comptabilité Générale": 28000,
+        "Initiation au Réseau Informatique": 28000,
+        "Création d’applications (Flutter)": 33000,
+        "Initiation à la Sécurité Informatique": 30000,
+        "Initiation au Réseau Téléphonique VoIP": 26000,
+        "Système de Vidéosurveillance Analogique": 27000,
+        "Initiation au Système de Panneau Solaire (SPS)": 28000,
+        "IMITECH (Initiation en entrepreneuriat : Business Model Canvas)": 25000
       },
       "modulePrices": {
-        "Base de données + IA": 33000,
-        "Initiation à Windows Server": 28000,
-        "Initiation au Réseau Téléphonique VoIP": 26000,
-        "Initiation à la Sécurité Informatique": 30000,
-        "Maintenance Informatique": 29000,
-        "Système de Vidéosurveillance Analogique": 27000,
-        "Initiation au Réseau Informatique": 28000,
-        "Initiation au Système de Panneau Solaire (SPS)": 28000,
+        "Word et Excel": 20000,
         "Adobe Photoshop": 22000,
         "Adobe Première Pro": 22000,
-        "CapCut / VN + IA (Vidéos)": 22000,
-        "Canva + IA (Affiches)": 20000,
-        "Sage 100 comptabilité Générale": 28000,
-        "IMITECH (Initiation en entrepreneuriat : Business Model Canvas)": 25000,
-        "Word et Excel": 20000,
         "Community Management": 23000,
-        "Intelligence Artificielle (IA)": 32000,
+        "Base de données + IA": 33000,
+        "Canva + IA (Affiches)": 20000,
+        "Maintenance Informatique": 29000,
         "Internet des Objets (IOT)": 28000,
-        "Création d’applications (Flutter)": 33000
+        "CapCut / VN + IA (Vidéos)": 22000,
+        "Initiation à Windows Server": 28000,
+        "Intelligence Artificielle (IA)": 32000,
+        "Sage 100 comptabilité Générale": 28000,
+        "Initiation au Réseau Informatique": 28000,
+        "Création d’applications (Flutter)": 33000,
+        "Initiation à la Sécurité Informatique": 30000,
+        "Initiation au Réseau Téléphonique VoIP": 26000,
+        "Système de Vidéosurveillance Analogique": 27000,
+        "Initiation au Système de Panneau Solaire (SPS)": 28000,
+        "IMITECH (Initiation en entrepreneuriat : Business Model Canvas)": 25000
       },
       "moduleFormateurIds": {},
       "modules_bonus": [
@@ -904,10 +916,10 @@
       "date_inscription": "2026-08-28T23:19:34.604+00:00",
       "date_acceptation": null,
       "apprenant_id": null,
-      "apprenantId": null,
-      "etudiantId": null,
+      "apprenantId": "",
+      "etudiantId": "",
       "formationId": "09cKUMEJm3UnRztD4Jm2",
-      "dateInscription": "2026-08-28T23:19:34.604+00:00",
+      "dateInscription": "2026-08-28T23:19:34.604Z",
       "paiementId": null,
       "paiementEffectue": false,
       "dateAcceptation": null,
@@ -989,9 +1001,9 @@
       "apprenantId": "etudiant_1787878639578",
       "etudiantId": "etudiant_1787878639578",
       "formationId": "09cKUMEJm3UnRztD4Jm2",
-      "dateInscription": "2026-08-28T00:56:24.498+00:00",
+      "dateInscription": "2026-08-28T00:56:24.498Z",
       "paiementId": null,
-      "paiementEffectue": false,
+      "paiementEffectue": true,
       "dateAcceptation": "2026-08-28T00:57:19.578+00:00",
       "motifRejet": null,
       "typeFormation": "FormationType.mixte",
@@ -1013,9 +1025,9 @@
       "prenom": "In explicabo Dolore",
       "email": "nicujicot@mailinator.com",
       "telephone": "+1 (947) 591-4322",
-      "sexe": "Homme",
+      "sexe": null,
       "type_formation": "presentiel",
-      "description": "Obcaecati pariatur ",
+      "description": "Obcaecati pariatur",
       "modules": [
         "svs · ip"
       ],
@@ -1026,12 +1038,12 @@
       "date_inscription": "2026-08-29T01:37:02.356+00:00",
       "date_acceptation": "2026-08-29T01:37:29.385+00:00",
       "apprenant_id": null,
-      "apprenantId": null,
+      "apprenantId": "etudiant_1787967449385",
       "etudiantId": "etudiant_1787967449385",
       "formationId": "cYATeSYfngBQmK7gTcoB",
-      "dateInscription": "2026-08-29T01:37:02.356+00:00",
+      "dateInscription": "2026-08-29T01:37:02.356Z",
       "paiementId": null,
-      "paiementEffectue": false,
+      "paiementEffectue": true,
       "dateAcceptation": "2026-08-29T01:37:29.385+00:00",
       "motifRejet": null,
       "typeFormation": "presentiel",
@@ -1083,6 +1095,45 @@
     }
   ],
   "payments": [
+    {
+      "id": "pay_1787967476927",
+      "inscription_id": "insc_1787967422356",
+      "etudiant_id": "etudiant_1787967449385",
+      "montant": 40000,
+      "remise": 0,
+      "tranche_numero": 1,
+      "nombre_tranches": 2,
+      "status": "effectue",
+      "methode": "especes",
+      "reference": "REC-7476927",
+      "recu_par": null,
+      "date_paiement": "2026-08-29T01:37:56.927+00:00",
+      "inscriptionId": "insc_1787967422356",
+      "apprenant_id": null,
+      "apprenantId": null,
+      "etudiantId": "etudiant_1787967449385",
+      "formation_id": "cYATeSYfngBQmK7gTcoB",
+      "formationId": "cYATeSYfngBQmK7gTcoB",
+      "date_creation": "2026-08-29T01:37:56.927+00:00",
+      "dateCreation": "2026-08-29T01:37:56.927+00:00",
+      "date_effectuation": "2026-08-29T01:37:56.927+00:00",
+      "dateEffectuation": "2026-08-29T01:37:57.009269+00:00",
+      "reference_transaction": null,
+      "referenceTransaction": null,
+      "motif_echec": null,
+      "motifEchec": null,
+      "motif": "Acompte / Inscription",
+      "module_id": null,
+      "moduleId": null,
+      "trancheNumero": 1,
+      "nombreTranches": 2,
+      "date_echeance": null,
+      "dateEcheance": null,
+      "created_at": "2026-08-29T01:37:57.009269+00:00",
+      "updated_at": "2026-08-29T01:37:57.009269+00:00",
+      "recuPar": null,
+      "datePaiement": "2026-08-29T01:37:56.927+00:00"
+    },
     {
       "id": "pay_1787878777050",
       "inscription_id": "insc_web_1787878584498",
@@ -1279,138 +1330,67 @@
       "datePaiement": null
     },
     {
-      "id": "pay_1787967476927",
-      "inscription_id": "insc_1787967422356",
-      "etudiant_id": "etudiant_1787967449385",
+      "id": "pay_1788139669541",
+      "inscriptionId": "insc_test_moussa",
+      "apprenantId": "",
+      "etudiantId": "",
+      "formationId": "09cKUMEJm3UnRztD4Jm2",
       "montant": 40000,
-      "remise": 0,
-      "tranche_numero": 1,
-      "nombre_tranches": 2,
       "status": "effectue",
-      "methode": "especes",
-      "reference": "REC-7476927",
-      "recu_par": null,
-      "date_paiement": "2026-08-29T01:37:56.927+00:00",
-      "inscriptionId": "insc_1787967422356",
-      "apprenant_id": null,
-      "apprenantId": null,
-      "etudiantId": "etudiant_1787967449385",
-      "formation_id": "cYATeSYfngBQmK7gTcoB",
-      "formationId": "cYATeSYfngBQmK7gTcoB",
-      "date_creation": "2026-08-29T01:37:56.927+00:00",
-      "dateCreation": "2026-08-29T01:37:56.927+00:00",
-      "date_effectuation": "2026-08-29T01:37:56.927+00:00",
-      "dateEffectuation": "2026-08-29T01:37:57.009269+00:00",
-      "reference_transaction": null,
-      "referenceTransaction": null,
-      "motif_echec": null,
+      "methode": "orangeMoney",
+      "dateCreation": "2026-08-31T01:27:49.541",
+      "dateEffectuation": "2026-08-31T01:27:49.541",
+      "referenceTransaction": "REC-9669541",
       "motifEchec": null,
       "motif": "Acompte / Inscription",
-      "module_id": null,
       "moduleId": null,
       "trancheNumero": 1,
+      "nombreTranches": 3,
+      "remise": 0,
+      "dateEcheance": null
+    },
+    {
+      "id": "pay_1788139700424",
+      "inscriptionId": "insc_web_1787878584498",
+      "apprenantId": "etudiant_1787878639578",
+      "etudiantId": "etudiant_1787878639578",
+      "formationId": "09cKUMEJm3UnRztD4Jm2",
+      "montant": 50000,
+      "status": "effectue",
+      "methode": "orangeMoney",
+      "dateCreation": "2026-08-31T01:28:20.424",
+      "dateEffectuation": "2026-08-31T01:28:20.424",
+      "referenceTransaction": "REC-9700424",
+      "motifEchec": null,
+      "motif": "Versement 2",
+      "moduleId": null,
+      "trancheNumero": 2,
+      "nombreTranches": 4,
+      "remise": 0,
+      "dateEcheance": null
+    },
+    {
+      "id": "pay_1788140659648",
+      "inscriptionId": "insc_1787967422356",
+      "apprenantId": "etudiant_1787967449385",
+      "etudiantId": "etudiant_1787967449385",
+      "formationId": "cYATeSYfngBQmK7gTcoB",
+      "montant": 5000,
+      "status": "effectue",
+      "methode": "orangeMoney",
+      "dateCreation": "2026-08-31T01:44:19.648",
+      "dateEffectuation": "2026-08-31T01:44:19.648",
+      "referenceTransaction": "REC-0659648",
+      "motifEchec": null,
+      "motif": "Versement 2",
+      "moduleId": null,
+      "trancheNumero": 2,
       "nombreTranches": 2,
-      "date_echeance": null,
-      "dateEcheance": null,
-      "created_at": "2026-08-29T01:37:57.009269+00:00",
-      "updated_at": "2026-08-29T01:37:57.009269+00:00",
-      "recuPar": null,
-      "datePaiement": "2026-08-29T01:37:56.927+00:00"
+      "remise": 0,
+      "dateEcheance": null
     }
   ],
   "notifications": [
-    {
-      "id": "notif_insc_1787915246360084",
-      "title": "Nouvelle Inscription",
-      "description": "Moussa Traore a soumis une inscription pour Stage de Formation Professionnelle - SFP5.",
-      "image_url": null,
-      "imageUrl": null,
-      "sender_id": "",
-      "senderId": "system",
-      "sender_email": "",
-      "senderEmail": "system@malintic.ml",
-      "target_roles": [],
-      "targetRoles": [
-        "admin",
-        "assistant",
-        "dg",
-        "comptable"
-      ],
-      "target_user_ids": [],
-      "targetUserIds": [],
-      "audience": [
-        "admin",
-        "assistant"
-      ],
-      "read_by": [],
-      "readBy": [],
-      "reminder_count": 0,
-      "reminderCount": 0,
-      "created_at": "2026-08-28T11:07:26.812396+00:00",
-      "createdAt": "2026-08-28T11:07:26.360084+00:00",
-      "updated_at": "2026-08-28T11:07:26.812396+00:00",
-      "updatedAt": "2026-08-28T11:07:26.360084+00:00"
-    },
-    {
-      "id": "notif_1787921203893652",
-      "title": "Inscription validée",
-      "description": "Votre inscription à Développement Web Fullstack React & Node.js a été validée.",
-      "image_url": null,
-      "imageUrl": null,
-      "sender_id": "admin_malintic",
-      "senderId": "",
-      "sender_email": "admin@malintic.ml",
-      "senderEmail": "",
-      "target_roles": [
-        "apprenant"
-      ],
-      "targetRoles": [],
-      "target_user_ids": [
-        "etudiant_1787921203893"
-      ],
-      "targetUserIds": [],
-      "audience": [
-        "apprenant"
-      ],
-      "read_by": [],
-      "readBy": [],
-      "reminder_count": 0,
-      "reminderCount": 0,
-      "created_at": "2026-08-28T12:46:43.893652+00:00",
-      "createdAt": "2026-08-28T12:46:47.788235+00:00",
-      "updated_at": "2026-08-28T12:46:43.893652+00:00",
-      "updatedAt": "2026-08-28T12:46:47.788235+00:00"
-    },
-    {
-      "id": "notif_1787924169400489",
-      "title": "Inscription validée",
-      "description": "Votre inscription à Développement Web Fullstack React & Node.js a été validée.",
-      "image_url": null,
-      "imageUrl": null,
-      "sender_id": "admin_malintic",
-      "senderId": "",
-      "sender_email": "admin@malintic.ml",
-      "senderEmail": "",
-      "target_roles": [
-        "apprenant"
-      ],
-      "targetRoles": [],
-      "target_user_ids": [
-        "etudiant_1787924169400"
-      ],
-      "targetUserIds": [],
-      "audience": [
-        "apprenant"
-      ],
-      "read_by": [],
-      "readBy": [],
-      "reminder_count": 0,
-      "reminderCount": 0,
-      "created_at": "2026-08-28T13:36:09.400489+00:00",
-      "createdAt": "2026-08-28T13:36:11.006057+00:00",
-      "updated_at": "2026-08-28T13:36:09.400489+00:00",
-      "updatedAt": "2026-08-28T13:36:11.006057+00:00"
-    },
     {
       "id": "notif_1787693059579000",
       "title": "Inscription validée",
@@ -1440,36 +1420,6 @@
       "createdAt": "2026-08-25T21:24:19.579+00:00",
       "updated_at": "2026-08-28T02:11:20.815801+00:00",
       "updatedAt": "2026-08-25T21:24:19.579+00:00"
-    },
-    {
-      "id": "notif_stud_1787795079178000",
-      "title": "Confirmation de versement",
-      "description": "Votre paiement de 10000 FCFA pour SFP 5 a été validé avec succès.",
-      "image_url": null,
-      "imageUrl": null,
-      "sender_id": "",
-      "senderId": "comptabilite",
-      "sender_email": "",
-      "senderEmail": "comptabilite@mali-ntic.ml",
-      "target_roles": [],
-      "targetRoles": [
-        "etudiant"
-      ],
-      "target_user_ids": [],
-      "targetUserIds": [
-        "admin_1787693051652"
-      ],
-      "audience": [
-        "mamadouk321@gmail.com"
-      ],
-      "read_by": [],
-      "readBy": [],
-      "reminder_count": 0,
-      "reminderCount": 0,
-      "created_at": "2026-08-28T02:11:21.645637+00:00",
-      "createdAt": "2026-08-27T01:44:39.178+00:00",
-      "updated_at": "2026-08-28T02:11:21.645637+00:00",
-      "updatedAt": "2026-08-27T01:44:39.178+00:00"
     },
     {
       "id": "notif_insc_1787921203208847",
@@ -1947,7 +1897,7 @@
       "updatedAt": "2026-08-28T11:17:31.027324+00:00"
     },
     {
-      "id": "notif_1787924661602719",
+      "id": "notif_1787921203893652",
       "title": "Inscription validée",
       "description": "Votre inscription à Développement Web Fullstack React & Node.js a été validée.",
       "image_url": null,
@@ -1961,7 +1911,7 @@
       ],
       "targetRoles": [],
       "target_user_ids": [
-        "etudiant_1787924661602"
+        "etudiant_1787921203893"
       ],
       "targetUserIds": [],
       "audience": [
@@ -1971,28 +1921,58 @@
       "readBy": [],
       "reminder_count": 0,
       "reminderCount": 0,
-      "created_at": "2026-08-28T13:44:21.602719+00:00",
-      "createdAt": "2026-08-28T13:44:23.019963+00:00",
-      "updated_at": "2026-08-28T13:44:21.602719+00:00",
-      "updatedAt": "2026-08-28T13:44:23.019963+00:00"
+      "created_at": "2026-08-28T12:46:43.893652+00:00",
+      "createdAt": "2026-08-28T12:46:47.788235+00:00",
+      "updated_at": "2026-08-28T12:46:43.893652+00:00",
+      "updatedAt": "2026-08-28T12:46:47.788235+00:00"
     },
     {
-      "id": "notif_insc_1787942776434512",
-      "title": "Nouvelle Inscription",
-      "description": "Nouvel Etudiant a soumis une inscription pour Développement Web Fullstack React & Node.js.",
+      "id": "notif_stud_1787795079178000",
+      "title": "Confirmation de versement",
+      "description": "Votre paiement de 10000 FCFA pour SFP 5 a été validé avec succès.",
       "image_url": null,
       "imageUrl": null,
-      "sender_id": "system",
-      "senderId": "",
-      "sender_email": "system@malintic.ml",
-      "senderEmail": "",
-      "target_roles": [
+      "sender_id": "",
+      "senderId": "comptabilite",
+      "sender_email": "",
+      "senderEmail": "comptabilite@mali-ntic.ml",
+      "target_roles": [],
+      "targetRoles": [
+        "etudiant"
+      ],
+      "target_user_ids": [],
+      "targetUserIds": [
+        "admin_1787693051652"
+      ],
+      "audience": [
+        "mamadouk321@gmail.com"
+      ],
+      "read_by": [],
+      "readBy": [],
+      "reminder_count": 0,
+      "reminderCount": 0,
+      "created_at": "2026-08-28T02:11:21.645637+00:00",
+      "createdAt": "2026-08-27T01:44:39.178+00:00",
+      "updated_at": "2026-08-28T02:11:21.645637+00:00",
+      "updatedAt": "2026-08-27T01:44:39.178+00:00"
+    },
+    {
+      "id": "notif_insc_1787915246360084",
+      "title": "Nouvelle Inscription",
+      "description": "Moussa Traore a soumis une inscription pour Stage de Formation Professionnelle - SFP5.",
+      "image_url": null,
+      "imageUrl": null,
+      "sender_id": "",
+      "senderId": "system",
+      "sender_email": "",
+      "senderEmail": "system@malintic.ml",
+      "target_roles": [],
+      "targetRoles": [
         "admin",
         "assistant",
         "dg",
         "comptable"
       ],
-      "targetRoles": [],
       "target_user_ids": [],
       "targetUserIds": [],
       "audience": [
@@ -2003,10 +1983,40 @@
       "readBy": [],
       "reminder_count": 0,
       "reminderCount": 0,
-      "created_at": "2026-08-28T18:46:16.434512+00:00",
-      "createdAt": "2026-08-28T18:46:16.986259+00:00",
-      "updated_at": "2026-08-28T18:46:16.434512+00:00",
-      "updatedAt": "2026-08-28T18:46:16.986259+00:00"
+      "created_at": "2026-08-28T11:07:26.812396+00:00",
+      "createdAt": "2026-08-28T11:07:26.360084+00:00",
+      "updated_at": "2026-08-28T11:07:26.812396+00:00",
+      "updatedAt": "2026-08-28T11:07:26.360084+00:00"
+    },
+    {
+      "id": "notif_1787924169400489",
+      "title": "Inscription validée",
+      "description": "Votre inscription à Développement Web Fullstack React & Node.js a été validée.",
+      "image_url": null,
+      "imageUrl": null,
+      "sender_id": "admin_malintic",
+      "senderId": "",
+      "sender_email": "admin@malintic.ml",
+      "senderEmail": "",
+      "target_roles": [
+        "apprenant"
+      ],
+      "targetRoles": [],
+      "target_user_ids": [
+        "etudiant_1787924169400"
+      ],
+      "targetUserIds": [],
+      "audience": [
+        "apprenant"
+      ],
+      "read_by": [],
+      "readBy": [],
+      "reminder_count": 0,
+      "reminderCount": 0,
+      "created_at": "2026-08-28T13:36:09.400489+00:00",
+      "createdAt": "2026-08-28T13:36:11.006057+00:00",
+      "updated_at": "2026-08-28T13:36:09.400489+00:00",
+      "updatedAt": "2026-08-28T13:36:11.006057+00:00"
     },
     {
       "id": "notif_1787925165420871",
@@ -2628,6 +2638,68 @@
       "updatedAt": "2026-08-28T18:35:19.2+00:00"
     },
     {
+      "id": "notif_insc_1787942776434512",
+      "title": "Nouvelle Inscription",
+      "description": "Nouvel Etudiant a soumis une inscription pour Développement Web Fullstack React & Node.js.",
+      "image_url": null,
+      "imageUrl": null,
+      "sender_id": "system",
+      "senderId": "",
+      "sender_email": "system@malintic.ml",
+      "senderEmail": "",
+      "target_roles": [
+        "admin",
+        "assistant",
+        "dg",
+        "comptable"
+      ],
+      "targetRoles": [],
+      "target_user_ids": [],
+      "targetUserIds": [],
+      "audience": [
+        "admin",
+        "assistant"
+      ],
+      "read_by": [],
+      "readBy": [],
+      "reminder_count": 0,
+      "reminderCount": 0,
+      "created_at": "2026-08-28T18:46:16.434512+00:00",
+      "createdAt": "2026-08-28T18:46:16.986259+00:00",
+      "updated_at": "2026-08-28T18:46:16.434512+00:00",
+      "updatedAt": "2026-08-28T18:46:16.986259+00:00"
+    },
+    {
+      "id": "notif_1787924661602719",
+      "title": "Inscription validée",
+      "description": "Votre inscription à Développement Web Fullstack React & Node.js a été validée.",
+      "image_url": null,
+      "imageUrl": null,
+      "sender_id": "admin_malintic",
+      "senderId": "",
+      "sender_email": "admin@malintic.ml",
+      "senderEmail": "",
+      "target_roles": [
+        "apprenant"
+      ],
+      "targetRoles": [],
+      "target_user_ids": [
+        "etudiant_1787924661602"
+      ],
+      "targetUserIds": [],
+      "audience": [
+        "apprenant"
+      ],
+      "read_by": [],
+      "readBy": [],
+      "reminder_count": 0,
+      "reminderCount": 0,
+      "created_at": "2026-08-28T13:44:21.602719+00:00",
+      "createdAt": "2026-08-28T13:44:23.019963+00:00",
+      "updated_at": "2026-08-28T13:44:21.602719+00:00",
+      "updatedAt": "2026-08-28T13:44:23.019963+00:00"
+    },
+    {
       "id": "notif_pay_1787535610959000",
       "title": "Paiement reçu",
       "description": "Versement de 15000 FCFA reçu de Astan SIDIBE (SFP 5).",
@@ -2660,36 +2732,6 @@
       "createdAt": "2026-08-24T01:40:10.959+00:00",
       "updated_at": "2026-08-29T01:28:48.845688+00:00",
       "updatedAt": "2026-08-25T02:24:48.7+00:00"
-    },
-    {
-      "id": "notif_stud_1787535611224000",
-      "title": "Confirmation de versement",
-      "description": "Votre paiement de 15000 FCFA pour SFP 5 a été validé avec succès.",
-      "image_url": null,
-      "imageUrl": null,
-      "sender_id": "",
-      "senderId": "comptabilite",
-      "sender_email": "",
-      "senderEmail": "comptabilite@mali-ntic.ml",
-      "target_roles": [],
-      "targetRoles": [
-        "etudiant"
-      ],
-      "target_user_ids": [],
-      "targetUserIds": [
-        "etudiant_1787526602439"
-      ],
-      "audience": [
-        "astan@gmail.com"
-      ],
-      "read_by": [],
-      "readBy": [],
-      "reminder_count": 0,
-      "reminderCount": 0,
-      "created_at": "2026-08-29T01:28:48.965507+00:00",
-      "createdAt": "2026-08-24T01:40:11.224+00:00",
-      "updated_at": "2026-08-29T01:28:48.965507+00:00",
-      "updatedAt": "2026-08-24T01:40:11.224+00:00"
     },
     {
       "id": "notif_pay_1787535692543000",
@@ -3354,6 +3396,36 @@
       "updatedAt": "2026-08-23T23:13:50.207+00:00"
     },
     {
+      "id": "notif_stud_1787535611224000",
+      "title": "Confirmation de versement",
+      "description": "Votre paiement de 15000 FCFA pour SFP 5 a été validé avec succès.",
+      "image_url": null,
+      "imageUrl": null,
+      "sender_id": "",
+      "senderId": "comptabilite",
+      "sender_email": "",
+      "senderEmail": "comptabilite@mali-ntic.ml",
+      "target_roles": [],
+      "targetRoles": [
+        "etudiant"
+      ],
+      "target_user_ids": [],
+      "targetUserIds": [
+        "etudiant_1787526602439"
+      ],
+      "audience": [
+        "astan@gmail.com"
+      ],
+      "read_by": [],
+      "readBy": [],
+      "reminder_count": 0,
+      "reminderCount": 0,
+      "created_at": "2026-08-29T01:28:48.965507+00:00",
+      "createdAt": "2026-08-24T01:40:11.224+00:00",
+      "updated_at": "2026-08-29T01:28:48.965507+00:00",
+      "updatedAt": "2026-08-24T01:40:11.224+00:00"
+    },
+    {
       "id": "notif_insc_1787622493292000",
       "title": "Nouvelle Inscription",
       "description": "Kamissa CAMARA a soumis une inscription pour Système de Vidéosurveillance (SVS).",
@@ -3922,24 +3994,191 @@
       "createdAt": "2026-08-25T01:56:13.963+00:00",
       "updated_at": "2026-08-29T01:28:51.911577+00:00",
       "updatedAt": "2026-08-25T02:24:52.364+00:00"
+    },
+    {
+      "id": "notif_pay_1788139669631000",
+      "title": "Paiement reçu",
+      "description": "Versement de 40000 FCFA reçu de Moussa DIARRA (Stage de Formation Professionnelle - SFP5).",
+      "imageUrl": null,
+      "senderId": "system",
+      "senderEmail": "comptabilite@malintic.ml",
+      "targetRoles": [
+        "admin",
+        "comptable",
+        "daf",
+        "dg"
+      ],
+      "targetUserIds": [],
+      "audience": [
+        "admin",
+        "comptable"
+      ],
+      "readBy": [],
+      "reminderCount": 0,
+      "createdAt": "2026-08-31T01:27:49.631",
+      "updatedAt": "2026-08-31T01:27:49.631"
+    },
+    {
+      "id": "notif_pay_1788139700522000",
+      "title": "Paiement reçu",
+      "description": "Versement de 50000 FCFA reçu de Amadou DRAME (Stage de Formation Professionnelle - SFP5).",
+      "imageUrl": null,
+      "senderId": "system",
+      "senderEmail": "comptabilite@malintic.ml",
+      "targetRoles": [
+        "admin",
+        "comptable",
+        "daf",
+        "dg"
+      ],
+      "targetUserIds": [],
+      "audience": [
+        "admin",
+        "comptable"
+      ],
+      "readBy": [],
+      "reminderCount": 0,
+      "createdAt": "2026-08-31T01:28:20.522",
+      "updatedAt": "2026-08-31T01:28:20.522"
+    },
+    {
+      "id": "notif_stud_1788139700553000",
+      "title": "Confirmation de versement",
+      "description": "Votre paiement de 50000 FCFA pour Stage de Formation Professionnelle - SFP5 a été validé avec succès.",
+      "imageUrl": null,
+      "senderId": "comptabilite",
+      "senderEmail": "comptabilite@malintic.ml",
+      "targetRoles": [
+        "apprenant"
+      ],
+      "targetUserIds": [
+        "etudiant_1787878639578"
+      ],
+      "audience": [
+        "amadoudrame324@gmail.com"
+      ],
+      "readBy": [],
+      "reminderCount": 0,
+      "createdAt": "2026-08-31T01:28:20.553",
+      "updatedAt": "2026-08-31T01:28:20.553"
+    },
+    {
+      "id": "notif_pay_1788140659982000",
+      "title": "Paiement reçu",
+      "description": "Versement de 5000 FCFA reçu de In explicabo Dolore Omnis esse placeat (Système de Vidéosurveillance (SVS)).",
+      "imageUrl": null,
+      "senderId": "system",
+      "senderEmail": "comptabilite@malintic.ml",
+      "targetRoles": [
+        "admin",
+        "comptable",
+        "daf",
+        "dg"
+      ],
+      "targetUserIds": [],
+      "audience": [
+        "admin",
+        "comptable"
+      ],
+      "readBy": [],
+      "reminderCount": 0,
+      "createdAt": "2026-08-31T01:44:19.982",
+      "updatedAt": "2026-08-31T01:44:19.982"
+    },
+    {
+      "id": "notif_stud_1788140660066000",
+      "title": "Confirmation de versement",
+      "description": "Votre paiement de 5000 FCFA pour Système de Vidéosurveillance (SVS) a été validé avec succès.",
+      "imageUrl": null,
+      "senderId": "comptabilite",
+      "senderEmail": "comptabilite@malintic.ml",
+      "targetRoles": [
+        "apprenant"
+      ],
+      "targetUserIds": [
+        "etudiant_1787967449385"
+      ],
+      "audience": [
+        "nicujicot@mailinator.com"
+      ],
+      "readBy": [],
+      "reminderCount": 0,
+      "createdAt": "2026-08-31T01:44:20.066",
+      "updatedAt": "2026-08-31T01:44:20.066"
     }
   ],
   "audit_logs": [
     {
-      "id": "log_1787878644562",
-      "user_nom": null,
-      "user_role": null,
-      "action": "Modification formation",
-      "description": "Mise à jour: \"SFP 5\"",
-      "timestamp": "2026-08-28T00:57:24.562+00:00",
-      "target_id": null,
-      "target_type": null,
-      "severity": "info",
-      "userNom": null,
-      "userRole": null,
+      "id": "log_1788139648743_x7cuu",
+      "userNom": "Mamadou TOURE",
+      "userRole": "admin",
+      "action": "Connexion",
+      "description": "Connexion réussie de Mamadou TOURE (mamadou@mntic.ml) - Rôle: admin - IP: 172.18.0.1",
+      "timestamp": "2026-08-31T01:27:28.743+00:00",
       "targetId": null,
       "targetType": null,
-      "created_at": "2026-08-28T00:57:25.204476+00:00"
+      "severity": "info",
+      "userId": "admin_mamadou",
+      "userEmail": "mamadou@mntic.ml",
+      "user_nom": "Mamadou TOURE",
+      "user_role": "admin",
+      "target_id": null,
+      "target_type": null,
+      "created_at": "2026-08-31T01:44:01.596551+00:00"
+    },
+    {
+      "id": "log_1788138964539_g0tnu",
+      "userNom": "Mamadou TOURE",
+      "userRole": "admin",
+      "action": "Connexion",
+      "description": "Connexion réussie de Mamadou TOURE (mamadou@mntic.ml) - Rôle: admin - IP: 172.18.0.1",
+      "timestamp": "2026-08-31T01:16:04.539+00:00",
+      "targetId": null,
+      "targetType": null,
+      "severity": "info",
+      "userId": "admin_mamadou",
+      "userEmail": "mamadou@mntic.ml",
+      "user_nom": "Mamadou TOURE",
+      "user_role": "admin",
+      "target_id": null,
+      "target_type": null,
+      "created_at": "2026-08-31T01:44:01.859755+00:00"
+    },
+    {
+      "id": "log_1788138957466_ce7s3",
+      "userNom": "Mamadou TOURE",
+      "userRole": "admin",
+      "action": "Mot de passe initial défini",
+      "description": "Mamadou TOURE (mamadou@mntic.ml) a modifié son mot de passe avec succès.",
+      "timestamp": "2026-08-31T01:15:57.466+00:00",
+      "targetId": "admin_mamadou",
+      "targetType": "user",
+      "severity": "info",
+      "userId": "admin_mamadou",
+      "userEmail": "mamadou@mntic.ml",
+      "user_nom": "Mamadou TOURE",
+      "user_role": "admin",
+      "target_id": "admin_mamadou",
+      "target_type": "user",
+      "created_at": "2026-08-31T01:44:02.181444+00:00"
+    },
+    {
+      "id": "log_1788138946245_ayy7b",
+      "userNom": "Mamadou TOURE",
+      "userRole": "admin",
+      "action": "Connexion",
+      "description": "Connexion réussie de Mamadou TOURE (mamadou@mntic.ml) - Rôle: admin - IP: 172.18.0.1",
+      "timestamp": "2026-08-31T01:15:46.245+00:00",
+      "targetId": null,
+      "targetType": null,
+      "severity": "info",
+      "userId": "admin_mamadou",
+      "userEmail": "mamadou@mntic.ml",
+      "user_nom": "Mamadou TOURE",
+      "user_role": "admin",
+      "target_id": null,
+      "target_type": null,
+      "created_at": "2026-08-31T01:44:02.462048+00:00"
     },
     {
       "id": "log_1787878645096",
@@ -4566,36 +4805,20 @@
       "created_at": "2026-08-28T00:57:21.808151+00:00"
     },
     {
-      "id": "log_1787933393704",
-      "user_nom": "Administration",
-      "user_role": "admin",
+      "id": "log_1787878644562",
+      "user_nom": null,
+      "user_role": null,
       "action": "Modification formation",
-      "description": "Mise à jour: \"Développement Web Fullstack React & Node.js\"",
-      "timestamp": "2026-08-28T16:09:53.705+00:00",
+      "description": "Mise à jour: \"SFP 5\"",
+      "timestamp": "2026-08-28T00:57:24.562+00:00",
       "target_id": null,
       "target_type": null,
       "severity": "info",
-      "userNom": "Administration",
-      "userRole": "admin",
+      "userNom": null,
+      "userRole": null,
       "targetId": null,
       "targetType": null,
-      "created_at": "2026-08-28T16:08:22.068686+00:00"
-    },
-    {
-      "id": "log_1787941764605",
-      "user_nom": "Administration",
-      "user_role": "admin",
-      "action": "Modification formation",
-      "description": "Mise à jour: \"Développement Web Fullstack React & Node.js\"",
-      "timestamp": "2026-08-28T18:29:24.605+00:00",
-      "target_id": null,
-      "target_type": null,
-      "severity": "info",
-      "userNom": "Administration",
-      "userRole": "admin",
-      "targetId": null,
-      "targetType": null,
-      "created_at": "2026-08-28T18:29:25.236675+00:00"
+      "created_at": "2026-08-28T00:57:25.204476+00:00"
     },
     {
       "id": "log_1787941764982",
@@ -5174,6 +5397,38 @@
       "created_at": "2026-08-28T18:29:24.448995+00:00"
     },
     {
+      "id": "log_1787933393704",
+      "user_nom": "Administration",
+      "user_role": "admin",
+      "action": "Modification formation",
+      "description": "Mise à jour: \"Développement Web Fullstack React & Node.js\"",
+      "timestamp": "2026-08-28T16:09:53.705+00:00",
+      "target_id": null,
+      "target_type": null,
+      "severity": "info",
+      "userNom": "Administration",
+      "userRole": "admin",
+      "targetId": null,
+      "targetType": null,
+      "created_at": "2026-08-28T16:08:22.068686+00:00"
+    },
+    {
+      "id": "log_1787941764605",
+      "user_nom": "Administration",
+      "user_role": "admin",
+      "action": "Modification formation",
+      "description": "Mise à jour: \"Développement Web Fullstack React & Node.js\"",
+      "timestamp": "2026-08-28T18:29:24.605+00:00",
+      "target_id": null,
+      "target_type": null,
+      "severity": "info",
+      "userNom": "Administration",
+      "userRole": "admin",
+      "targetId": null,
+      "targetType": null,
+      "created_at": "2026-08-28T18:29:25.236675+00:00"
+    },
+    {
       "id": "log_1787944082050_xc7jm",
       "user_nom": "Mamadou TOURE",
       "user_role": "UserRole.admin",
@@ -5492,6 +5747,102 @@
       "targetId": null,
       "targetType": null,
       "created_at": "2026-08-29T01:28:46.853675+00:00"
+    },
+    {
+      "id": "log_1788139669631",
+      "userNom": "Moussa DIARRA",
+      "userRole": "apprenant",
+      "action": "Paiement effectué",
+      "description": "Versement de 40000 FCFA (ORANGEMONEY) pour Stage de Formation Professionnelle - SFP5 (Tranche 1/3)",
+      "timestamp": "2026-08-31T01:27:49.631+00:00",
+      "targetId": null,
+      "targetType": null,
+      "severity": "info",
+      "user_nom": "Moussa DIARRA",
+      "user_role": "apprenant",
+      "target_id": null,
+      "target_type": null,
+      "created_at": "2026-08-31T01:44:32.455311+00:00"
+    },
+    {
+      "id": "log_1788139669677",
+      "userNom": "Mamadou TOURE",
+      "userRole": "admin",
+      "action": "Nouveau Versement",
+      "description": "Versement de 40000 FCFA (Tranche 1/3) enregistré.",
+      "timestamp": "2026-08-31T01:27:49.677+00:00",
+      "targetId": null,
+      "targetType": null,
+      "severity": "info",
+      "user_nom": "Mamadou TOURE",
+      "user_role": "admin",
+      "target_id": null,
+      "target_type": null,
+      "created_at": "2026-08-31T01:44:32.616331+00:00"
+    },
+    {
+      "id": "log_1788139700521",
+      "userNom": "Amadou DRAME",
+      "userRole": "apprenant",
+      "action": "Paiement effectué",
+      "description": "Versement de 50000 FCFA (ORANGEMONEY) pour Stage de Formation Professionnelle - SFP5 (Tranche 2/4)",
+      "timestamp": "2026-08-31T01:28:20.521+00:00",
+      "targetId": null,
+      "targetType": null,
+      "severity": "info",
+      "user_nom": "Amadou DRAME",
+      "user_role": "apprenant",
+      "target_id": null,
+      "target_type": null,
+      "created_at": "2026-08-31T01:44:32.775334+00:00"
+    },
+    {
+      "id": "log_1788139700569",
+      "userNom": "Mamadou TOURE",
+      "userRole": "admin",
+      "action": "Nouveau Versement",
+      "description": "Versement de 50000 FCFA (Tranche 2/4) enregistré.",
+      "timestamp": "2026-08-31T01:28:20.569+00:00",
+      "targetId": null,
+      "targetType": null,
+      "severity": "info",
+      "user_nom": "Mamadou TOURE",
+      "user_role": "admin",
+      "target_id": null,
+      "target_type": null,
+      "created_at": "2026-08-31T01:44:32.997925+00:00"
+    },
+    {
+      "id": "log_1788140659981",
+      "userNom": "In explicabo Dolore Omnis esse placeat",
+      "userRole": "apprenant",
+      "action": "Paiement effectué",
+      "description": "Versement de 5000 FCFA (ORANGEMONEY) pour Système de Vidéosurveillance (SVS) (Tranche 2/2)",
+      "timestamp": "2026-08-31T01:44:19.981+00:00",
+      "targetId": null,
+      "targetType": null,
+      "severity": "info",
+      "user_nom": "In explicabo Dolore Omnis esse placeat",
+      "user_role": "apprenant",
+      "target_id": null,
+      "target_type": null,
+      "created_at": "2026-08-31T01:44:33.220279+00:00"
+    },
+    {
+      "id": "log_1788140660129",
+      "userNom": "Mamadou TOURE",
+      "userRole": "admin",
+      "action": "Nouveau Versement",
+      "description": "Versement de 5000 FCFA (Tranche 2/2) enregistré.",
+      "timestamp": "2026-08-31T01:44:20.129+00:00",
+      "targetId": null,
+      "targetType": null,
+      "severity": "info",
+      "user_nom": "Mamadou TOURE",
+      "user_role": "admin",
+      "target_id": null,
+      "target_type": null,
+      "created_at": "2026-08-31T01:44:33.374579+00:00"
     }
   ],
   "seances": []

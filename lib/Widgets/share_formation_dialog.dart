@@ -9,6 +9,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:gestion_formations/Models/formation.dart';
 import 'package:gestion_formations/config/theme.dart';
+import 'package:gestion_formations/Services/local_storage.dart';
 import 'package:gestion_formations/utils/file_saver.dart';
 
 class ShareFormationDialog extends StatefulWidget {
@@ -39,6 +40,7 @@ class _ShareFormationDialogState extends State<ShareFormationDialog> {
   String _localBase = 'http://localhost';
   final TextEditingController _customIpController = TextEditingController();
   bool _isLoadingNetwork = false;
+  final LocalStorage _storage = LocalStorage();
 
   @override
   void initState() {
@@ -65,18 +67,37 @@ class _ShareFormationDialogState extends State<ShareFormationDialog> {
         _publicBase = _defaultVercelBase;
       }
 
-      // 2. Détection base locale / LAN
+      // 2. Récupérer l'IP LAN préférée enregistrée en local (si existante)
+      final savedLanIp = _storage.getItem('preferred_lan_ip')?.trim() ?? '';
+
+      // 3. Détection base locale / LAN
       String detectedLocalHost = currentHost.isNotEmpty ? currentHost : 'localhost';
       String portSuffix = '';
       if (currentPort != 80 && currentPort != 443 && currentPort != 0) {
         portSuffix = ':$currentPort';
       }
 
-      _localBase = 'http://$detectedLocalHost$portSuffix';
-      _customIpController.text = '$detectedLocalHost$portSuffix';
+      if (savedLanIp.isNotEmpty) {
+        final withHttp = savedLanIp.startsWith('http://') || savedLanIp.startsWith('https://')
+            ? savedLanIp
+            : 'http://$savedLanIp';
+        _localBase = withHttp;
+        _customIpController.text = savedLanIp.replaceFirst(RegExp(r'^https?:\/\/'), '');
+      } else if (!detectedLocalHost.startsWith('127.') &&
+          detectedLocalHost != 'localhost' &&
+          !detectedLocalHost.startsWith('172.')) {
+        _localBase = 'http://$detectedLocalHost$portSuffix';
+        _customIpController.text = '$detectedLocalHost$portSuffix';
+        _storage.setItem('preferred_lan_ip', '$detectedLocalHost$portSuffix');
+      } else {
+        _localBase = 'http://$detectedLocalHost$portSuffix';
+        _customIpController.text = '$detectedLocalHost$portSuffix';
+      }
 
-      // Si nous sommes sur localhost ou 127.0.0.1, interroger l'API pour obtenir la vraie IP LAN Wi-Fi
-      if (detectedLocalHost == 'localhost' || detectedLocalHost.startsWith('127.')) {
+      // Si nous sommes sur localhost ou 127.0.0.1, interroger l'API pour obtenir la vraie IP LAN Wi-Fi de l'hôte Windows
+      if (detectedLocalHost == 'localhost' ||
+          detectedLocalHost.startsWith('127.') ||
+          detectedLocalHost.startsWith('172.')) {
         try {
           final apiUri = Uri.parse('/api/system/network-info');
           final response = await http.get(apiUri).timeout(
@@ -86,20 +107,34 @@ class _ShareFormationDialogState extends State<ShareFormationDialog> {
 
           if (response.statusCode == 200) {
             final data = jsonDecode(response.body) as Map<String, dynamic>;
-            final detectedIps = data['detectedIps'] as List<dynamic>?;
-            if (detectedIps != null && detectedIps.isNotEmpty) {
-              final realIps = detectedIps
-                  .map((e) => e.toString())
-                  .where((ip) => !ip.startsWith('172.') && !ip.startsWith('127.'))
-                  .toList();
-              if (realIps.isNotEmpty) {
-                final lanIp = realIps.first;
-                final finalPort = (currentPort != 80 && currentPort != 443 && currentPort != 0)
-                    ? ':$currentPort'
-                    : '';
-                _localBase = 'http://$lanIp$finalPort';
-                _customIpController.text = '$lanIp$finalPort';
-              }
+            final primaryIp = data['primaryIp']?.toString();
+            final detectedIps = (data['detectedIps'] as List<dynamic>?)
+                ?.map((e) => e.toString())
+                .toList() ?? [];
+
+            // Filtrer les IP internes Docker et APIPA
+            final realIps = detectedIps
+                .where((ip) =>
+                    !ip.startsWith('172.') &&
+                    !ip.startsWith('127.') &&
+                    !ip.startsWith('169.254.') &&
+                    ip != '0.0.0.0')
+                .toList();
+
+            final chosenIp = (primaryIp != null &&
+                    !primaryIp.startsWith('172.') &&
+                    !primaryIp.startsWith('127.') &&
+                    !primaryIp.startsWith('169.254.'))
+                ? primaryIp
+                : (realIps.isNotEmpty ? realIps.first : null);
+
+            if (chosenIp != null && chosenIp.isNotEmpty) {
+              final finalPort = (currentPort != 80 && currentPort != 443 && currentPort != 0)
+                  ? ':$currentPort'
+                  : '';
+              _localBase = 'http://$chosenIp$finalPort';
+              _customIpController.text = '$chosenIp$finalPort';
+              _storage.setItem('preferred_lan_ip', '$chosenIp$finalPort');
             }
           }
         } catch (_) {}
@@ -547,18 +582,19 @@ class _ShareFormationDialogState extends State<ShareFormationDialog> {
                                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                                   isDense: true,
                                 ),
-                                onChanged: (val) {
-                                  final clean = val.trim();
-                                  if (clean.isNotEmpty) {
-                                    setState(() {
-                                      if (clean.startsWith('http://') || clean.startsWith('https://')) {
-                                        _localBase = clean;
-                                      } else {
-                                        _localBase = 'http://$clean';
-                                      }
-                                    });
-                                  }
-                                },
+                                 onChanged: (val) {
+                                   final clean = val.trim();
+                                   if (clean.isNotEmpty) {
+                                     setState(() {
+                                       if (clean.startsWith('http://') || clean.startsWith('https://')) {
+                                         _localBase = clean;
+                                       } else {
+                                         _localBase = 'http://$clean';
+                                       }
+                                     });
+                                     _storage.setItem('preferred_lan_ip', clean);
+                                   }
+                                 },
                               ),
                             ),
                           ),
