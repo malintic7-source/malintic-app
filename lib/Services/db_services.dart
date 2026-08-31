@@ -998,6 +998,7 @@ class LocalDataService {
     try {
       final list = _formations.map((f) => f.toMap()).toList();
       _localStorage.setItem('app_saved_formations', jsonEncode(list));
+      _notifyDataChanged();
     } catch (e) { debugPrint('[Malintic] Erreur sauvegarde formations: $e'); }
   }
 
@@ -1005,6 +1006,7 @@ class LocalDataService {
     try {
       final list = _users.map((u) => u.toMap()).toList();
       _localStorage.setItem('app_saved_users', jsonEncode(list));
+      _notifyDataChanged();
     } catch (e) { debugPrint('[Malintic] Erreur sauvegarde users: $e'); }
   }
 
@@ -1012,6 +1014,7 @@ class LocalDataService {
     try {
       final list = _inscriptions.map((i) => i.toMap()).toList();
       _localStorage.setItem('app_saved_inscriptions', jsonEncode(list));
+      _notifyDataChanged();
     } catch (e) { debugPrint('[Malintic] Erreur sauvegarde inscriptions: $e'); }
   }
 
@@ -1019,6 +1022,7 @@ class LocalDataService {
     try {
       final list = _payments.map((p) => p.toMap()).toList();
       _localStorage.setItem('app_saved_payments', jsonEncode(list));
+      _notifyDataChanged();
     } catch (e) { debugPrint('[Malintic] Erreur sauvegarde paiements: $e'); }
   }
 
@@ -1026,10 +1030,12 @@ class LocalDataService {
     try {
       final list = _seances.map((s) => s.toMap()).toList();
       _localStorage.setItem('app_saved_seances', jsonEncode(list));
+      _notifyDataChanged();
     } catch (e) { debugPrint('[Malintic] Erreur sauvegarde séances: $e'); }
   }
 
   // Reactive Data Controllers
+  final _dataChangesController = StreamController<void>.broadcast();
   final _usersController = StreamController<List<User>>.broadcast();
   final _formationsController = StreamController<List<Formation>>.broadcast();
   final _inscriptionsController = StreamController<List<Inscription>>.broadcast();
@@ -1037,6 +1043,39 @@ class LocalDataService {
   final _seancesController = StreamController<List<Seance>>.broadcast();
   final _notificationsController = StreamController<List<AppNotification>>.broadcast();
   final _auditLogsController = StreamController<List<AuditLog>>.broadcast();
+
+  /// Flux global réactif déclenché lors de toute modification de données (inscriptions, paiements, formations, users, etc.)
+  Stream<void> get onDataChanged => _dataChangesController.stream;
+  Stream<void> watchAllDataChanges() => _dataChangesController.stream;
+
+  void _notifyDataChanged() {
+    if (!_dataChangesController.isClosed) {
+      _dataChangesController.add(null);
+    }
+    if (!_usersController.isClosed) {
+      _usersController.add(List.unmodifiable(_users));
+    }
+    if (!_formationsController.isClosed) {
+      _formationsController.add(List.unmodifiable(_formations));
+    }
+    if (!_inscriptionsController.isClosed) {
+      _inscriptionsController.add(List.unmodifiable(_inscriptions));
+    }
+    if (!_paymentsController.isClosed) {
+      _paymentsController.add(List.unmodifiable(_payments));
+    }
+    if (!_seancesController.isClosed) {
+      _seancesController.add(List.unmodifiable(_seances));
+    }
+    if (!_notificationsController.isClosed) {
+      _notificationsController.add(List.unmodifiable(_notifications));
+    }
+    if (!_auditLogsController.isClosed) {
+      _auditLogsController.add(List.unmodifiable(_auditLogs));
+    }
+  }
+
+  void notifyListeners() => _notifyDataChanged();
 
   // Internal Storage Lists
   final List<User> _users = [];

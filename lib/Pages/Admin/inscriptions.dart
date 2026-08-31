@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -8,7 +10,6 @@ import 'package:gestion_formations/Models/inscription.dart';
 import 'package:gestion_formations/Models/formation.dart';
 import 'package:gestion_formations/Services/db_services.dart';
 import 'package:gestion_formations/Services/pdf_helper.dart';
-import 'dart:convert';
 
 
 Map<String, dynamic> resolveInscriptionUserData(
@@ -98,6 +99,8 @@ class _AdminInscriptionsState extends State<AdminInscriptions> with TickerProvid
   final LocalDataService _db = LocalDataService();
   late AnimationController _fadeController;
   String filterStatus = 'en_attente';
+  StreamSubscription<void>? _dataSub;
+  Timer? _refreshTimer;
 
   @override
   void initState() {
@@ -107,13 +110,21 @@ class _AdminInscriptionsState extends State<AdminInscriptions> with TickerProvid
       vsync: this,
     )..forward();
 
-    // Les imports ne sont jamais automatiques : ils pourraient recréer des
-    // dossiers historiques lors de l'ouverture ou du rafraîchissement.
+    // Mise à jour automatique instantanée des cartes statistiques et des inscriptions
+    _dataSub = _db.watchAllDataChanges().listen((_) {
+      if (mounted) setState(() {});
+    });
+
+    _refreshTimer = Timer.periodic(const Duration(seconds: 4), (_) {
+      if (mounted) setState(() {});
+    });
   }
 
   @override
   void dispose() {
     _fadeController.dispose();
+    _dataSub?.cancel();
+    _refreshTimer?.cancel();
     super.dispose();
   }
 

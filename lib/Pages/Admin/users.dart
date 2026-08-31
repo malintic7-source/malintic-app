@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:animate_do/animate_do.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -14,9 +15,12 @@ class AdminUsers extends StatefulWidget {
 }
 
 class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
+  final LocalDataService _db = LocalDataService();
   final searchController = TextEditingController();
   String selectedRole = 'Tous';
   late AnimationController _fadeController;
+  StreamSubscription<void>? _dataSub;
+  Timer? _refreshTimer;
 
   @override
   void initState() {
@@ -25,11 +29,22 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
       duration: const Duration(milliseconds: 600),
       vsync: this,
     )..forward();
+
+    // Mise à jour automatique instantanée des utilisateurs
+    _dataSub = _db.watchAllDataChanges().listen((_) {
+      if (mounted) setState(() {});
+    });
+
+    _refreshTimer = Timer.periodic(const Duration(seconds: 4), (_) {
+      if (mounted) setState(() {});
+    });
   }
 
   @override
   void dispose() {
     _fadeController.dispose();
+    _dataSub?.cancel();
+    _refreshTimer?.cancel();
     searchController.dispose();
     super.dispose();
   }

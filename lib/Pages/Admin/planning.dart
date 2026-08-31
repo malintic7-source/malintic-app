@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -20,6 +21,8 @@ class _AdminPlanningState extends State<AdminPlanning>
     with TickerProviderStateMixin {
   final LocalDataService _db = LocalDataService();
   late AnimationController _fadeController;
+  StreamSubscription<void>? _dataSub;
+  Timer? _refreshTimer;
 
   bool _isCalendarView = true;
   String _selectedDay = 'Tous';
@@ -46,11 +49,22 @@ class _AdminPlanningState extends State<AdminPlanning>
       vsync: this,
     )..forward();
     _searchController.addListener(() => setState(() {}));
+
+    // Mise à jour automatique instantanée du planning et séances
+    _dataSub = _db.watchAllDataChanges().listen((_) {
+      if (mounted) setState(() {});
+    });
+
+    _refreshTimer = Timer.periodic(const Duration(seconds: 4), (_) {
+      if (mounted) setState(() {});
+    });
   }
 
   @override
   void dispose() {
     _fadeController.dispose();
+    _dataSub?.cancel();
+    _refreshTimer?.cancel();
     _searchController.dispose();
     super.dispose();
   }

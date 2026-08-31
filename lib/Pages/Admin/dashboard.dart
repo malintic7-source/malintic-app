@@ -27,6 +27,7 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
   final LocalDataService _db = LocalDataService();
   late AnimationController _fadeController;
   Timer? _refreshTimer;
+  StreamSubscription<void>? _dataSub;
 
   @override
   void initState() {
@@ -35,7 +36,13 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
       duration: const Duration(milliseconds: 600),
       vsync: this,
     )..forward();
-    _refreshTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+
+    // Réactivité instantanée lors de toute modification sur la plateforme
+    _dataSub = _db.watchAllDataChanges().listen((_) {
+      if (mounted) setState(() {});
+    });
+
+    _refreshTimer = Timer.periodic(const Duration(seconds: 4), (_) {
       if (mounted) setState(() {});
     });
   }
@@ -43,6 +50,7 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
   @override
   void dispose() {
     _fadeController.dispose();
+    _dataSub?.cancel();
     _refreshTimer?.cancel();
     super.dispose();
   }

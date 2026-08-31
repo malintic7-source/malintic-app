@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:animate_do/animate_do.dart';
@@ -24,6 +25,8 @@ class AdminPaiements extends StatefulWidget {
 class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStateMixin {
   final LocalDataService _db = LocalDataService();
   late AnimationController _fadeController;
+  StreamSubscription<void>? _dataSub;
+  Timer? _refreshTimer;
 
   int _selectedTab = 0; // 0: Suivi par Stagiaire & Tranches, 1: Historique des Transactions
   String? _selectedStudentId;
@@ -58,11 +61,22 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
     _searchController.addListener(() {
       setState(() => _searchQuery = _searchController.text.trim().toLowerCase());
     });
+
+    // Mise à jour automatique instantanée des cartes statistiques financières
+    _dataSub = _db.watchAllDataChanges().listen((_) {
+      if (mounted) setState(() {});
+    });
+
+    _refreshTimer = Timer.periodic(const Duration(seconds: 4), (_) {
+      if (mounted) setState(() {});
+    });
   }
 
   @override
   void dispose() {
     _fadeController.dispose();
+    _dataSub?.cancel();
+    _refreshTimer?.cancel();
     _amountController.dispose();
     _discountController.dispose();
     _installmentController.dispose();

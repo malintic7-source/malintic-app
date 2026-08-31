@@ -62,6 +62,9 @@ class _AdminApprenantsState extends State<AdminApprenants>
       _applyFilter();
       Future.microtask(() => _db.assignMissingMatriculesToValidatedStudents());
     });
+    _dataSub = _db.watchAllDataChanges().listen((_) {
+      _applyFilter();
+    });
     Future.microtask(() => _db.assignMissingMatriculesToValidatedStudents());
     _applyFilter();
 
@@ -70,12 +73,15 @@ class _AdminApprenantsState extends State<AdminApprenants>
     });
   }
 
+  StreamSubscription<void>? _dataSub;
+
   @override
   void dispose() {
     _fadeController.dispose();
     searchController.dispose();
     _usersSub?.cancel();
     _inscriptionsSub?.cancel();
+    _dataSub?.cancel();
     _debounce?.cancel();
     super.dispose();
   }

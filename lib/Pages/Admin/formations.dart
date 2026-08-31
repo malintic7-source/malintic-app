@@ -46,6 +46,8 @@ class _AdminFormationsState extends State<AdminFormations>
   String selectedFormationKind = 'Tous';
   final Set<String> _expandedFormationIds = {};
   late AnimationController _fadeController;
+  StreamSubscription<void>? _dataSub;
+  Timer? _refreshTimer;
 
   @override
   void initState() {
@@ -54,11 +56,22 @@ class _AdminFormationsState extends State<AdminFormations>
       duration: const Duration(milliseconds: 600),
       vsync: this,
     )..forward();
+
+    // Mise à jour automatique instantanée des cartes statistiques de formations
+    _dataSub = _db.watchAllDataChanges().listen((_) {
+      if (mounted) setState(() {});
+    });
+
+    _refreshTimer = Timer.periodic(const Duration(seconds: 4), (_) {
+      if (mounted) setState(() {});
+    });
   }
 
   @override
   void dispose() {
     _fadeController.dispose();
+    _dataSub?.cancel();
+    _refreshTimer?.cancel();
     searchController.dispose();
     super.dispose();
   }
