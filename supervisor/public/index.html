@@ -603,57 +603,55 @@
   </header>
 
   <main>
-    <!-- Topologie 4 Nœuds -->
+    <!-- Topologie 4 Nœuds Docker & WAN -->
     <div class="grid-4" id="nodesGrid">
       <div class="node-card active-primary">
         <div class="node-header">
-          <div class="node-title">🖥️ Docker Core API (LAN)</div>
-          <span class="status-tag online" id="dockerTag">LOCAL</span>
+          <div class="node-title">🖥️ Serveur Web Docker (LAN)</div>
+          <span class="status-tag online" id="appTag">LOCAL</span>
         </div>
-        <div class="node-details" id="dockerDetails">Vérification de l'API locale...</div>
+        <div class="node-details" id="appDetails">Vérification Nginx Web...</div>
+        <div class="metric-row">
+          <span>Latence Web :</span>
+          <span class="tag-count" id="appLatency">-- ms</span>
+        </div>
+      </div>
+
+      <div class="node-card">
+        <div class="node-header">
+          <div class="node-title">⚙️ Serveur API Docker (LAN)</div>
+          <span class="status-tag online" id="apiTag">LOCAL</span>
+        </div>
+        <div class="node-details" id="apiDetails">Vérification de l'API locale...</div>
         <div class="metric-row">
           <span>Latence API :</span>
-          <span class="tag-count" id="dockerLatency">-- ms</span>
+          <span class="tag-count" id="apiLatency">-- ms</span>
         </div>
       </div>
 
       <div class="node-card">
         <div class="node-header">
-          <div class="node-title">☁️ Supabase Cloud (PG)</div>
-          <span class="status-tag online" id="supabaseTag">CLOUD</span>
-        </div>
-        <div class="node-details" id="supabaseDetails">Vérification PostgreSQL Cloud...</div>
-        <div class="metric-row">
-          <span>Latence DB :</span>
-          <span class="tag-count" id="supabaseLatency">-- ms</span>
-        </div>
-      </div>
-
-      <div class="node-card">
-        <div class="node-header">
-          <div class="node-title">⚡ Vercel Edge (Web)</div>
-          <span class="status-tag online" id="vercelTag">CDN</span>
-        </div>
-        <div class="node-details" id="vercelDetails">SPA Flutter active</div>
-        <div class="metric-row">
-          <span>Accès Web :</span>
-          <a class="node-link" href="https://malintic-app.vercel.app" target="_blank" id="vercelLink">
-            malintic-app.vercel.app ↗
-          </a>
-        </div>
-      </div>
-
-      <div class="node-card">
-        <div class="node-header">
-          <div class="node-title">🚇 Ngrok WAN Tunnel</div>
+          <div class="node-title">🌐 Tunnel Sécurisé (Ngrok / WAN)</div>
           <span class="status-tag online" id="ngrokTag">GATEWAY</span>
         </div>
-        <div class="node-details" id="ngrokDetails">Passerelle télétravail</div>
+        <div class="node-details" id="ngrokDetails">Passerelle télétravail & accès public</div>
         <div class="metric-row">
           <span>Tunnel Public :</span>
           <span id="ngrokLinkContainer">
             <span class="tag-count" id="ngrokUrl">Automatique</span>
           </span>
+        </div>
+      </div>
+
+      <div class="node-card">
+        <div class="node-header">
+          <div class="node-title">💾 Base & Volume PRA (Local)</div>
+          <span class="status-tag online" id="dbTag">STORAGE</span>
+        </div>
+        <div class="node-details" id="dbDetails">Volume persistant /data</div>
+        <div class="metric-row">
+          <span>Statut Volume :</span>
+          <span class="tag-count" id="dbStatus">Actif</span>
         </div>
       </div>
     </div>
@@ -799,34 +797,42 @@
         if (!res.ok) return;
         const data = await res.json();
 
-        // 1. Docker API
-        document.getElementById('dockerDetails').innerText = data.nodes.docker.details;
-        document.getElementById('dockerLatency').innerText = (data.nodes.docker.latencyMs ?? '--') + ' ms';
-        const docTag = document.getElementById('dockerTag');
-        docTag.className = 'status-tag ' + (data.nodes.docker.isOnline ? 'online' : 'offline');
-        docTag.innerText = data.nodes.docker.isOnline ? 'OPÉRATIONNEL' : 'HORS-LIGNE';
+        // 1. Docker Web App
+        const appNode = data.nodes.docker_app || {};
+        document.getElementById('appDetails').innerText = appNode.details || 'En attente...';
+        document.getElementById('appLatency').innerText = (appNode.latencyMs ?? '--') + ' ms';
+        const appTag = document.getElementById('appTag');
+        appTag.className = 'status-tag ' + (appNode.isOnline ? 'online' : 'offline');
+        appTag.innerText = appNode.isOnline ? 'OPÉRATIONNEL' : 'HORS-LIGNE';
 
-        // 2. Supabase Cloud
-        document.getElementById('supabaseDetails').innerText = data.nodes.supabase.details;
-        document.getElementById('supabaseLatency').innerText = (data.nodes.supabase.latencyMs ?? '--') + ' ms';
-        const supaTag = document.getElementById('supabaseTag');
-        supaTag.className = 'status-tag ' + (data.nodes.supabase.isOnline ? 'online' : 'offline');
-        supaTag.innerText = data.nodes.supabase.isOnline ? 'CONNECTÉ' : 'HORS-LIGNE';
+        // 2. Docker API
+        const apiNode = data.nodes.docker_api || {};
+        document.getElementById('apiDetails').innerText = apiNode.details || 'En attente...';
+        document.getElementById('apiLatency').innerText = (apiNode.latencyMs ?? '--') + ' ms';
+        const apiTag = document.getElementById('apiTag');
+        apiTag.className = 'status-tag ' + (apiNode.isOnline ? 'online' : 'offline');
+        apiTag.innerText = apiNode.isOnline ? 'OPÉRATIONNEL' : 'HORS-LIGNE';
 
-        // 3. Vercel
-        document.getElementById('vercelDetails').innerText = data.nodes.vercel.details;
-        const vercelTag = document.getElementById('vercelTag');
-        vercelTag.className = 'status-tag ' + (data.nodes.vercel.isOnline ? 'online' : 'offline');
-        vercelTag.innerText = data.nodes.vercel.isOnline ? 'CDN ACTIF' : 'HORS-LIGNE';
-
-        // 4. Ngrok
-        document.getElementById('ngrokDetails').innerText = data.nodes.ngrok.details;
+        // 3. Ngrok WAN
+        const ngrokNode = data.nodes.ngrok || {};
+        document.getElementById('ngrokDetails').innerText = ngrokNode.details || 'En attente...';
+        const ngrokTag = document.getElementById('ngrokTag');
+        ngrokTag.className = 'status-tag ' + (ngrokNode.isOnline ? 'online' : 'offline');
+        ngrokTag.innerText = ngrokNode.isOnline ? 'ACTIF' : 'HORS-LIGNE';
         const ngrokContainer = document.getElementById('ngrokLinkContainer');
-        if (data.nodes.ngrok.publicUrl) {
-          ngrokContainer.innerHTML = `<a class="node-link" href="${data.nodes.ngrok.publicUrl}" target="_blank">${data.nodes.ngrok.publicUrl.replace('https://', '')} ↗</a>`;
+        if (ngrokNode.publicUrl) {
+          ngrokContainer.innerHTML = `<a class="node-link" href="${ngrokNode.publicUrl}" target="_blank">${ngrokNode.publicUrl.replace('https://', '')} ↗</a>`;
         } else {
-          ngrokContainer.innerHTML = `<span class="tag-count">${data.nodes.ngrok.details}</span>`;
+          ngrokContainer.innerHTML = `<span class="tag-count">${ngrokNode.details}</span>`;
         }
+
+        // 4. Base & Volume PRA
+        const dbNode = data.nodes.database || {};
+        document.getElementById('dbDetails').innerText = dbNode.details || 'Volume actif';
+        const dbTag = document.getElementById('dbTag');
+        dbTag.className = 'status-tag ' + (dbNode.isOnline ? 'online' : 'offline');
+        dbTag.innerText = dbNode.isOnline ? 'SYNCHRONISÉ' : 'ERREUR';
+        document.getElementById('dbStatus').innerText = dbNode.isOnline ? 'Connecté' : 'Erreur';
 
         // Compteurs Données
         const c = data.counts || {};

@@ -20,7 +20,7 @@ class SupabaseConfig {
 
   static const bool isEnabled = bool.fromEnvironment(
     'SUPABASE_ENABLED',
-    defaultValue: true,
+    defaultValue: false,
   );
 
   static bool get isConfigured => url.isNotEmpty && anonKey.isNotEmpty;

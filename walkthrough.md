@@ -1,6 +1,36 @@
-# Walkthrough - Exports Comptables Avancés & Modèles de Formations en 1-Clic
+# Walkthrough — Stabilisation & Suppression du "Sursaut" des Pages
 
-Les fonctionnalités d'**exports comptables universels** (Excel / CSV UTF-8 BOM, Rapports Financiers PDF A4 et Feuilles d'Émargement A4 Paysage) ainsi que les **modèles de formations clé en main en 1-clic** ont été entièrement développées, validées par une suite de tests unitaires (42 tests passés à 100%) et intégrées aux interfaces d'administration.
+## Problème résolu
+Les pages de l'application subissaient un effet de saut / sursaut continu ("sursauter") causé par :
+1. Un polling d'arrière-plan trop fréquent (toutes les 10-12s) qui déclenchait inconditionnellement des événements de flux (`StreamController.add`), même si aucune donnée n'avait changé sur le serveur.
+2. Des wrappers d'animation d'entrée (`SlideInUp` de la bibliothèque `animate_do`) placés sur les cartes de listes dynamiques sans clés stables, forçant chaque carte à rejouer une translation verticale depuis le bas à chaque cycle de rafraîchissement.
+
+## Solutions implémentées
+
+1. **Smart Diffing côté Flux de Données (`lib/Services/db_services.dart`)** :
+   - Mise en cache de l'empreinte JSON précédente pour chaque collection (`formations`, `users`, `inscriptions`, `payments`, `notifications`, `audit_logs`, `seances`).
+   - Le `StreamController` n'émet un nouvel événement **que si et seulement si** les données ont réellement été modifiées sur le serveur.
+
+2. **Ajustement de l'Intervalle de Polling (`lib/Services/polling_config.dart`)** :
+   - Augmentation de l'intervalle minimal de polling de 10s à **30s**.
+
+3. **Stabilisation des Cartes & Composants de Listes Dynamiques** :
+   - Remplacement de `SlideInUp` par des conteneurs stables avec clés déterministes (`ValueKey(id)`) sur l'ensemble des modules :
+     - [users.dart](file:///c:/Users/M_TOURE/Desktop/G/gestion_malintic/lib/Pages/Admin/users.dart) (Admin)
+     - [apprenants.dart](file:///c:/Users/M_TOURE/Desktop/G/gestion_malintic/lib/Pages/Admin/apprenants.dart) (Admin)
+     - [formations.dart](file:///c:/Users/M_TOURE/Desktop/G/gestion_malintic/lib/Pages/Admin/formations.dart) (Admin)
+     - [formateurs.dart](file:///c:/Users/M_TOURE/Desktop/G/gestion_malintic/lib/Pages/Admin/formateurs.dart) (Admin)
+     - [dashboard.dart](file:///c:/Users/M_TOURE/Desktop/G/gestion_malintic/lib/Pages/Student/dashboard.dart) (Étudiant)
+     - [discover_formations.dart](file:///c:/Users/M_TOURE/Desktop/G/gestion_malintic/lib/Pages/Student/discover_formations.dart) (Étudiant)
+     - [formations.dart](file:///c:/Users/M_TOURE/Desktop/G/gestion_malintic/lib/Pages/Student/formations.dart) (Étudiant)
+     - [apprenants.dart](file:///c:/Users/M_TOURE/Desktop/G/gestion_malintic/lib/Pages/Formateur/apprenants.dart) (Formateur)
+     - [schedule.dart](file:///c:/Users/M_TOURE/Desktop/G/gestion_malintic/lib/Pages/Formateur/schedule.dart) (Formateur)
+
+## Validation & Déploiement
+- **Tests unitaires & intégration** : `flutter test` réussi (**43/43 tests validés**).
+- **Bundle Web Release** : `flutter build web --release` compilé avec succès.
+- **Docker** : Conteneur `malintic_app` redémarré et synchronisé.
+- **Git & Vercel** : Commit `f1a7047` poussé sur la branche `main`.
 
 ---
 

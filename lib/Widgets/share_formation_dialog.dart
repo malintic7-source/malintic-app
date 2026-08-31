@@ -363,7 +363,7 @@ class _ShareFormationDialogState extends State<ShareFormationDialog> {
                               ),
                               const SizedBox(width: 6),
                               Text(
-                                'Lien En Ligne (Vercel)',
+                                'Lien Public (WAN)',
                                 style: GoogleFonts.poppins(
                                   fontSize: 11.5,
                                   fontWeight: isOnlineMode ? FontWeight.w700 : FontWeight.w500,

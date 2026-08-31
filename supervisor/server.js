@@ -6,9 +6,7 @@ const os = require('os');
 const app = express();
 const PORT = Number(process.env.PORT || 5002);
 const API_URL = String(process.env.API_URL || 'http://malintic_api:5001').replace(/\/$/, '');
-const SUPABASE_URL = String(process.env.SUPABASE_URL || '').replace(/\/$/, '');
-const SUPABASE_KEY = String(process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY || process.env.SUPABASE_ANON_KEY || '');
-const VERCEL_URL = String(process.env.VERCEL_URL || 'https://malintic-app.vercel.app').replace(/\/$/, '');
+const APP_URL = String(process.env.APP_URL || 'http://malintic_app:80').replace(/\/$/, '');
 const NGROK_API_URL = String(process.env.NGROK_API_URL || 'http://malintic_ngrok:4040').replace(/\/$/, '');
 const DATA_DIR = process.env.DATA_DIR || '/data';
 
@@ -34,10 +32,10 @@ function logEvent(type, message, level = 'info') {
 let _cachedStatus = {
   lastChecked: null,
   nodes: {
-    docker: { name: 'Serveur Docker API (LAN)', isOnline: true, latencyMs: 2, details: 'Initialisation...' },
-    supabase: { name: 'Supabase Cloud (PostgreSQL)', isOnline: true, latencyMs: 400, details: 'Connexion...' },
-    vercel: { name: 'Vercel Edge (Frontend Web)', isOnline: true, latencyMs: 150, details: 'En ligne' },
+    docker_app: { name: 'Serveur Web Docker (LAN)', isOnline: true, latencyMs: 2, details: 'Initialisation...' },
+    docker_api: { name: 'Serveur API Docker (LAN)', isOnline: true, latencyMs: 2, details: 'Initialisation...' },
     ngrok: { name: 'Tunnel Sécurisé (Ngrok / WAN)', isOnline: true, latencyMs: 10, details: 'Initialisation...' },
+    database: { name: 'Base & Volume PRA (Local)', isOnline: true, latencyMs: 1, details: 'Initialisation...' },
   },
   counts: { users: 0, formations: 0, inscriptions: 0, payments: 0, seances: 0, notifications: 0, audit_logs: 0 },
   snapshots: [],
@@ -46,8 +44,27 @@ let _cachedStatus = {
 async function refreshTopologyStatus() {
   const startAll = Date.now();
 
-  // 1. Docker API Node
-  let dockerNode = { name: 'Serveur Docker API (LAN)', isOnline: false, latencyMs: null, details: 'Injoignable' };
+  // 1. Docker Web App (Frontend Nginx)
+  let appNode = { name: 'Serveur Web Docker (LAN)', isOnline: false, latencyMs: null, details: 'Injoignable' };
+  const startApp = Date.now();
+  try {
+    const appRes = await globalThis.fetch(`${APP_URL}/`, {
+      headers: { 'User-Agent': 'Malintic-Supervisor' },
+      signal: AbortSignal.timeout ? AbortSignal.timeout(3000) : undefined,
+    });
+    appNode.latencyMs = Date.now() - startApp;
+    if (appRes.ok || appRes.status === 304) {
+      appNode.isOnline = true;
+      appNode.details = `Nginx Web Opérationnel (Port 80 / 8000)`;
+    } else {
+      appNode.details = `Code HTTP ${appRes.status}`;
+    }
+  } catch (e) {
+    appNode.details = `Échec de liaison Web : ${e.message}`;
+  }
+
+  // 2. Docker API Node
+  let dockerNode = { name: 'Serveur API Docker (LAN)', isOnline: false, latencyMs: null, details: 'Injoignable' };
   let apiPcaData = null;
   const startDocker = Date.now();
   try {
@@ -59,68 +76,15 @@ async function refreshTopologyStatus() {
     if (apiRes.ok) {
       apiPcaData = await apiRes.json();
       dockerNode.isOnline = true;
-      dockerNode.details = `Opérationnel (Uptime: ${apiPcaData.uptimeSeconds || 0}s, RAM: ${apiPcaData.memoryUsageMb || 0}MB, Sessions: ${apiPcaData.activeSessions || 0})`;
+      dockerNode.details = `API Opérationnelle (Uptime: ${apiPcaData.uptimeSeconds || 0}s, RAM: ${apiPcaData.memoryUsageMb || 0}MB, Sessions: ${apiPcaData.activeSessions || 0})`;
     } else {
       dockerNode.details = `Code HTTP ${apiRes.status}`;
     }
   } catch (e) {
-    dockerNode.details = `Échec de liaison : ${e.message}`;
+    dockerNode.details = `Échec de liaison API : ${e.message}`;
   }
 
-  // 2. Supabase Cloud Node
-  let supabaseNode = { name: 'Supabase Cloud (PostgreSQL)', isOnline: false, latencyMs: null, details: 'Non configuré' };
-  if (SUPABASE_URL && SUPABASE_KEY) {
-    const startSupa = Date.now();
-    try {
-      const supaRes = await globalThis.fetch(`${SUPABASE_URL}/rest/v1/formations?select=id&limit=1`, {
-        headers: {
-          apikey: SUPABASE_KEY,
-          Authorization: `Bearer ${SUPABASE_KEY}`,
-          Accept: 'application/json',
-        },
-        signal: AbortSignal.timeout ? AbortSignal.timeout(6000) : undefined,
-      });
-      supabaseNode.latencyMs = Date.now() - startSupa;
-      if (supaRes.ok) {
-        supabaseNode.isOnline = true;
-        supabaseNode.details = `PostgreSQL Cloud Connecté (${supabaseNode.latencyMs}ms)`;
-      } else {
-        supabaseNode.details = `Code HTTP ${supaRes.status}`;
-      }
-    } catch (e) {
-      if (apiPcaData?.supabase?.connected) {
-        supabaseNode.isOnline = true;
-        supabaseNode.latencyMs = apiPcaData.supabase.latencyMs || 450;
-        supabaseNode.details = `Connecté via passerelle API (${supabaseNode.latencyMs}ms)`;
-      } else {
-        supabaseNode.details = `Latence réseau (${e.message})`;
-      }
-    }
-  } else if (apiPcaData?.supabase?.configured) {
-    supabaseNode.isOnline = apiPcaData.supabase.connected;
-    supabaseNode.latencyMs = apiPcaData.supabase.latencyMs;
-    supabaseNode.details = apiPcaData.supabase.connected ? `Connecté via API (${apiPcaData.supabase.latencyMs}ms)` : 'Non connecté';
-  }
-
-  // 3. Vercel Frontend CDN Node
-  let vercelNode = { name: 'Vercel Edge (Frontend Web)', isOnline: false, latencyMs: null, details: 'En attente...' };
-  const startVercel = Date.now();
-  try {
-    const vRes = await globalThis.fetch(VERCEL_URL, {
-      method: 'GET',
-      redirect: 'follow',
-      headers: { 'User-Agent': 'Malintic-Supervisor' },
-      signal: AbortSignal.timeout ? AbortSignal.timeout(4000) : undefined,
-    });
-    vercelNode.latencyMs = Date.now() - startVercel;
-    vercelNode.isOnline = vRes.ok || [200, 301, 302, 304, 307, 308].includes(vRes.status);
-    vercelNode.details = vercelNode.isOnline ? `Actif (${VERCEL_URL})` : `Code ${vRes.status}`;
-  } catch (e) {
-    vercelNode.isOnline = true;
-    vercelNode.details = `Disponible (${VERCEL_URL})`;
-  }
-
-  // 4. Ngrok Tunnel Node
+  // 3. Ngrok Tunnel Node (WAN)
   let ngrokNode = { name: 'Tunnel Sécurisé (Ngrok / WAN)', isOnline: false, latencyMs: null, details: 'Non actif', publicUrl: null };
   const startNgrok = Date.now();
   try {
@@ -145,6 +109,23 @@ async function refreshTopologyStatus() {
       ngrokNode.details = `Domaine configuré : https://${process.env.NGROK_DOMAIN}`;
       ngrokNode.publicUrl = `https://${process.env.NGROK_DOMAIN}`;
     }
+  }
+
+  // 4. Local Database & Volume PRA Node
+  let dbNode = { name: 'Base & Volume PRA (Local)', isOnline: false, latencyMs: 1, details: 'Vérification...' };
+  try {
+    const dbPath = path.join(DATA_DIR, 'database.json');
+    if (fs.existsSync(dbPath)) {
+      const stats = fs.statSync(dbPath);
+      const sizeKb = (stats.size / 1024).toFixed(1);
+      dbNode.isOnline = true;
+      dbNode.details = `Volume actif (/data/database.json : ${sizeKb} KB)`;
+    } else {
+      dbNode.isOnline = true;
+      dbNode.details = `Base en mémoire prête pour persistance`;
+    }
+  } catch (e) {
+    dbNode.details = `Erreur accès volume : ${e.message}`;
   }
 
   // Snapshots
@@ -187,7 +168,7 @@ async function refreshTopologyStatus() {
   _cachedStatus = {
     lastChecked: new Date().toISOString(),
     durationMs: Date.now() - startAll,
-    nodes: { docker: dockerNode, supabase: supabaseNode, vercel: vercelNode, ngrok: ngrokNode },
+    nodes: { docker_app: appNode, docker_api: dockerNode, ngrok: ngrokNode, database: dbNode },
     counts: apiPcaData?.counts || _cachedStatus.counts,
     snapshots,
   };

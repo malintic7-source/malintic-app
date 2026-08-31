@@ -44,10 +44,6 @@ services:
       - DATA_DIR=/data
       - HOST_LAN_IP=${HOST_LAN_IP:-${LAN_IP:-}}
       - LAN_IP=${LAN_IP:-${HOST_LAN_IP:-}}
-      - SUPABASE_URL=${SUPABASE_URL:-}
-      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY:-}
-      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY:-}
-      - SUPABASE_KEY=${SUPABASE_KEY:-}
     volumes:
       - malintic_data:/data
     expose:
@@ -91,11 +87,8 @@ services:
       - NODE_ENV=production
       - PORT=5002
       - API_URL=http://malintic_api:5001
+      - APP_URL=http://malintic_app:80
       - DATA_DIR=/data
-      - SUPABASE_URL=${SUPABASE_URL:-}
-      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY:-}
-      - SUPABASE_KEY=${SUPABASE_KEY:-}
-      - VERCEL_URL=${VERCEL_URL:-https://malintic-app.vercel.app}
       - NGROK_API_URL=http://malintic_ngrok:4040
     volumes:
       - malintic_data:/data
