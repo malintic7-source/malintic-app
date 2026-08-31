@@ -11,7 +11,7 @@ class SupabaseMapper {
   SupabaseMapper._();
 
   static const userSelect =
-      'id,email,nom,prenom,phone,matricule,role,photo_url,specialite,sexe,est_actif,assigned_formations,date_creation,date_modification';
+      'id,email,nom,prenom,phone,matricule,role,photo_url,specialite,sexe,est_actif,assigned_formations,must_change_password,date_creation,date_modification';
 
   static const formationSelect =
       'id,titre,description,prix,prix_en_ligne,modules,module_prices,modules_bonus,formateur_ids,module_formateur_ids,type,status,duree_semaines,duree_heures,horaires,photo_url,est_stage,max_modules_par_etudiant,nombre_inscrits,capacite_max,date_debut,date_fin,date_creation,image_format';
@@ -116,6 +116,7 @@ class SupabaseMapper {
       'specialite': data['specialite'],
       'sexe': data['sexe'] ?? 'Homme',
       'est_actif': data['estActif'] ?? data['est_actif'] ?? true,
+      'must_change_password': data['doitChangerMotDePasse'] ?? data['must_change_password'] ?? false,
       'assigned_formations':
           data['assignedFormations'] ?? data['assigned_formations'] ?? [],
       'date_creation': data['dateCreation'] ?? data['date_creation'],
@@ -141,6 +142,7 @@ class SupabaseMapper {
       'specialite': row['specialite'],
       'sexe': row['sexe'],
       'estActif': row['est_actif'] ?? row['estActif'] ?? true,
+      'doitChangerMotDePasse': row['must_change_password'] ?? row['doitChangerMotDePasse'] ?? false,
       'assignedFormations': row['assigned_formations'] ?? row['assignedFormations'] ?? [],
       'dateCreation': row['date_creation'] ?? row['dateCreation'],
       'dateModification': row['date_modification'] ?? row['dateModification'],

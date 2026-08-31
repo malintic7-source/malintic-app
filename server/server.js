@@ -221,6 +221,7 @@ function legacyPasswordMatches(password, legacyPassword) {
 
 function publicUser(user) {
   const { password, passwordHash, motDePasse, ...safeUser } = user;
+  safeUser.doitChangerMotDePasse = Boolean(user.doitChangerMotDePasse || user.must_change_password);
   return safeUser;
 }
 
@@ -1483,6 +1484,7 @@ app.post('/api/auth/change-password', (req, res) => {
   delete user.password;
   delete user.motDePasse;
   user.doitChangerMotDePasse = false;
+  user.must_change_password = false;
   user.dateModification = new Date().toISOString();
 
   const userFullName = `${user.prenom || ''} ${user.nom || ''}`.trim() || user.email;
@@ -1498,14 +1500,30 @@ app.post('/api/auth/change-password', (req, res) => {
     severity: 'info',
   });
 
+  // Pour la première connexion ou demande explicite, purger les sessions existantes
+  if (isFirstLogin || req.body?.logoutAfterChange) {
+    for (const [sToken, sData] of sessions.entries()) {
+      if (String(sData.userId) === String(user.id)) {
+        sessions.delete(sToken);
+      }
+    }
+    saveSessions();
+    res.setHeader('Set-Cookie', 'malintic_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0');
+  } else {
+    const token = crypto.randomBytes(32).toString('hex');
+    sessions.set(token, { userId: user.id, role: user.role, createdAt: Date.now() });
+    saveSessions();
+    res.setHeader('Set-Cookie', `malintic_session=${token}; Path=/; HttpOnly; SameSite=Lax${isProduction ? '; Secure' : ''}`);
+  }
+
+  enqueueSyncDocument('users', user);
   writeState(state);
 
-  const token = crypto.randomBytes(32).toString('hex');
-  sessions.set(token, { userId: user.id, role: user.role, createdAt: Date.now() });
-  saveSessions();
-  res.setHeader('Set-Cookie', `malintic_session=${token}; Path=/; HttpOnly; SameSite=Lax${isProduction ? '; Secure' : ''}`);
-
-  res.json(publicUser(user));
+  res.json({
+    ...publicUser(user),
+    loggedOut: isFirstLogin || Boolean(req.body?.logoutAfterChange),
+    message: 'Mot de passe mis à jour avec succès.',
+  });
 });
 
 app.post('/api/admin/users/:id/password', requireAdministrator, requireAdminRateLimit, (req, res) => {

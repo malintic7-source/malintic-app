@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:gestion_formations/Models/formation.dart';
 import 'package:gestion_formations/Models/user.dart';
 import 'package:gestion_formations/Pages/Login/welcome_page.dart';
+import 'package:gestion_formations/Pages/Login/sign_in.dart';
 import 'package:gestion_formations/Services/auth_provider.dart';
 import 'package:gestion_formations/Services/db_services.dart';
 import 'package:gestion_formations/config/theme.dart';
@@ -51,6 +52,7 @@ class _FirstLoginPasswordDialogState extends State<FirstLoginPasswordDialog> {
   bool _obscureNew = true;
   bool _obscureConfirm = true;
   bool _isLoading = false;
+  bool _isSuccess = false;
   String? _errorMessage;
 
   @override
@@ -136,9 +138,11 @@ class _FirstLoginPasswordDialogState extends State<FirstLoginPasswordDialog> {
       );
 
       if (!mounted) return;
-      Navigator.of(context, rootNavigator: true).pop();
       widget.onPasswordSet?.call();
-      await _showPasswordChangedMessage();
+      setState(() {
+        _isLoading = false;
+        _isSuccess = true;
+      });
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -148,31 +152,11 @@ class _FirstLoginPasswordDialogState extends State<FirstLoginPasswordDialog> {
     }
   }
 
-  Future<void> _showPasswordChangedMessage() async {
-    if (!mounted) return;
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Mot de passe mis à jour'),
-        content: const Text(
-          'Votre nouveau mot de passe est enregistré pour tous vos appareils. '
-          'Pour appliquer la modification, vous allez être déconnecté. '
-          'Reconnectez-vous avec ce nouveau mot de passe.',
-        ),
-        actions: [
-          FilledButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Se déconnecter'),
-          ),
-        ],
-      ),
-    );
-    if (!mounted) return;
+  Future<void> _redirectToSignIn() async {
     await AuthProvider().logout();
     if (!mounted) return;
     Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const WelcomePage()),
+      MaterialPageRoute(builder: (_) => const SignInPage()),
       (route) => false,
     );
   }
@@ -180,7 +164,7 @@ class _FirstLoginPasswordDialogState extends State<FirstLoginPasswordDialog> {
   Future<void> _logout() async {
     await AuthProvider().logout();
     if (!mounted) return;
-    Navigator.of(context).pushAndRemoveUntil(
+    Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
       MaterialPageRoute(builder: (context) => const WelcomePage()),
       (route) => false,
     );
@@ -192,6 +176,95 @@ class _FirstLoginPasswordDialogState extends State<FirstLoginPasswordDialog> {
     final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
     final textColor = isDark ? Colors.white : AppTheme.textPrimary;
     final subtextColor = isDark ? Colors.white70 : AppTheme.textSecondary;
+
+    if (_isSuccess) {
+      return PopScope(
+        canPop: false,
+        child: Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          backgroundColor: cardBg,
+          elevation: 16,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 440),
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 72,
+                    height: 72,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFDCFCE7),
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppTheme.success.withValues(alpha: 0.2),
+                          blurRadius: 16,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.check_circle_rounded,
+                      color: AppTheme.success,
+                      size: 40,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'Mot de passe mis à jour !',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.poppins(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: textColor,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    'Votre nouveau mot de passe a été enregistré avec succès pour tous vos appareils.\n\n'
+                    'Pour des raisons de sécurité, votre session temporaire a été fermée. '
+                    'Veuillez vous reconnecter avec vos nouveaux identifiants.',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      height: 1.5,
+                      color: subtextColor,
+                    ),
+                  ),
+                  const SizedBox(height: 28),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: _redirectToSignIn,
+                      icon: const Icon(Icons.login_rounded, size: 18),
+                      label: Text(
+                        'Se reconnecter maintenant',
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        elevation: 3,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
 
     final allFormations = LocalDataService().getFormations();
     final assignedIds = widget.user.assignedFormations

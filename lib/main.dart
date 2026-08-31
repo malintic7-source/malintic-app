@@ -278,7 +278,12 @@ class _FirstLoginGateState extends State<_FirstLoginGate> {
 
   @override
   Widget build(BuildContext context) {
-    // Affiche le HomeScreen en fond (le dialog bloque toute interaction)
-    return HomeScreen(user: widget.user);
+    // Écran d'attente sécurisé pendant la définition du mot de passe initial
+    return const Scaffold(
+      backgroundColor: AppTheme.background,
+      body: Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
   }
 }

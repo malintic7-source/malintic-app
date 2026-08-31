@@ -439,6 +439,9 @@ class AuthProvider {
       );
     }
 
+    final targetUserId = _currentUser!.id;
+    final targetEmail = _currentUser!.email;
+
     try {
       final response = await http
           .post(
@@ -448,13 +451,14 @@ class AuthProvider {
               'ngrok-skip-browser-warning': 'true',
             },
             body: jsonEncode({
-              'userId': _currentUser!.id,
-              'email': _currentUser!.email,
-              'identifier': _currentUser!.email,
+              'userId': targetUserId,
+              'email': targetEmail,
+              'identifier': targetEmail,
               if (currentPassword != null && currentPassword.isNotEmpty)
                 'currentPassword': currentPassword,
               'newPassword': newPassword.trim(),
               'isFirstLogin': isFirstLogin,
+              'logoutAfterChange': isFirstLogin,
             }),
           )
           .timeout(const Duration(seconds: 6));
@@ -476,30 +480,38 @@ class AuthProvider {
       // The local credentials are saved and updated so the user is never blocked.
     }
 
-    User updatedUser = _currentUser!.copyWith(
-      doitChangerMotDePasse: false,
-      dateModification: DateTime.now(),
-    );
-    _currentUser = updatedUser;
-    _authController.add(_currentUser);
-    _localStorage.setSessionItem(
-      'currentUserJson',
-      jsonEncode(_currentUser!.toMap()),
-    );
-    _localStorage.setItem('user_pw_${_currentUser!.id}', newPassword.trim());
-    _localStorage.setItem('user_pw_changed_${_currentUser!.id}', 'true');
+    _localStorage.setItem('user_pw_$targetUserId', newPassword.trim());
+    _localStorage.setItem('user_pw_changed_$targetUserId', 'true');
 
-    final localUser = _db.getUserById(updatedUser.id);
+    final localUser = _db.getUserById(targetUserId);
     if (localUser != null) {
       await _db.addUser(
         localUser.copyWith(
+          password: newPassword.trim(),
           doitChangerMotDePasse: false,
           dateModification: DateTime.now(),
         ),
       );
     }
 
-    return updatedUser;
+    final updatedUser = _currentUser!.copyWith(
+      password: newPassword.trim(),
+      doitChangerMotDePasse: false,
+      dateModification: DateTime.now(),
+    );
+
+    if (isFirstLogin) {
+      await logout();
+      return updatedUser;
+    } else {
+      _currentUser = updatedUser;
+      _authController.add(_currentUser);
+      _localStorage.setSessionItem(
+        'currentUserJson',
+        jsonEncode(_currentUser!.toMap()),
+      );
+      return updatedUser;
+    }
   }
 
   /// #2 — Génère un mot de passe temporaire aléatoire sécurisé à 12 caractères.
