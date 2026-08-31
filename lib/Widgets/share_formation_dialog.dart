@@ -68,12 +68,17 @@ class _ShareFormationDialogState extends State<ShareFormationDialog> {
       }
 
       // 2. Récupérer l'IP LAN préférée enregistrée en local (si existante)
-      final savedLanIp = _storage.getItem('preferred_lan_ip')?.trim() ?? '';
+      final rawSavedLanIp = _storage.getItem('preferred_lan_ip')?.trim() ?? '';
+      // Nettoyer tout port 8080 (réservé à Apache) ou 5001 pour garantir que le scan mobile tape sur Docker Nginx port 80
+      final savedLanIp = rawSavedLanIp.replaceAll(':8080', '').replaceAll(':5001', '');
+      if (savedLanIp != rawSavedLanIp) {
+        _storage.setItem('preferred_lan_ip', savedLanIp);
+      }
 
       // 3. Détection base locale / LAN
       String detectedLocalHost = currentHost.isNotEmpty ? currentHost : 'localhost';
       String portSuffix = '';
-      if (currentPort != 80 && currentPort != 443 && currentPort != 0) {
+      if (currentPort != 80 && currentPort != 443 && currentPort != 0 && currentPort != 8080 && currentPort != 5001) {
         portSuffix = ':$currentPort';
       }
 
@@ -129,7 +134,7 @@ class _ShareFormationDialogState extends State<ShareFormationDialog> {
                 : (realIps.isNotEmpty ? realIps.first : null);
 
             if (chosenIp != null && chosenIp.isNotEmpty) {
-              final finalPort = (currentPort != 80 && currentPort != 443 && currentPort != 0)
+              final finalPort = (currentPort != 80 && currentPort != 443 && currentPort != 0 && currentPort != 8080 && currentPort != 5001)
                   ? ':$currentPort'
                   : '';
               _localBase = 'http://$chosenIp$finalPort';
