@@ -124,8 +124,6 @@ class WelcomePage extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              _buildBrandPill(isDark),
-              const SizedBox(height: 20),
               _buildLogoCircle(260, isDark),
               const SizedBox(height: 36),
               Padding(
@@ -169,8 +167,6 @@ class WelcomePage extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        _buildBrandPill(isDark),
-        const SizedBox(height: 18),
         _buildLogoCircle(170, isDark),
         const SizedBox(height: 24),
         Text(
@@ -190,28 +186,6 @@ class WelcomePage extends StatelessWidget {
               child: _PoleCard(pole: pole, isDark: isDark),
             )),
       ],
-    );
-  }
-
-  Widget _buildBrandPill(bool isDark) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-      decoration: BoxDecoration(
-        color: AppTheme.primary.withValues(alpha: isDark ? 0.2 : 0.08),
-        borderRadius: BorderRadius.circular(30),
-        border: Border.all(
-          color: AppTheme.primary.withValues(alpha: isDark ? 0.35 : 0.16),
-        ),
-      ),
-      child: Text(
-        'M@LI-NTIC  •  UNIVERS NUMÉRIQUE',
-        style: GoogleFonts.poppins(
-          fontSize: 10,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0.6,
-          color: isDark ? Colors.white : AppTheme.primary,
-        ),
-      ),
     );
   }
 

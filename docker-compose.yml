@@ -72,6 +72,33 @@ services:
     networks:
       - malintic_network
 
+  supervisor:
+    build:
+      context: ./supervisor
+      dockerfile: Dockerfile
+    container_name: malintic_supervisor
+    restart: unless-stopped
+    init: true
+    ports:
+      - "5002:5002"
+    environment:
+      - NODE_ENV=production
+      - PORT=5002
+      - API_URL=http://malintic_api:5001
+      - DATA_DIR=/data
+      - SUPABASE_URL=${SUPABASE_URL:-}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY:-}
+      - SUPABASE_KEY=${SUPABASE_KEY:-}
+      - VERCEL_URL=${VERCEL_URL:-https://malintic-app.vercel.app}
+      - NGROK_API_URL=http://malintic_ngrok:4040
+    volumes:
+      - malintic_data:/data
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - malintic_network
+
   # cloudflared:
   #   image: cloudflare/cloudflared:latest
   #   container_name: malintic_tunnel

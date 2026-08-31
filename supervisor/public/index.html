@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>M@LINTIC — Superviseur Haute Disponibilité & PRA / PCA</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0b1120;
+      --card-bg: rgba(30, 41, 59, 0.7);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --primary: #0284c7;
+      --primary-light: #38bdf8;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(2, 132, 199, 0.15) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.1) 0px, transparent 50%);
+    }
+
+    header {
+      padding: 20px 32px;
+      border-bottom: 1px solid var(--card-border);
+      background: rgba(15, 23, 42, 0.8);
+      backdrop-filter: blur(12px);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .logo-badge {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--primary), #0369a1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 20px;
+      color: white;
+      box-shadow: 0 0 20px rgba(2, 132, 199, 0.4);
+    }
+
+    .title-group h1 {
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+    }
+
+    .title-group p {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .system-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: 20px;
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      font-size: 12px;
+      font-weight: 600;
+      color: #34d399;
+    }
+
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: var(--success);
+      box-shadow: 0 0 10px var(--success);
+      animation: pulse 1.8s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(1.3); }
+    }
+
+    main {
+      padding: 32px;
+      max-width: 1300px;
+      margin: 0 auto;
+      width: 100%;
+      flex: 1;
+    }
+
+    .grid-4 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 18px;
+      margin-bottom: 28px;
+    }
+
+    .node-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 20px;
+      backdrop-filter: blur(10px);
+      transition: transform 0.2s, border-color 0.2s;
+    }
+
+    .node-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    .node-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .node-title {
+      font-size: 14px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status-tag {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .status-tag.online {
+      background: rgba(16, 185, 129, 0.2);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .status-tag.offline {
+      background: rgba(239, 68, 68, 0.2);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .node-details {
+      font-size: 12.5px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    .metric-row {
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+    }
+
+    .actions-bar {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 28px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .actions-title h3 {
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .actions-title p {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .button-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    button, .btn {
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 10px 18px;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+      text-decoration: none;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+      box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);
+    }
+    .btn-primary:hover { background: #0369a1; }
+
+    .btn-reconcile {
+      background: #0f766e;
+      color: white;
+    }
+    .btn-reconcile:hover { background: #115e59; }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .btn-secondary:hover { background: rgba(255, 255, 255, 0.12); }
+
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.2);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      padding: 6px 12px;
+      font-size: 11.5px;
+    }
+    .btn-danger:hover { background: rgba(239, 68, 68, 0.3); }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .section-header h2 {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: -0.2px;
+    }
+
+    .table-container {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      overflow: hidden;
+      margin-bottom: 28px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    th {
+      background: rgba(15, 23, 42, 0.6);
+      padding: 14px 18px;
+      text-align: left;
+      font-weight: 600;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    td {
+      padding: 14px 18px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+    .tag-count {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      background: rgba(2, 132, 199, 0.15);
+      color: var(--primary-light);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    .logs-panel {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 18px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      max-height: 240px;
+      overflow-y: auto;
+    }
+
+    .log-entry {
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+      display: flex;
+      gap: 12px;
+    }
+
+    .log-time { color: var(--text-muted); }
+    .log-type { font-weight: 600; color: var(--primary-light); }
+    .log-msg { color: var(--text); }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(6px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      visibility: hidden;
+      opacity: 0;
+      transition: 0.2s;
+    }
+    .modal-overlay.active {
+      visibility: visible;
+      opacity: 1;
+    }
+    .modal {
+      background: #1e293b;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 18px;
+      padding: 26px;
+      width: 100%;
+      max-width: 480px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+    }
+    .modal h3 { font-size: 17px; margin-bottom: 12px; }
+    .modal input {
+      width: 100%;
+      background: #0f172a;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      padding: 10px 14px;
+      color: white;
+      font-family: inherit;
+      margin-top: 8px;
+      margin-bottom: 16px;
+    }
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand">
+      <div class="logo-badge">M</div>
+      <div class="title-group">
+        <h1>Superviseur Haute Disponibilité & PRA / PCA</h1>
+        <p>M@LINTIC Multi-Node Topology & Disaster Recovery Center</p>
+      </div>
+    </div>
+    <div class="system-status" id="globalStatus">
+      <div class="pulse-dot"></div>
+      <span>SUPERVISION ACTIVE</span>
+    </div>
+  </header>
+
+  <main>
+    <!-- Topologie 4 Nœuds -->
+    <div class="grid-4" id="nodesGrid">
+      <div class="node-card">
+        <div class="node-header">
+          <div class="node-title">🖥️ Docker Core API (LAN)</div>
+          <span class="status-tag online">LOCAL</span>
+        </div>
+        <div class="node-details" id="dockerDetails">Chargement des métriques...</div>
+        <div class="metric-row">
+          <span>Latence :</span>
+          <span class="tag-count" id="dockerLatency">-- ms</span>
+        </div>
+      </div>
+
+      <div class="node-card">
+        <div class="node-header">
+          <div class="node-title">☁️ Supabase Cloud (PG)</div>
+          <span class="status-tag online" id="supabaseTag">CLOUD</span>
+        </div>
+        <div class="node-details" id="supabaseDetails">Vérification PostgreSQL...</div>
+        <div class="metric-row">
+          <span>Latence API :</span>
+          <span class="tag-count" id="supabaseLatency">-- ms</span>
+        </div>
+      </div>
+
+      <div class="node-card">
+        <div class="node-header">
+          <div class="node-title">⚡ Vercel Edge (Web)</div>
+          <span class="status-tag online">CDN</span>
+        </div>
+        <div class="node-details" id="vercelDetails">SPA Flutter active</div>
+        <div class="metric-row">
+          <span>Réseau :</span>
+          <span class="tag-count">Multi-Appareils</span>
+        </div>
+      </div>
+
+      <div class="node-card">
+        <div class="node-header">
+          <div class="node-title">🚇 Ngrok WAN Tunnel</div>
+          <span class="status-tag online" id="ngrokTag">GATEWAY</span>
+        </div>
+        <div class="node-details" id="ngrokDetails">Passerelle télétravail</div>
+        <div class="metric-row">
+          <span>Accès :</span>
+          <span class="tag-count" id="ngrokUrl">Automatique</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Barre d'actions PRA / PCA -->
+    <div class="actions-bar">
+      <div class="actions-title">
+        <h3>Actions de Haute Disponibilité & Reprise (PRA / PCA)</h3>
+        <p>Déclenchez des sauvegardes à chaud ou synchronisez manuellement les nœuds</p>
+      </div>
+      <div class="button-group">
+        <button class="btn-primary" onclick="openSnapshotModal()">
+          📸 Créer un Snapshot PRA
+        </button>
+        <button class="btn-reconcile" onclick="triggerReconcile()">
+          🔄 Forcer la Réconciliation 2-Way
+        </button>
+        <a class="btn btn-secondary" href="/api/supervisor/export" target="_blank">
+          📥 Exporter Archive JSON
+        </a>
+      </div>
+    </div>
+
+    <!-- Table des Snapshots PRA -->
+    <div class="section-header">
+      <h2>Points de Restauration Archivés (PRA) — Rotation des 10 Derniers</h2>
+      <span class="tag-count" id="snapshotsCount">0 point(s)</span>
+    </div>
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Date & Heure</th>
+            <th>Label</th>
+            <th>Motif / Déclencheur</th>
+            <th>Taille</th>
+            <th>Documents</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="snapshotsTableBody">
+          <tr>
+            <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 24px;">
+              Chargement des instantanés PRA...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Journal d'événements -->
+    <div class="section-header">
+      <h2>Journal des Événements & Télémétrie Superviseur</h2>
+    </div>
+    <div class="logs-panel" id="logsPanel">
+      <div class="log-entry">
+        <span class="log-time">--:--:--</span>
+        <span class="log-type">INFO</span>
+        <span class="log-msg">Initialisation du Superviseur PRA / PCA...</span>
+      </div>
+    </div>
+  </main>
+
+  <!-- Modal Création Snapshot -->
+  <div class="modal-overlay" id="snapshotModal">
+    <div class="modal">
+      <h3>📸 Créer un Instantané PRA</h3>
+      <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 14px;">
+        Capture l'état complet de toutes les bases de données (formations, utilisateurs, inscriptions, paiements, séances).
+      </p>
+      <label style="font-size: 12px; font-weight: 600;">Label :</label>
+      <input type="text" id="snapLabel" placeholder="ex: avant_cloture_sfp5">
+      <label style="font-size: 12px; font-weight: 600;">Motif :</label>
+      <input type="text" id="snapReason" placeholder="ex: Sauvegarde manuelle Superviseur">
+      <div class="modal-actions">
+        <button class="btn-secondary" onclick="closeSnapshotModal()">Annuler</button>
+        <button class="btn-primary" onclick="submitSnapshot()">Créer le Snapshot</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    async function fetchStatus() {
+      try {
+        const res = await fetch('/api/supervisor/status');
+        if (!res.ok) return;
+        const data = await res.json();
+
+        // 1. Docker
+        document.getElementById('dockerDetails').innerText = data.nodes.docker.details;
+        document.getElementById('dockerLatency').innerText = (data.nodes.docker.latencyMs ?? '--') + ' ms';
+
+        // 2. Supabase
+        document.getElementById('supabaseDetails').innerText = data.nodes.supabase.details;
+        document.getElementById('supabaseLatency').innerText = (data.nodes.supabase.latencyMs ?? '--') + ' ms';
+        const supaTag = document.getElementById('supabaseTag');
+        supaTag.className = 'status-tag ' + (data.nodes.supabase.isOnline ? 'online' : 'offline');
+        supaTag.innerText = data.nodes.supabase.isOnline ? 'CONNECTÉ' : 'HORS-LIGNE';
+
+        // 3. Vercel
+        document.getElementById('vercelDetails').innerText = data.nodes.vercel.details;
+
+        // 4. Ngrok
+        document.getElementById('ngrokDetails').innerText = data.nodes.ngrok.details;
+        if (data.nodes.ngrok.publicUrl) {
+          document.getElementById('ngrokUrl').innerText = data.nodes.ngrok.publicUrl.replace('https://', '');
+        }
+
+        // Snapshots Table
+        const snaps = data.snapshots || [];
+        document.getElementById('snapshotsCount').innerText = snaps.length + ' point(s)';
+        const tbody = document.getElementById('snapshotsTableBody');
+        if (snaps.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 24px;">Aucun snapshot disponible. Cliquez sur « Créer un Snapshot PRA ».</td></tr>';
+        } else {
+          tbody.innerHTML = snaps.map(s => {
+            const countsStr = Object.entries(s.counts || {}).map(([k, v]) => `${k}: ${v}`).join(' • ');
+            const sizeKb = (s.sizeBytes / 1024).toFixed(1) + ' KB';
+            const dateStr = new Date(s.createdAt).toLocaleString('fr-FR');
+            return `
+              <tr>
+                <td><strong>${dateStr}</strong></td>
+                <td><span class="tag-count">${s.label}</span></td>
+                <td style="color: var(--text-muted);">${s.reason || 'Auto'}</td>
+                <td>${sizeKb}</td>
+                <td style="font-size: 11.5px; color: var(--text-muted);">${countsStr || '--'}</td>
+                <td>
+                  <button class="btn-danger" onclick="restoreSnapshot('${s.filename}')">Restaurer</button>
+                </td>
+              </tr>
+            `;
+          }).join('');
+        }
+
+        // Logs
+        const logsPanel = document.getElementById('logsPanel');
+        if (data.logs && data.logs.length > 0) {
+          logsPanel.innerHTML = data.logs.map(l => `
+            <div class="log-entry">
+              <span class="log-time">${new Date(l.timestamp).toLocaleTimeString()}</span>
+              <span class="log-type">[${l.type.toUpperCase()}]</span>
+              <span class="log-msg">${l.message}</span>
+            </div>
+          `).join('');
+        }
+      } catch (e) {
+        console.error('Superviseur poll error:', e);
+      }
+    }
+
+    function openSnapshotModal() {
+      document.getElementById('snapLabel').value = 'manuel_' + new Date().getHours() + 'h' + new Date().getMinutes();
+      document.getElementById('snapReason').value = 'Sauvegarde superviseur';
+      document.getElementById('snapshotModal').classList.add('active');
+    }
+
+    function closeSnapshotModal() {
+      document.getElementById('snapshotModal').classList.remove('active');
+    }
+
+    async function submitSnapshot() {
+      const label = document.getElementById('snapLabel').value;
+      const reason = document.getElementById('snapReason').value;
+      closeSnapshotModal();
+      try {
+        const res = await fetch('/api/supervisor/snapshot', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ label, reason }),
+        });
+        if (res.ok) {
+          alert('Snapshot PRA créé avec succès !');
+          fetchStatus();
+        } else {
+          alert('Erreur lors de la création du snapshot.');
+        }
+      } catch (_) {
+        alert('Erreur réseau.');
+      }
+    }
+
+    async function triggerReconcile() {
+      try {
+        const res = await fetch('/api/supervisor/reconcile', { method: 'POST' });
+        if (res.ok) {
+          alert('Réconciliation Docker <-> Supabase exécutée avec succès !');
+          fetchStatus();
+        } else {
+          alert('Erreur lors de la réconciliation.');
+        }
+      } catch (_) {
+        alert('Erreur réseau.');
+      }
+    }
+
+    async function restoreSnapshot(filename) {
+      if (!confirm(`Restaurer le point PRA « ${filename} » ? Les données actuelles seront écrasées et re-synchronisées vers Supabase.`)) {
+        return;
+      }
+      try {
+        const res = await fetch('/api/supervisor/restore', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ filename }),
+        });
+        if (res.ok) {
+          alert('Restauration PRA effectuée avec succès !');
+          fetchStatus();
+        } else {
+          alert('Erreur lors de la restauration.');
+        }
+      } catch (_) {
+        alert('Erreur réseau.');
+      }
+    }
+
+    fetchStatus();
+    setInterval(fetchStatus, 5000);
+  </script>
+</body>
+</html>

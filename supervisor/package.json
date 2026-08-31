@@ -1,0 +1,15 @@
+{
+  "name": "malintic-pra-supervisor",
+  "version": "1.0.0",
+  "description": "Serveur Docker autonome de supervision et pilotage PRA / PCA pour M@LINTIC",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  },
+  "keywords": ["pra", "pca", "supervisor", "disaster-recovery", "malintic"],
+  "author": "M@LINTIC Infrastructure Team",
+  "license": "ISC"
+}
