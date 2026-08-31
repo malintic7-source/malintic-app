@@ -1780,13 +1780,15 @@ class _AdminFormationsState extends State<AdminFormations>
     return null;
   }
 
-
   Widget _buildInteractiveModulesSection({
     required BuildContext context,
     required List<_ModuleItemData> moduleItems,
     required List<User> formateurs,
     required void Function(void Function()) setModalState,
   }) {
+    final standardCount = moduleItems.where((i) => !i.isBonus).length;
+    final bonusCount = moduleItems.where((i) => i.isBonus).length;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(12),
@@ -1799,112 +1801,103 @@ class _AdminFormationsState extends State<AdminFormations>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Header section modules (responsive)
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final narrow = constraints.maxWidth < 360;
-              return narrow
-                  ? Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
                       children: [
-                        Row(
-                          children: [
-                            const Icon(Icons.view_module_rounded, size: 18, color: AppTheme.primary),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                'Programme & Modules (${moduleItems.length})',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 12.5,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.black87,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton.icon(
-                            onPressed: () {
-                              setModalState(() {
-                                moduleItems.add(
-                                  _ModuleItemData(
-                                    nameCtrl: TextEditingController(),
-                                    priceCtrl: TextEditingController(),
-                                    formateurId: formateurs.isNotEmpty ? formateurs.first.id : null,
-                                  ),
-                                );
-                              });
-                            },
-                            icon: const Icon(Icons.add_rounded, size: 14),
-                            label: Text(
-                              'Ajouter un module',
-                              style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppTheme.primary,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                            ),
+                        const Icon(Icons.view_module_rounded, size: 18, color: AppTheme.primary),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Programme & Modules (${moduleItems.length})',
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.black87,
                           ),
                         ),
                       ],
-                    )
-                  : Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            const Icon(Icons.view_module_rounded, size: 18, color: AppTheme.primary),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Programme & Modules (${moduleItems.length})',
-                              style: GoogleFonts.poppins(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.black87,
-                              ),
-                            ),
-                          ],
-                        ),
-                        ElevatedButton.icon(
-                          onPressed: () {
-                            setModalState(() {
-                              moduleItems.add(
-                                _ModuleItemData(
-                                  nameCtrl: TextEditingController(),
-                                  priceCtrl: TextEditingController(),
-                                  formateurId: formateurs.isNotEmpty ? formateurs.first.id : null,
-                                ),
-                              );
-                            });
-                          },
-                          icon: const Icon(Icons.add_rounded, size: 14),
-                          label: Text(
-                            'Ajouter un module',
-                            style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '$standardCount standard(s) • $bonusCount bonus offert(s)',
+                      style: GoogleFonts.poppins(fontSize: 11, color: AppTheme.textSecondary),
+                    ),
+                  ],
+                ),
+              ),
+              Wrap(
+                spacing: 6,
+                runSpacing: 4,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      setModalState(() {
+                        moduleItems.add(
+                          _ModuleItemData(
+                            nameCtrl: TextEditingController(),
+                            priceCtrl: TextEditingController(),
+                            formateurId: formateurs.isNotEmpty ? formateurs.first.id : null,
+                            isBonus: false,
                           ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.primary,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                            visualDensity: VisualDensity.compact,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        );
+                      });
+                    },
+                    icon: const Icon(Icons.add_rounded, size: 13),
+                    label: Text(
+                      '+ Module',
+                      style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      visualDensity: VisualDensity.compact,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      setModalState(() {
+                        moduleItems.add(
+                          _ModuleItemData(
+                            nameCtrl: TextEditingController(),
+                            priceCtrl: TextEditingController(),
+                            formateurId: formateurs.isNotEmpty ? formateurs.first.id : null,
+                            isBonus: true,
                           ),
-                        ),
-                      ],
-                    );
-            },
+                        );
+                      });
+                    },
+                    icon: const Icon(Icons.card_giftcard_rounded, size: 13, color: Color(0xFFD97706)),
+                    label: Text(
+                      '+ Bonus',
+                      style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFFD97706)),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Color(0xFFFDE68A), width: 1.2),
+                      backgroundColor: const Color(0xFFFEF3C7).withValues(alpha: 0.5),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      visualDensity: VisualDensity.compact,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           if (moduleItems.isEmpty)
             Center(
               child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 12),
+                padding: const EdgeInsets.symmetric(vertical: 16),
                 child: Text(
-                  'Aucun module défini. Cliquez sur « Ajouter un module » ci-dessus.',
+                  'Aucun module défini. Cliquez sur « + Module » ou « + Bonus » ci-dessus.',
                   style: GoogleFonts.poppins(fontSize: 11.5, color: Colors.black45),
                 ),
               ),
@@ -1918,7 +1911,7 @@ class _AdminFormationsState extends State<AdminFormations>
                 margin: const EdgeInsets.only(bottom: 8),
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: item.isBonus ? const Color(0xFFFEF3C7).withValues(alpha: 0.3) : Colors.white,
+                  color: item.isBonus ? const Color(0xFFFEF3C7).withValues(alpha: 0.35) : Colors.white,
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
                     color: item.isBonus ? const Color(0xFFFDE68A) : const Color(0xFFCBD5E1),
@@ -1930,91 +1923,45 @@ class _AdminFormationsState extends State<AdminFormations>
                     Row(
                       children: [
                         Container(
-                          width: 22,
-                          height: 22,
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
-                            color: AppTheme.primary.withValues(alpha: 0.1),
-                            shape: BoxShape.circle,
+                            color: item.isBonus ? const Color(0xFFD97706) : AppTheme.primary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                          child: Center(
-                            child: Text(
-                              '${idx + 1}',
-                              style: GoogleFonts.poppins(
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                color: AppTheme.primary,
-                              ),
+                          child: Text(
+                            item.isBonus ? '🎁 BONUS' : '#${idx + 1}',
+                            style: GoogleFonts.poppins(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: item.isBonus ? Colors.white : AppTheme.primary,
                             ),
                           ),
                         ),
                         const SizedBox(width: 8),
-                        // Intitulé + Prix en column sur petit écran, row sur grand
                         Expanded(
-                          child: LayoutBuilder(
-                            builder: (ctx, bc) {
-                              final narrow = bc.maxWidth < 260;
-                              if (narrow) {
-                                return Column(
-                                  children: [
-                                    TextFormField(
-                                      controller: item.nameCtrl,
-                                      style: GoogleFonts.poppins(fontSize: 12),
-                                      decoration: InputDecoration(
-                                        isDense: true,
-                                        hintText: 'Intitulé du module',
-                                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
-                                        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 6),
-                                    TextFormField(
-                                      controller: item.priceCtrl,
-                                      keyboardType: TextInputType.number,
-                                      style: GoogleFonts.poppins(fontSize: 12),
-                                      decoration: InputDecoration(
-                                        isDense: true,
-                                        hintText: 'Prix (FCFA)',
-                                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
-                                        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                                      ),
-                                    ),
-                                  ],
-                                );
-                              }
-                              return Row(
-                                children: [
-                                  Expanded(
-                                    flex: 3,
-                                    child: TextFormField(
-                                      controller: item.nameCtrl,
-                                      style: GoogleFonts.poppins(fontSize: 12),
-                                      decoration: InputDecoration(
-                                        isDense: true,
-                                        hintText: 'Intitulé (ex: Flutter & Dart)',
-                                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
-                                        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    flex: 2,
-                                    child: TextFormField(
-                                      controller: item.priceCtrl,
-                                      keyboardType: TextInputType.number,
-                                      style: GoogleFonts.poppins(fontSize: 12),
-                                      decoration: InputDecoration(
-                                        isDense: true,
-                                        hintText: 'Prix (FCFA)',
-                                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
-                                        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              );
-                            },
+                          child: TextFormField(
+                            controller: item.nameCtrl,
+                            style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600),
+                            decoration: InputDecoration(
+                              isDense: true,
+                              hintText: item.isBonus ? 'Intitulé du module bonus (ex: PowerPoint + IA)' : 'Intitulé du module (ex: Flutter & Dart)',
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                            ),
                           ),
+                        ),
+                        const SizedBox(width: 6),
+                        IconButton(
+                          icon: Icon(Icons.delete_outline_rounded, color: Colors.red.shade400, size: 20),
+                          tooltip: 'Supprimer ce module',
+                          onPressed: () {
+                            setModalState(() {
+                              moduleItems.removeAt(idx);
+                            });
+                          },
+                          visualDensity: VisualDensity.compact,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                         ),
                       ],
                     ),
@@ -2022,6 +1969,26 @@ class _AdminFormationsState extends State<AdminFormations>
                     Row(
                       children: [
                         Expanded(
+                          flex: 3,
+                          child: TextFormField(
+                            controller: item.priceCtrl,
+                            keyboardType: TextInputType.number,
+                            style: GoogleFonts.poppins(fontSize: 12),
+                            decoration: InputDecoration(
+                              isDense: true,
+                              labelText: 'Tarif unitaire (FCFA)',
+                              hintText: 'ex: 35000',
+                              helperText: 'Prix pour inscription à la carte hors-SFP',
+                              helperStyle: GoogleFonts.poppins(fontSize: 9.5),
+                              prefixIcon: const Icon(Icons.sell_outlined, size: 15),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          flex: 3,
                           child: DropdownButtonFormField<String>(
                             initialValue: (item.formateurId != null && formateurs.any((f) => f.id == item.formateurId))
                                 ? item.formateurId
@@ -2053,24 +2020,29 @@ class _AdminFormationsState extends State<AdminFormations>
                             },
                           ),
                         ),
-                        const SizedBox(width: 12),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Checkbox(
-                              value: item.isBonus,
-                              onChanged: (val) {
-                                setModalState(() {
-                                  item.isBonus = val ?? false;
-                                });
-                              },
-                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            ),
-                            Text(
-                              'Module Bonus',
-                              style: GoogleFonts.poppins(fontSize: 11, color: Colors.black87),
-                            ),
-                          ],
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Checkbox(
+                          value: item.isBonus,
+                          onChanged: (val) {
+                            setModalState(() {
+                              item.isBonus = val ?? false;
+                            });
+                          },
+                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          activeColor: const Color(0xFFD97706),
+                        ),
+                        Text(
+                          'Module Bonus Offert (inclus gratuitement dans le pack)',
+                          style: GoogleFonts.poppins(
+                            fontSize: 11,
+                            color: item.isBonus ? const Color(0xFF92400E) : Colors.black87,
+                            fontWeight: item.isBonus ? FontWeight.w600 : FontWeight.normal,
+                          ),
                         ),
                       ],
                     ),
@@ -2158,7 +2130,7 @@ class _AdminFormationsState extends State<AdminFormations>
                     ),
                     // Image picker avec upload ImageKit
                     Container(
-                      margin: EdgeInsets.only(bottom: 12),
+                      margin: const EdgeInsets.only(bottom: 12),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -2170,7 +2142,7 @@ class _AdminFormationsState extends State<AdminFormations>
                               color: Colors.black87,
                             ),
                           ),
-                          SizedBox(height: 8),
+                          const SizedBox(height: 8),
                           if (uploadedImageUrl != null &&
                               uploadedImageUrl!.isNotEmpty)
                             Column(
@@ -2187,7 +2159,7 @@ class _AdminFormationsState extends State<AdminFormations>
                                             Container(
                                               height: 150,
                                               color: Colors.grey.shade200,
-                                              child: Center(
+                                              child: const Center(
                                                 child: Icon(
                                                   Icons.broken_image,
                                                   color: Colors.grey,
@@ -2196,7 +2168,7 @@ class _AdminFormationsState extends State<AdminFormations>
                                             ),
                                   ),
                                 ),
-                                SizedBox(height: 8),
+                                const SizedBox(height: 8),
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.end,
                                   children: [
@@ -2207,11 +2179,11 @@ class _AdminFormationsState extends State<AdminFormations>
                                           imageUrlController.clear();
                                         });
                                       },
-                                      icon: Icon(
+                                      icon: const Icon(
                                         Icons.delete,
                                         color: Colors.red,
                                       ),
-                                      label: Text(
+                                      label: const Text(
                                         'Supprimer',
                                         style: TextStyle(color: Colors.red),
                                       ),
@@ -2282,13 +2254,13 @@ class _AdminFormationsState extends State<AdminFormations>
                                           mainAxisAlignment:
                                               MainAxisAlignment.center,
                                           children: [
-                                            CircularProgressIndicator(
+                                            const CircularProgressIndicator(
                                               valueColor:
                                                   AlwaysStoppedAnimation(
                                                     AppTheme.primary,
                                                   ),
                                             ),
-                                            SizedBox(height: 12),
+                                            const SizedBox(height: 12),
                                             Text(
                                               'Upload en cours...',
                                               style: GoogleFonts.poppins(
@@ -2303,12 +2275,12 @@ class _AdminFormationsState extends State<AdminFormations>
                                         mainAxisAlignment:
                                             MainAxisAlignment.center,
                                         children: [
-                                          Icon(
+                                          const Icon(
                                             Icons.add_photo_alternate_rounded,
                                             size: 48,
                                             color: AppTheme.primary,
                                           ),
-                                          SizedBox(height: 8),
+                                          const SizedBox(height: 8),
                                           Text(
                                             'Cliquer pour ajouter une image',
                                             style: GoogleFonts.poppins(
@@ -2323,7 +2295,7 @@ class _AdminFormationsState extends State<AdminFormations>
                         ],
                       ),
                     ),
-                    SizedBox(height: 8),
+                    const SizedBox(height: 8),
                     _buildFormField(
                       imageUrlController,
                       'URL de l\'image (optionnel)',
@@ -2336,17 +2308,17 @@ class _AdminFormationsState extends State<AdminFormations>
                         });
                       },
                     ),
-                    SizedBox(height: 12),
+                    const SizedBox(height: 12),
                     DropdownButtonFormField<ImageFormat>(
                       initialValue: imageFormatValue,
                       decoration: InputDecoration(
                         labelText: 'Format de l\'image',
-                        prefixIcon: Icon(Icons.crop),
+                        prefixIcon: const Icon(Icons.crop),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
                       ),
-                      items: [
+                      items: const [
                         DropdownMenuItem(
                           value: ImageFormat.carre,
                           child: Text('Carré (1:1)'),
@@ -2368,18 +2340,20 @@ class _AdminFormationsState extends State<AdminFormations>
                     ),
                     _buildFormField(
                       prixController,
-                      'Prix',
+                      'Prix (Présentiel ou Forfait Global)',
                       null,
                       Icons.attach_money_rounded,
                       isNumber: true,
+                      helperText: 'Forfait fixe pour stage SFP (ex: 100000 FCFA)',
                     ),
                     if (typeValue == 'En ligne' || typeValue == 'Mixte')
                       _buildFormField(
                         prixEnLigneController,
-                        'Prix en ligne',
+                        'Prix en ligne (Forfait Global Ligne)',
                         null,
                         Icons.computer_rounded,
                         isNumber: true,
+                        helperText: 'Forfait fixe en ligne pour SFP (ex: 125000 FCFA)',
                       ),
                     _buildFormField(
                       dureeController,
@@ -2393,6 +2367,7 @@ class _AdminFormationsState extends State<AdminFormations>
                       'Heures',
                       null,
                       Icons.timer_rounded,
+                      helperText: 'Ex: 3 mois • 3 séances par semaine • 3h par séance',
                     ),
                     _buildFormField(
                       horairesController,
@@ -2420,39 +2395,91 @@ class _AdminFormationsState extends State<AdminFormations>
                       Icons.people_rounded,
                       isNumber: true,
                     ),
-                    if (isStage)
-                      Padding(
-                        padding: EdgeInsets.only(top: 4, bottom: 8),
-                        child: _buildFormField(
-                          maxModulesController,
-                          'Nbr max de modules par étudiant (SFP)',
-                          null,
-                          Icons.view_module_rounded,
-                          isNumber: true,
+                    // Section Type de Formation (Stage SFP vs Standard)
+                    Container(
+                      margin: const EdgeInsets.only(top: 8, bottom: 12),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: isStage ? const Color(0xFFEFF6FF) : const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: isStage ? const Color(0xFF93C5FD) : const Color(0xFFE2E8F0),
+                          width: 1.2,
                         ),
                       ),
-                    SizedBox(height: 12),
-                    CheckboxListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(
-                        'C’est un stage',
-                        style: GoogleFonts.poppins(
-                          fontSize: 13,
-                          color: Colors.black87,
-                        ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Checkbox(
+                                value: isStage,
+                                onChanged: (value) {
+                                  setState(() {
+                                    isStage = value ?? false;
+                                    if (isStage && maxModulesController.text.trim().isEmpty) {
+                                      maxModulesController.text = '3';
+                                    }
+                                  });
+                                },
+                                activeColor: AppTheme.primary,
+                              ),
+                              Expanded(
+                                child: InkWell(
+                                  onTap: () {
+                                    setState(() {
+                                      isStage = !isStage;
+                                      if (isStage && maxModulesController.text.trim().isEmpty) {
+                                        maxModulesController.text = '3';
+                                      }
+                                    });
+                                  },
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'C’est un stage professionnel (ex: SFP5)',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w700,
+                                          color: isStage ? AppTheme.primary : Colors.black87,
+                                        ),
+                                      ),
+                                      Text(
+                                        isStage
+                                            ? 'Prix fixe global pour le pack entier. Les candidats choisissent un nombre défini de modules.'
+                                            : 'Formation modulaire standard (hors-SFP). Choix de modules à la carte avec total par prix unitaire.',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 11,
+                                          color: AppTheme.textSecondary,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (isStage) ...[
+                            const SizedBox(height: 10),
+                            _buildFormField(
+                              maxModulesController,
+                              'Nombre max de modules sélectionnables par stagiaire',
+                              null,
+                              Icons.view_module_rounded,
+                              isNumber: true,
+                              helperText: 'Ex: 3 modules pour le SFP5 (parmi tous les modules proposés)',
+                            ),
+                          ],
+                        ],
                       ),
-                      value: isStage,
-                      onChanged: (value) =>
-                          setState(() => isStage = value ?? false),
-                      controlAffinity: ListTileControlAffinity.leading,
-                      activeColor: AppTheme.primary,
                     ),
-                    SizedBox(height: 12),
+                    const SizedBox(height: 8),
                     DropdownButtonFormField<String>(
                       initialValue: ['En ligne', 'Présentielle', 'Mixte'].contains(typeValue) ? typeValue : 'En ligne',
                       decoration: InputDecoration(
                         labelText: 'Type',
-                        prefixIcon: Icon(Icons.computer_rounded),
+                        prefixIcon: const Icon(Icons.computer_rounded),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
@@ -2469,12 +2496,12 @@ class _AdminFormationsState extends State<AdminFormations>
                         if (value != null) setState(() => typeValue = value);
                       },
                     ),
-                    SizedBox(height: 12),
+                    const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
                       initialValue: ['Programmée', 'En Cours', 'Terminée'].contains(statusValue) ? statusValue : 'Programmée',
                       decoration: InputDecoration(
                         labelText: 'Statut',
-                        prefixIcon: Icon(Icons.info_rounded),
+                        prefixIcon: const Icon(Icons.info_rounded),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
@@ -2498,7 +2525,7 @@ class _AdminFormationsState extends State<AdminFormations>
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: Text('Annuler'),
+                child: const Text('Annuler'),
               ),
               Container(
                 decoration: BoxDecoration(
@@ -2554,7 +2581,7 @@ class _AdminFormationsState extends State<AdminFormations>
                               capaciteController.text.trim(),
                             );
                             final maxModulesParEtudiant = isStage
-                                ? int.tryParse(maxModulesController.text.trim())
+                                ? (int.tryParse(maxModulesController.text.trim()) ?? 3)
                                 : null;
                             final dateDebut = dateDebutController.text.trim().isEmpty
                                 ? null
@@ -2664,7 +2691,7 @@ class _AdminFormationsState extends State<AdminFormations>
     ValueChanged<String>? onChanged,
   }) {
     return Padding(
-      padding: EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 12),
       child: TextFormField(
         controller: controller,
         keyboardType: isNumber ? TextInputType.number : TextInputType.text,
@@ -2703,7 +2730,11 @@ class _AdminFormationsState extends State<AdminFormations>
       )),
       ...formation.modulesBonus.map((m) => _ModuleItemData(
         nameCtrl: TextEditingController(text: m),
-        priceCtrl: TextEditingController(),
+        priceCtrl: TextEditingController(
+          text: formation.modulePrices[m] != null && formation.modulePrices[m]! > 0
+              ? formation.modulePrices[m]!.toStringAsFixed(0)
+              : '',
+        ),
         formateurId: formation.moduleFormateurIds[m],
         isBonus: true,
       )),
@@ -2716,10 +2747,10 @@ class _AdminFormationsState extends State<AdminFormations>
       text: formation.formateurIds.join(', '),
     );
     final prixController = TextEditingController(
-      text: formation.prix.toString(),
+      text: formation.prix.toStringAsFixed(0),
     );
     final prixEnLigneController = TextEditingController(
-      text: formation.prixEnLigne?.toString() ?? '',
+      text: formation.prixEnLigne != null ? formation.prixEnLigne!.toStringAsFixed(0) : '',
     );
     final dureeController = TextEditingController(
       text: formation.dureeSemaines.toString(),
@@ -2744,7 +2775,7 @@ class _AdminFormationsState extends State<AdminFormations>
       text: formation.capaciteMax?.toString() ?? '',
     );
     final maxModulesController = TextEditingController(
-      text: formation.maxModulesParEtudiant?.toString() ?? '',
+      text: (formation.maxModulesParEtudiant ?? (formation.estStage ? 3 : null))?.toString() ?? '',
     );
     String typeValue = _formatType(formation.type);
     String statusValue = _formatStatus(formation.status);
@@ -2798,7 +2829,7 @@ class _AdminFormationsState extends State<AdminFormations>
                     ),
                     // Image picker avec upload ImageKit
                     Container(
-                      margin: EdgeInsets.only(bottom: 12),
+                      margin: const EdgeInsets.only(bottom: 12),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -2810,7 +2841,7 @@ class _AdminFormationsState extends State<AdminFormations>
                               color: Colors.black87,
                             ),
                           ),
-                          SizedBox(height: 8),
+                          const SizedBox(height: 8),
                           if (uploadedImageUrl != null &&
                               uploadedImageUrl!.isNotEmpty)
                             Column(
@@ -2827,7 +2858,7 @@ class _AdminFormationsState extends State<AdminFormations>
                                             Container(
                                               height: 150,
                                               color: Colors.grey.shade200,
-                                              child: Center(
+                                              child: const Center(
                                                 child: Icon(
                                                   Icons.broken_image,
                                                   color: Colors.grey,
@@ -2836,7 +2867,7 @@ class _AdminFormationsState extends State<AdminFormations>
                                             ),
                                   ),
                                 ),
-                                SizedBox(height: 8),
+                                const SizedBox(height: 8),
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.end,
                                   children: [
@@ -2847,11 +2878,11 @@ class _AdminFormationsState extends State<AdminFormations>
                                           imageUrlController.clear();
                                         });
                                       },
-                                      icon: Icon(
+                                      icon: const Icon(
                                         Icons.delete,
                                         color: Colors.red,
                                       ),
-                                      label: Text(
+                                      label: const Text(
                                         'Supprimer',
                                         style: TextStyle(color: Colors.red),
                                       ),
@@ -2865,7 +2896,7 @@ class _AdminFormationsState extends State<AdminFormations>
                               onTap: isUploading
                                   ? null
                                   : () async {
-                                    final localContext = context;
+                                      final localContext = context;
                                       setState(() {
                                         isUploading = true;
                                       });
@@ -2919,13 +2950,13 @@ class _AdminFormationsState extends State<AdminFormations>
                                           mainAxisAlignment:
                                               MainAxisAlignment.center,
                                           children: [
-                                            CircularProgressIndicator(
+                                            const CircularProgressIndicator(
                                               valueColor:
                                                   AlwaysStoppedAnimation(
                                                     AppTheme.primary,
                                                   ),
                                             ),
-                                            SizedBox(height: 12),
+                                            const SizedBox(height: 12),
                                             Text(
                                               'Upload en cours...',
                                               style: GoogleFonts.poppins(
@@ -2940,12 +2971,12 @@ class _AdminFormationsState extends State<AdminFormations>
                                         mainAxisAlignment:
                                             MainAxisAlignment.center,
                                         children: [
-                                          Icon(
+                                          const Icon(
                                             Icons.add_photo_alternate_rounded,
                                             size: 48,
                                             color: AppTheme.primary,
                                           ),
-                                          SizedBox(height: 8),
+                                          const SizedBox(height: 8),
                                           Text(
                                             'Cliquer pour ajouter une image',
                                             style: GoogleFonts.poppins(
@@ -2960,7 +2991,7 @@ class _AdminFormationsState extends State<AdminFormations>
                         ],
                       ),
                     ),
-                    SizedBox(height: 8),
+                    const SizedBox(height: 8),
                     _buildFormField(
                       imageUrlController,
                       'URL de l\'image (optionnel)',
@@ -2973,17 +3004,17 @@ class _AdminFormationsState extends State<AdminFormations>
                         });
                       },
                     ),
-                    SizedBox(height: 12),
+                    const SizedBox(height: 12),
                     DropdownButtonFormField<ImageFormat>(
                       initialValue: imageFormatValue,
                       decoration: InputDecoration(
                         labelText: 'Format de l\'image',
-                        prefixIcon: Icon(Icons.crop),
+                        prefixIcon: const Icon(Icons.crop),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
                       ),
-                      items: [
+                      items: const [
                         DropdownMenuItem(
                           value: ImageFormat.carre,
                           child: Text('Carré (1:1)'),
@@ -3005,18 +3036,20 @@ class _AdminFormationsState extends State<AdminFormations>
                     ),
                     _buildFormField(
                       prixController,
-                      'Prix',
+                      'Prix (Présentiel ou Forfait Global)',
                       null,
                       Icons.attach_money_rounded,
                       isNumber: true,
+                      helperText: 'Forfait fixe pour stage SFP (ex: 100000 FCFA)',
                     ),
                     if (typeValue == 'En ligne' || typeValue == 'Mixte')
                       _buildFormField(
                         prixEnLigneController,
-                        'Prix en ligne',
+                        'Prix en ligne (Forfait Global Ligne)',
                         null,
                         Icons.computer_rounded,
                         isNumber: true,
+                        helperText: 'Forfait fixe en ligne pour SFP (ex: 125000 FCFA)',
                       ),
                     _buildFormField(
                       dureeController,
@@ -3030,6 +3063,7 @@ class _AdminFormationsState extends State<AdminFormations>
                       'Heures',
                       null,
                       Icons.timer_rounded,
+                      helperText: 'Ex: 3 mois • 3 séances par semaine • 3h par séance',
                     ),
                     _buildFormField(
                       horairesController,
@@ -3057,23 +3091,91 @@ class _AdminFormationsState extends State<AdminFormations>
                       Icons.people_rounded,
                       isNumber: true,
                     ),
-                    if (isStage)
-                      Padding(
-                        padding: EdgeInsets.only(top: 4, bottom: 8),
-                        child: _buildFormField(
-                          maxModulesController,
-                          'Nbr max de modules par étudiant (SFP)',
-                          null,
-                          Icons.view_module_rounded,
-                          isNumber: true,
+                    // Section Type de Formation (Stage SFP vs Standard)
+                    Container(
+                      margin: const EdgeInsets.only(top: 8, bottom: 12),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: isStage ? const Color(0xFFEFF6FF) : const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: isStage ? const Color(0xFF93C5FD) : const Color(0xFFE2E8F0),
+                          width: 1.2,
                         ),
                       ),
-                    SizedBox(height: 12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Checkbox(
+                                value: isStage,
+                                onChanged: (value) {
+                                  setState(() {
+                                    isStage = value ?? false;
+                                    if (isStage && maxModulesController.text.trim().isEmpty) {
+                                      maxModulesController.text = '3';
+                                    }
+                                  });
+                                },
+                                activeColor: AppTheme.primary,
+                              ),
+                              Expanded(
+                                child: InkWell(
+                                  onTap: () {
+                                    setState(() {
+                                      isStage = !isStage;
+                                      if (isStage && maxModulesController.text.trim().isEmpty) {
+                                        maxModulesController.text = '3';
+                                      }
+                                    });
+                                  },
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'C’est un stage professionnel (ex: SFP5)',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w700,
+                                          color: isStage ? AppTheme.primary : Colors.black87,
+                                        ),
+                                      ),
+                                      Text(
+                                        isStage
+                                            ? 'Prix fixe global pour le pack entier. Les candidats choisissent un nombre défini de modules.'
+                                            : 'Formation modulaire standard (hors-SFP). Choix de modules à la carte avec total par prix unitaire.',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 11,
+                                          color: AppTheme.textSecondary,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (isStage) ...[
+                            const SizedBox(height: 10),
+                            _buildFormField(
+                              maxModulesController,
+                              'Nombre max de modules sélectionnables par stagiaire',
+                              null,
+                              Icons.view_module_rounded,
+                              isNumber: true,
+                              helperText: 'Ex: 3 modules pour le SFP5 (parmi tous les modules proposés)',
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
                     DropdownButtonFormField<String>(
                       initialValue: ['En ligne', 'Présentielle', 'Mixte'].contains(typeValue) ? typeValue : 'En ligne',
                       decoration: InputDecoration(
                         labelText: 'Type',
-                        prefixIcon: Icon(Icons.computer_rounded),
+                        prefixIcon: const Icon(Icons.computer_rounded),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
@@ -3090,12 +3192,12 @@ class _AdminFormationsState extends State<AdminFormations>
                         if (value != null) setState(() => typeValue = value);
                       },
                     ),
-                    SizedBox(height: 12),
+                    const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
                       initialValue: ['Programmée', 'En Cours', 'Terminée'].contains(statusValue) ? statusValue : 'Programmée',
                       decoration: InputDecoration(
                         labelText: 'Statut',
-                        prefixIcon: Icon(Icons.info_rounded),
+                        prefixIcon: const Icon(Icons.info_rounded),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
@@ -3112,22 +3214,6 @@ class _AdminFormationsState extends State<AdminFormations>
                         if (value != null) setState(() => statusValue = value);
                       },
                     ),
-                    SizedBox(height: 12),
-                    CheckboxListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(
-                        'C’est un stage',
-                        style: GoogleFonts.poppins(
-                          fontSize: 13,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      value: isStage,
-                      onChanged: (value) =>
-                          setState(() => isStage = value ?? false),
-                      controlAffinity: ListTileControlAffinity.leading,
-                      activeColor: AppTheme.primary,
-                    ),
                   ],
                 ),
               ),
@@ -3135,7 +3221,7 @@ class _AdminFormationsState extends State<AdminFormations>
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: Text('Annuler'),
+                child: const Text('Annuler'),
               ),
               Container(
                 decoration: BoxDecoration(
@@ -3191,7 +3277,7 @@ class _AdminFormationsState extends State<AdminFormations>
                               capaciteController.text.trim(),
                             );
                             final maxModulesParEtudiant = isStage
-                                ? int.tryParse(maxModulesController.text.trim())
+                                ? (int.tryParse(maxModulesController.text.trim()) ?? 3)
                                 : null;
                             final dateDebut = dateDebutController.text.trim().isEmpty
                                 ? null
