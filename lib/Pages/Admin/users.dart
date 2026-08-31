@@ -1304,18 +1304,97 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
   }
 
   void _confirmDeleteUser(BuildContext context, User user) {
+    final currentUserId = AuthProvider().currentUser?.id;
+    final currentUserEmail = AuthProvider().currentUser?.email.trim().toLowerCase();
+
+    if (user.id == currentUserId || (currentUserEmail != null && user.email.trim().toLowerCase() == currentUserEmail)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Action impossible : vous ne pouvez pas supprimer votre propre compte administrateur connecté.',
+            style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+          ),
+          backgroundColor: AppTheme.warning,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Supprimer l\'utilisateur', style: GoogleFonts.poppins(fontWeight: FontWeight.w700, color: const Color(0xFFEF4444))),
-        content: Text('Êtes-vous sûr de vouloir supprimer définitivement le compte de ${user.nomComplet} (${user.email}) ?'),
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEF4444).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.delete_forever_rounded, color: Color(0xFFEF4444), size: 24),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Supprimer l\'utilisateur',
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w800, fontSize: 16, color: const Color(0xFFEF4444)),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Êtes-vous sûr de vouloir supprimer définitivement le compte de :',
+              style: GoogleFonts.poppins(fontSize: 13, color: AppTheme.textPrimary),
+            ),
+            const SizedBox(height: 10),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    user.nomComplet,
+                    style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 13.5, color: Colors.black87),
+                  ),
+                  Text(
+                    '${user.email} • ${_roleLabel(user.role)}',
+                    style: GoogleFonts.poppins(fontSize: 12, color: Colors.black54),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              '⚠️ Cette action est irréversible. Les inscriptions liées seront archivées dans le journal d\'audit.',
+              style: GoogleFonts.poppins(fontSize: 11.5, color: const Color(0xFFD97706), fontWeight: FontWeight.w500),
+            ),
+          ],
+        ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Annuler'),
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Annuler', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: AppTheme.textSecondary)),
           ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFEF4444)),
+          ElevatedButton.icon(
+            icon: const Icon(Icons.delete_rounded, size: 16, color: Colors.white),
+            label: Text('Supprimer', style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 12.5, color: Colors.white)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFEF4444),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            ),
             onPressed: () async {
               final localContext = context;
               final email = user.email.trim().toLowerCase();
@@ -1324,17 +1403,18 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
               }
               await AuthProvider().deleteUser(user.id);
               if (!localContext.mounted) return;
-              Navigator.pop(localContext);
+              Navigator.pop(ctx);
               if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Utilisateur supprimé avec succès'),
+                setState(() {});
+                ScaffoldMessenger.of(localContext).showSnackBar(
+                  SnackBar(
+                    content: Text('Le compte de ${user.nomComplet} a été supprimé avec succès.'),
                     backgroundColor: AppTheme.error,
+                    behavior: SnackBarBehavior.floating,
                   ),
                 );
               }
             },
-            child: const Text('Supprimer', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
