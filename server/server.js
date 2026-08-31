@@ -29,41 +29,6 @@ for (const origin of [process.env.PUBLIC_URL, process.env.NGROK_DOMAIN && `https
   if (origin) allowedOrigins.add(origin.replace(/\/$/, ''));
 }
 
-async function _supabaseGet(table) {
-  const fetchFn = globalThis.fetch;
-  if (!fetchFn) throw new Error('fetch indisponible dans cette version de Node.js');
-  const res = await fetchFn(`${SUPABASE_URL}/rest/v1/${table}?select=*`, {
-    headers: {
-      apikey: SUPABASE_KEY,
-      Authorization: `Bearer ${SUPABASE_KEY}`,
-      Accept: 'application/json',
-    },
-    signal: AbortSignal.timeout ? AbortSignal.timeout(8000) : undefined,
-  });
-  if (!res.ok) throw new Error(`${table} GET ${res.status}: ${(await res.text()).slice(0, 200)}`);
-  return res.json();
-}
-
-let _remotePullRunning = false;
-async function pullSharedState() {
-  if (_remotePullRunning || _syncRunning || _syncQueue.length > 0 || !SUPABASE_KEY) return;
-  _remotePullRunning = true;
-  try {
-    const entries = await Promise.all(
-      Object.entries(_remoteTables).map(async ([table, config]) => [table, await _supabaseGet(table), config]),
-    );
-    const current = readState();
-    const next = { ...current };
-    for (const [table, rows, config] of entries) {
-      next[table] = rows.map(config.unmapper);
-    }
-    writeState(next);
-  } catch (error) {
-    console.error(`[Supabase] pull partagé impossible: ${error.message}`);
-  } finally {
-    _remotePullRunning = false;
-  }
-}
 
 // ─── HTTPS Redirect en production ────────────────────────────────────────
 if (isProduction) {
@@ -808,6 +773,21 @@ const _remoteTables = {
   notifications: { mapper: (row) => row, unmapper: (row) => row },
 };
 
+async function _supabaseGet(table) {
+  const fetchFn = globalThis.fetch;
+  if (!fetchFn) throw new Error('fetch indisponible dans cette version de Node.js');
+  const res = await fetchFn(`${SUPABASE_URL}/rest/v1/${table}?select=*`, {
+    headers: {
+      apikey: SUPABASE_KEY,
+      Authorization: `Bearer ${SUPABASE_KEY}`,
+      Accept: 'application/json',
+    },
+    signal: AbortSignal.timeout ? AbortSignal.timeout(8000) : undefined,
+  });
+  if (!res.ok) throw new Error(`${table} GET ${res.status}: ${(await res.text()).slice(0, 200)}`);
+  return res.json();
+}
+
 async function _supabaseUpsert(table, row, retries = 2) {
   const fetchFn = globalThis.fetch;
   if (!fetchFn) return;
@@ -827,7 +807,7 @@ async function _supabaseUpsert(table, row, retries = 2) {
       if (res.ok || res.status === 200 || res.status === 201 || res.status === 204) return;
       const errText = await res.text();
       console.error(`[Supabase] ${table} upsert ${res.status}: ${errText.substring(0, 200)}`);
-      return; // ne pas retenter si erreur schema (4xx)
+      return;
     } catch (err) {
       if (attempt < retries) await new Promise(r => setTimeout(r, 500 * (attempt + 1)));
       else console.error(`[Supabase] ${table} network error: ${err.message}`);
@@ -893,19 +873,221 @@ function enqueueSyncDocument(collection, doc, deleted = false) {
   setImmediate(_drainSyncQueue);
 }
 
-// ─── Snapshot des IDs précédents pour sync différentielle ────────────────────
+// ─── Tracking des suppressions & Réplication PRA / PCA ────────────────────────
+const _deletedDocIds = {
+  formations: new Set(),
+  users: new Set(),
+  inscriptions: new Set(),
+  payments: new Set(),
+  seances: new Set(),
+  audit_logs: new Set(),
+  notifications: new Set(),
+};
+
 const _prevIds = { formations: new Set(), users: new Set(), inscriptions: new Set(), payments: new Set() };
 const _syncTables = ['formations', 'users', 'inscriptions', 'payments', 'seances', 'audit_logs', 'notifications'];
 let _lastSyncHash = '';
 let _lastSyncTime = 0;
-const SYNC_THROTTLE_MS = 1_000; // propagate local writes quickly while protecting the queue
+const SYNC_THROTTLE_MS = 1_000;
 
 function _stateHash(state) {
-  // Hash léger basé sur les IDs + versions des documents
   const parts = _syncTables.map(t =>
     (state[t] || []).map(r => `${r.id}:${r.dateModification || r.dateCreation || ''}`).join(',')
   );
   return parts.join('|');
+}
+
+function _extractTimestamp(item) {
+  if (!item) return 0;
+  const raw = item.dateModification || item.date_modification ||
+              item.dateCreation || item.date_creation ||
+              item.updatedAt || item.updated_at ||
+              item.createdAt || item.created_at ||
+              item.timestamp;
+  if (!raw) return 0;
+  const t = new Date(raw).getTime();
+  return isNaN(t) ? 0 : t;
+}
+
+let _remotePullRunning = false;
+async function reconcileTwoWay(reason = 'periodic') {
+  if (_remotePullRunning || _syncRunning || !SUPABASE_KEY || !SUPABASE_URL) return;
+  _remotePullRunning = true;
+  try {
+    const remoteData = await Promise.all(
+      Object.entries(_remoteTables).map(async ([table, config]) => {
+        try {
+          const rows = await _supabaseGet(table);
+          return [table, rows, config];
+        } catch (e) {
+          console.warn(`[Supabase] Lecture ${table} indisponible (${e.message})`);
+          return [table, null, config];
+        }
+      }),
+    );
+
+    const localState = readState();
+    let localModified = false;
+    const itemsToUpsertSupabase = [];
+
+    for (const [table, remoteRows, config] of remoteData) {
+      if (!Array.isArray(remoteRows)) continue;
+
+      const localList = Array.isArray(localState[table]) ? localState[table] : [];
+      const localMap = new Map(localList.map((item) => [String(item.id), item]));
+      const unmappedRemote = remoteRows.map(config.unmapper);
+      const deletedSet = _deletedDocIds[table] || new Set();
+
+      for (const remoteItem of unmappedRemote) {
+        const id = String(remoteItem.id);
+        if (deletedSet.has(id)) {
+          _syncQueue.push(() => _supabaseDelete(table, id));
+          continue;
+        }
+
+        if (!localMap.has(id)) {
+          localList.push(remoteItem);
+          localMap.set(id, remoteItem);
+          localModified = true;
+        } else {
+          const localItem = localMap.get(id);
+          const remoteTime = _extractTimestamp(remoteItem);
+          const localTime = _extractTimestamp(localItem);
+
+          if (remoteTime > localTime) {
+            const idx = localList.findIndex((it) => String(it.id) === id);
+            if (idx >= 0) {
+              localList[idx] = { ...localList[idx], ...remoteItem };
+              localModified = true;
+            }
+          } else if (localTime > remoteTime) {
+            itemsToUpsertSupabase.push({ table, row: config.mapper(localItem) });
+          }
+        }
+      }
+
+      localState[table] = localList;
+    }
+
+    if (localModified) {
+      writeState(localState);
+    }
+
+    if (itemsToUpsertSupabase.length > 0) {
+      _syncQueue.push(async () => {
+        for (const { table, row } of itemsToUpsertSupabase) {
+          await _supabaseUpsert(table, row);
+        }
+      });
+      setImmediate(_drainSyncQueue);
+    }
+  } catch (error) {
+    console.error(`[Supabase] Réconciliation impossible: ${error.message}`);
+  } finally {
+    _remotePullRunning = false;
+  }
+}
+
+// ─── PRA (Plan de Reprise d'Activité) - Snapshots & Recovery ─────────────────
+const praDir = path.join(dataDir, 'backups');
+try { fs.mkdirSync(praDir, { recursive: true }); } catch (_) {}
+const MAX_PRA_SNAPSHOTS = 10;
+
+function createPraSnapshot(label = 'auto', reason = 'backup') {
+  try {
+    fs.mkdirSync(praDir, { recursive: true });
+    const state = readState();
+    const timestamp = new Date().toISOString();
+    const cleanLabel = String(label).replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 30);
+    const filename = `pra_snapshot_${Date.now()}_${cleanLabel}.json`;
+    const targetPath = path.join(praDir, filename);
+
+    const counts = Object.fromEntries(collections.map((name) => [name, (state[name] || []).length]));
+    const payload = {
+      metadata: {
+        version: '1.0',
+        label: cleanLabel,
+        reason,
+        createdAt: timestamp,
+        counts,
+      },
+      state,
+    };
+
+    fs.writeFileSync(targetPath, JSON.stringify(payload, null, 2));
+
+    // Rotation des 10 derniers snapshots
+    const existing = listPraSnapshots();
+    if (existing.length > MAX_PRA_SNAPSHOTS) {
+      const toRemove = existing.slice(MAX_PRA_SNAPSHOTS);
+      for (const item of toRemove) {
+        try { fs.unlinkSync(path.join(praDir, item.filename)); } catch (_) {}
+      }
+    }
+
+    return { success: true, filename, createdAt: timestamp, counts };
+  } catch (e) {
+    console.error(`[PRA] Erreur création snapshot: ${e.message}`);
+    return { success: false, error: e.message };
+  }
+}
+
+function listPraSnapshots() {
+  try {
+    if (!fs.existsSync(praDir)) return [];
+    const files = fs.readdirSync(praDir).filter((f) => f.startsWith('pra_snapshot_') && f.endsWith('.json'));
+    const list = [];
+    for (const f of files) {
+      try {
+        const fullPath = path.join(praDir, f);
+        const stats = fs.statSync(fullPath);
+        let meta = { label: 'inconnu', reason: '', createdAt: stats.mtime.toISOString(), counts: {} };
+        try {
+          const content = JSON.parse(fs.readFileSync(fullPath, 'utf8'));
+          if (content.metadata) meta = content.metadata;
+        } catch (_) {}
+        list.push({
+          filename: f,
+          sizeBytes: stats.size,
+          createdAt: meta.createdAt || stats.mtime.toISOString(),
+          label: meta.label || f,
+          reason: meta.reason || '',
+          counts: meta.counts || {},
+        });
+      } catch (_) {}
+    }
+    list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return list;
+  } catch (_) {
+    return [];
+  }
+}
+
+function restorePraSnapshot(filename) {
+  try {
+    const safeName = path.basename(filename);
+    const fullPath = path.join(praDir, safeName);
+    if (!fs.existsSync(fullPath)) throw new Error('Fichier de snapshot introuvable.');
+
+    const raw = JSON.parse(fs.readFileSync(fullPath, 'utf8'));
+    const state = raw.state || raw;
+
+    for (const name of collections) if (!Array.isArray(state[name])) state[name] = [];
+    migrateLegacyPasswords(state);
+    repairFormations(state);
+    writeState(state);
+
+    // Synchronisation vers Supabase
+    enqueueSyncState(state);
+
+    return {
+      success: true,
+      message: `Point de restauration ${safeName} réappliqué avec succès.`,
+      counts: Object.fromEntries(collections.map((name) => [name, state[name].length])),
+    };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
 }
 
 function writeState(state) {
@@ -917,14 +1099,13 @@ function writeState(state) {
   _stateCacheDirty = false;
   _stateVersion = Date.now().toString();
 
-  // Sync différentielle vers Supabase avec throttle (ne bloque pas la réponse HTTP)
   const now = Date.now();
   const hash = _stateHash(state);
   const hasChanged = hash !== _lastSyncHash;
   const canSync = (now - _lastSyncTime) >= SYNC_THROTTLE_MS;
 
-  if (!hasChanged) return; // Rien n'a changé, pas besoin de sync
-  if (!canSync && _lastSyncTime > 0) return; // Throttle actif
+  if (!hasChanged) return;
+  if (!canSync && _lastSyncTime > 0) return;
 
   _lastSyncHash = hash;
   _lastSyncTime = now;
@@ -939,13 +1120,10 @@ function writeState(state) {
     for (const t of _syncTables) {
       const mapper = mappers[t];
       const rows = state[t] || [];
-      // 1. Upsert tous les documents actuels
       for (const row of rows) await _supabaseUpsert(t, mapper(row));
-      // 2. Supprimer dans Supabase les IDs qui n'existent plus dans Docker
       for (const oldId of _prevIds[t]) {
         if (!snap[t].has(oldId)) await _supabaseDelete(t, oldId);
       }
-      // 3. Mettre à jour le snapshot des IDs connus
       _prevIds[t] = snap[t];
     }
   });
@@ -1014,6 +1192,142 @@ app.get('/api/system/network-info', requireAdministrator, (req, res) => {
     detectedIps,
     ngrokDomain,
     publicUrl,
+  });
+});
+
+// ─── Endpoints PCA (Continuité d'Activité) & PRA (Reprise d'Activité) ─────────
+app.get('/api/pca/status', async (req, res) => {
+  const state = readState();
+  let dbSizeBytes = 0;
+  try {
+    if (fs.existsSync(dataFile)) {
+      dbSizeBytes = fs.statSync(dataFile).size;
+    }
+  } catch (_) {}
+
+  // Test de connectivité Supabase Cloud & mesure de latence
+  const supabaseStatus = {
+    configured: Boolean(SUPABASE_URL && SUPABASE_KEY),
+    connected: false,
+    latencyMs: null,
+    lastSyncTime: _lastSyncTime ? new Date(_lastSyncTime).toISOString() : null,
+    pendingSyncCount: _syncQueue.length,
+    url: SUPABASE_URL ? SUPABASE_URL.replace(/https:\/\/(.{4}).*(\.supabase\.co)/, 'https://$1***$2') : null,
+  };
+
+  if (SUPABASE_URL && SUPABASE_KEY) {
+    const start = Date.now();
+    try {
+      const ping = await globalThis.fetch(`${SUPABASE_URL}/rest/v1/formations?select=id&limit=1`, {
+        headers: {
+          apikey: SUPABASE_KEY,
+          Authorization: `Bearer ${SUPABASE_KEY}`,
+          Accept: 'application/json',
+        },
+        signal: AbortSignal.timeout ? AbortSignal.timeout(3500) : undefined,
+      });
+      supabaseStatus.connected = ping.ok;
+      supabaseStatus.latencyMs = Date.now() - start;
+    } catch (e) {
+      supabaseStatus.connected = false;
+      supabaseStatus.error = e.message;
+    }
+  }
+
+  const snapshots = listPraSnapshots();
+
+  res.json({
+    node: 'docker-lan',
+    timestamp: new Date().toISOString(),
+    uptimeSeconds: Math.floor(process.uptime()),
+    memoryUsageMb: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
+    storage: {
+      databaseSizeBytes: dbSizeBytes,
+      dataFile,
+      backupFileExists: fs.existsSync(backupFile),
+    },
+    counts: Object.fromEntries(collections.map((name) => [name, (state[name] || []).length])),
+    supabase: supabaseStatus,
+    pra: {
+      snapshotsCount: snapshots.length,
+      latestSnapshot: snapshots[0] || null,
+      autoBackupEnabled: true,
+    },
+    activeSessions: sessions.size,
+  });
+});
+
+app.post('/api/pra/snapshot', requireAdministrator, (req, res) => {
+  const label = req.body?.label || 'manuel';
+  const reason = req.body?.reason || 'instantané administrateur';
+  const result = createPraSnapshot(label, reason);
+  if (!result.success) return res.status(500).json(result);
+  res.json(result);
+});
+
+app.get('/api/pra/snapshots', requireAdministrator, (req, res) => {
+  res.json({ snapshots: listPraSnapshots() });
+});
+
+app.post('/api/pra/restore', requireAdministrator, (req, res) => {
+  const filename = req.body?.filename;
+  if (!filename) return res.status(400).json({ error: 'Nom du fichier de snapshot requis.' });
+  const result = restorePraSnapshot(filename);
+  if (!result.success) return res.status(500).json(result);
+  res.json(result);
+});
+
+app.post('/api/pra/reconcile', requireAdministrator, async (req, res) => {
+  try {
+    await reconcileTwoWay('manual_admin_trigger');
+    const state = readState();
+    res.json({
+      success: true,
+      message: 'Réconciliation bidirectionnelle Docker <-> Supabase effectuée avec succès.',
+      counts: Object.fromEntries(collections.map((name) => [name, (state[name] || []).length])),
+    });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+app.get('/api/pra/export', requireAdministrator, (req, res) => {
+  const state = readState();
+  const exportPayload = {
+    metadata: {
+      exportedAt: new Date().toISOString(),
+      exporter: req.session?.userId || 'admin',
+      version: '1.0',
+      counts: Object.fromEntries(collections.map((name) => [name, (state[name] || []).length])),
+    },
+    state,
+  };
+  res.setHeader('Content-Disposition', `attachment; filename="malintic_backup_${Date.now()}.json"`);
+  res.setHeader('Content-Type', 'application/json');
+  res.send(JSON.stringify(exportPayload, null, 2));
+});
+
+app.post('/api/pra/import', requireAdministrator, (req, res) => {
+  const payload = req.body;
+  const importedState = payload?.state || payload;
+  if (!importedState || typeof importedState !== 'object') {
+    return res.status(400).json({ error: 'Format d\'archive de données invalide.' });
+  }
+  for (const name of collections) {
+    if (!Array.isArray(importedState[name])) importedState[name] = [];
+  }
+  migrateLegacyPasswords(importedState);
+  repairFormations(importedState);
+  writeState(importedState);
+  enqueueSyncState(importedState);
+
+  // Créer automatiquement un snapshot post-import
+  createPraSnapshot('post_import', 'importation de données');
+
+  res.json({
+    success: true,
+    message: 'Données importées et synchronisées avec succès.',
+    counts: Object.fromEntries(collections.map((name) => [name, importedState[name].length])),
   });
 });
 
@@ -1428,20 +1742,42 @@ app.delete('/api/:collection/:id', requireEmployee, (req, res) => {
   if (collection === 'users') {
     state.inscriptions = (state.inscriptions || []).filter((ins) => String(ins.etudiantId) !== id && String(ins.id) !== id);
   }
+  // Enregistrer le tombstone de suppression pour éviter la réapparition lors du pull Supabase
+  if (_deletedDocIds[collection]) {
+    _deletedDocIds[collection].add(id);
+  }
+  enqueueSyncDocument(collection, { id }, true);
   writeState(state);
   res.status(204).end();
 });
 
 const port = Number(process.env.PORT || 5001);
 app.listen(port, () => {
-  console.log(`API Malintic disponible sur le port ${port}`);
+  console.log(`API Malintic opérationnelle sur le port ${port}`);
+
+  // 1. Instantané PRA au démarrage si aucun n'existe
+  try {
+    const snaps = listPraSnapshots();
+    if (snaps.length === 0) {
+      createPraSnapshot('initial_boot', 'premier démarrage');
+    }
+  } catch (_) {}
+
+  // 2. Cron PRA: Instantané automatique de sauvegarde toutes les 6 heures
+  setInterval(() => {
+    try {
+      createPraSnapshot('auto_6h', 'sauvegarde tournante planifiée (PRA)');
+    } catch (_) {}
+  }, 6 * 60 * 60 * 1000);
+
   if (!SUPABASE_URL || !SUPABASE_KEY) {
     console.warn('[Supabase] synchronisation désactivée: SUPABASE_URL et une clé backend sont requises');
     return;
   }
 
+  // 3. Réconciliation initiale et worker périodique (toutes les 10s)
   const localState = readState();
   enqueueSyncState(localState);
-  setTimeout(() => pullSharedState(), 2_000);
-  setInterval(() => pullSharedState(), 5_000);
+  setTimeout(() => reconcileTwoWay('startup'), 2_000);
+  setInterval(() => reconcileTwoWay('periodic_worker'), 10_000);
 });

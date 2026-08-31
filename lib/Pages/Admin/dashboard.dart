@@ -12,6 +12,7 @@ import 'package:gestion_formations/Services/payment_report_service.dart';
 import 'package:gestion_formations/Services/pdf_helper.dart';
 import 'package:gestion_formations/Widgets/chart_widgets.dart';
 import 'package:gestion_formations/Widgets/share_formation_dialog.dart';
+import 'package:gestion_formations/Pages/Admin/pra_pca_dialog.dart';
 
 class AdminDashboard extends StatefulWidget {
   final User user;
@@ -431,6 +432,13 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
         'color': const Color(0xFFDC2626),
         'bg': const Color(0xFFFEF2F2),
         'onTap': _exportFinancialSummaryPdf,
+      },
+      {
+        'label': 'Centre PRA / PCA',
+        'icon': Icons.cloud_sync_rounded,
+        'color': const Color(0xFF0F766E),
+        'bg': const Color(0xFFF0FDFA),
+        'onTap': () => PraPcaCenterDialog.show(context),
       },
     ];
 
