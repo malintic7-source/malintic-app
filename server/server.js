@@ -451,6 +451,141 @@ function repairFormations(state) {
   return modified;
 }
 
+function reconcileAndDeduplicate(state) {
+  if (!state || typeof state !== 'object') return false;
+  let modified = false;
+
+  for (const name of collections) {
+    if (!Array.isArray(state[name])) {
+      state[name] = [];
+      modified = true;
+    }
+  }
+
+  // 1. Formation Deduplication and Canonical Re-linking
+  const canonFormMap = new Map();
+  const cleanFormations = [];
+  const formIdRedirects = new Map();
+
+  for (const f of state.formations) {
+    if (!f || !f.id) continue;
+    const normTitle = (f.titre || '').trim().toLowerCase();
+    if (normTitle && canonFormMap.has(normTitle)) {
+      const canon = canonFormMap.get(normTitle);
+      formIdRedirects.set(String(f.id), String(canon.id));
+      modified = true;
+    } else {
+      canonFormMap.set(normTitle, f);
+      cleanFormations.push(f);
+    }
+  }
+  if (cleanFormations.length !== state.formations.length) {
+    state.formations = cleanFormations;
+    modified = true;
+  }
+
+  // Apply formation redirects
+  if (formIdRedirects.size > 0) {
+    for (const insc of state.inscriptions) {
+      const currentFid = String(insc.formationId || insc.formation_id || '');
+      if (formIdRedirects.has(currentFid)) {
+        insc.formationId = formIdRedirects.get(currentFid);
+        insc.formation_id = formIdRedirects.get(currentFid);
+        modified = true;
+      }
+    }
+    for (const pay of state.payments) {
+      const currentFid = String(pay.formationId || pay.formation_id || '');
+      if (formIdRedirects.has(currentFid)) {
+        pay.formationId = formIdRedirects.get(currentFid);
+        pay.formation_id = formIdRedirects.get(currentFid);
+        modified = true;
+      }
+    }
+  }
+
+  // 2. Clean mock test users (e.g. nouvel.etudiant.*@example.com with 0 payments)
+  const mockUserIds = new Set();
+  const cleanUsers = [];
+  for (const u of state.users) {
+    if (!u || !u.id) continue;
+    const em = (u.email || '').toLowerCase().trim();
+    const isMock = em.startsWith('nouvel.etudiant.') && em.endsWith('@example.com');
+    const hasPay = state.payments.some(p => String(p.etudiantId || p.apprenantId || p.etudiant_id || '') === String(u.id));
+    if (isMock && !hasPay) {
+      mockUserIds.add(String(u.id));
+      modified = true;
+    } else {
+      cleanUsers.push(u);
+    }
+  }
+  if (cleanUsers.length !== state.users.length) {
+    state.users = cleanUsers;
+    modified = true;
+  }
+
+  // Clean inscriptions associated with deleted mock users
+  if (mockUserIds.size > 0) {
+    const prevInscLen = state.inscriptions.length;
+    state.inscriptions = state.inscriptions.filter(i => {
+      const uId = String(i.apprenantId || i.etudiantId || i.etudiant_id || '');
+      const em = (i.email || '').toLowerCase().trim();
+      const isMock = (em.startsWith('nouvel.etudiant.') && em.endsWith('@example.com')) || mockUserIds.has(uId);
+      const hasPay = state.payments.some(p => String(p.inscriptionId || p.inscription_id || '') === String(i.id));
+      return !(isMock && !hasPay);
+    });
+    if (state.inscriptions.length !== prevInscLen) modified = true;
+  }
+
+  // 3. Reconcile Payments consistency and Inscription status flags
+  for (const insc of state.inscriptions) {
+    if (!insc || !insc.id) continue;
+    const inscId = String(insc.id);
+    const linkedPayments = state.payments.filter(p => String(p.inscriptionId || p.inscription_id || '') === inscId);
+
+    // Reconcile user & formation ID links in payments
+    for (const p of linkedPayments) {
+      if (insc.formationId && !p.formationId) { p.formationId = insc.formationId; p.formation_id = insc.formationId; modified = true; }
+      if (insc.apprenantId && !p.apprenantId) { p.apprenantId = insc.apprenantId; p.apprenant_id = insc.apprenantId; p.etudiantId = insc.apprenantId; p.etudiant_id = insc.apprenantId; modified = true; }
+    }
+
+    const totalPaid = linkedPayments
+      .filter(p => p.status === 'effectue' || p.status === 'PaymentStatus.effectue')
+      .reduce((sum, p) => sum + (Number(p.montant) || 0), 0);
+
+    const formation = state.formations.find(f => String(f.id) === String(insc.formationId || insc.formation_id));
+    let basePrice = Number(formation?.prix) || 0;
+
+    if (formation && !formation.estStage && (insc.modules || insc.selectedModules) && formation.modulePrices) {
+      const mods = insc.modules || insc.selectedModules || [];
+      const sumMods = mods.reduce((sum, m) => sum + (Number(formation.modulePrices[m]) || 0), 0);
+      if (sumMods > 0 && (mods.length < (formation.modules || []).length || basePrice === 0)) {
+        basePrice = sumMods;
+      }
+    }
+
+    const highestRemise = linkedPayments.reduce((max, p) => Math.max(max, Number(p.remise) || 0), 0);
+    const netDue = Math.max(0, basePrice - highestRemise);
+
+    const shouldBePaid = (totalPaid >= netDue && netDue > 0);
+    if (insc.paiementEffectue !== shouldBePaid) {
+      insc.paiementEffectue = shouldBePaid;
+      insc.paiement_effectue = shouldBePaid;
+      modified = true;
+    }
+    if (linkedPayments.length > 0) {
+      const latestPayId = linkedPayments[linkedPayments.length - 1].id;
+      if (insc.paiementId !== latestPayId) {
+        insc.paiementId = latestPayId;
+        insc.paiement_id = latestPayId;
+        modified = true;
+      }
+    }
+  }
+
+  return modified;
+}
+
 function sessionFromRequest(req) {
   const cookies = Object.fromEntries((req.headers.cookie || '').split(';').map((value) => {
     const [key, ...rest] = value.trim().split('=');
@@ -591,7 +726,8 @@ function readState() {
     for (const name of collections) if (!Array.isArray(parsed[name])) parsed[name] = [];
     const pwMigrated = migrateLegacyPasswords(parsed);
     const formRepaired = repairFormations(parsed);
-    if (pwMigrated || formRepaired) writeState(parsed);
+    const reconciled = reconcileAndDeduplicate(parsed);
+    if (pwMigrated || formRepaired || reconciled) writeState(parsed);
     _stateCache = parsed;
     _stateCacheDirty = false;
     return parsed;
@@ -602,7 +738,8 @@ function readState() {
         for (const name of collections) if (!Array.isArray(restored[name])) restored[name] = [];
         const pwMigrated = migrateLegacyPasswords(restored);
         const formRepaired = repairFormations(restored);
-        if (pwMigrated || formRepaired) writeState(restored);
+        const reconciled = reconcileAndDeduplicate(restored);
+        if (pwMigrated || formRepaired || reconciled) writeState(restored);
         _stateCache = restored;
         _stateCacheDirty = false;
         return restored;

@@ -63,26 +63,26 @@ class Inscription {
       return InscriptionStatus.enAttente;
     }
 
-    final rawModules = data['modules'];
+    final rawModules = data['modules'] ?? data['selectedModules'] ?? data['selected_modules'];
     final List<String>? parsedModules = rawModules != null ? parseStringList(rawModules) : null;
 
     return Inscription(
       id: id,
-      apprenantId: parseString(data['apprenantId'] ?? data['etudiantId']),
-      formationId: parseString(data['formationId']),
-      status: parseStatus(parseString(data['status'], defaultValue: 'InscriptionStatus.enAttente')),
-      dateInscription: parseDate(data['dateInscription']),
-      paiementId: parseStringOrNull(data['paiementId']),
-      paiementEffectue: parseBool(data['paiementEffectue']),
-      dateAcceptation: parseStringOrNull(data['dateAcceptation']),
-      motifRejet: parseStringOrNull(data['motifRejet']),
+      apprenantId: parseString(data['apprenantId'] ?? data['etudiantId'] ?? data['etudiant_id'] ?? data['apprenant_id']),
+      formationId: parseString(data['formationId'] ?? data['formation_id']),
+      status: parseStatus(parseString(data['status'] ?? data['statut'], defaultValue: 'InscriptionStatus.enAttente')),
+      dateInscription: parseDate(data['dateInscription'] ?? data['date_inscription']),
+      paiementId: parseStringOrNull(data['paiementId'] ?? data['paiement_id']),
+      paiementEffectue: parseBool(data['paiementEffectue'] ?? data['paiement_effectue']),
+      dateAcceptation: parseStringOrNull(data['dateAcceptation'] ?? data['date_acceptation']),
+      motifRejet: parseStringOrNull(data['motifRejet'] ?? data['motif_rejet']),
       prenom: parseStringOrNull(data['prenom']),
       nom: parseStringOrNull(data['nom']),
       email: parseStringOrNull(data['email']),
       telephone: parseStringOrNull(data['telephone']),
       description: parseStringOrNull(data['description']),
       modules: parsedModules,
-      typeFormation: parseStringOrNull(data['typeFormation']),
+      typeFormation: parseStringOrNull(data['typeFormation'] ?? data['type_formation']),
       sexe: parseStringOrNull(data['sexe']),
       source: parseString(data['source'], defaultValue: 'web'),
     );
