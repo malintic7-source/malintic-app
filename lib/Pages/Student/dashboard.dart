@@ -307,84 +307,80 @@ class _StudentDashboardState extends State<StudentDashboard> with TickerProvider
     required int delay,
     List<double>? chartData,
   }) {
-    return SlideInUp(
-      delay: Duration(milliseconds: delay),
-      duration: const Duration(milliseconds: 600),
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(18),
-          color: Colors.white,
-          border: Border.all(color: AppTheme.primary.withValues(alpha: 0.08)),
-          boxShadow: AppTheme.cardShadow,
-        ),
-        child: Column(
-          children: [
-            Container(
-              height: 6,
-              decoration: BoxDecoration(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
-                gradient: LinearGradient(colors: [color, color.withValues(alpha: 0.72)]),
-              ),
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        color: Colors.white,
+        border: Border.all(color: AppTheme.primary.withValues(alpha: 0.08)),
+        boxShadow: AppTheme.cardShadow,
+      ),
+      child: Column(
+        children: [
+          Container(
+            height: 6,
+            decoration: BoxDecoration(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
+              gradient: LinearGradient(colors: [color, color.withValues(alpha: 0.72)]),
             ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: color.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: Icon(icon, color: color, size: 24),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(14),
                       ),
-                      if (chartData != null && chartData.isNotEmpty)
-                        SizedBox(
-                          width: 120,
-                          child: SparkLineChart(
-                            data: chartData,
-                            color: color,
-                            height: 40,
-                          ),
+                      child: Icon(icon, color: color, size: 24),
+                    ),
+                    if (chartData != null && chartData.isNotEmpty)
+                      SizedBox(
+                        width: 120,
+                        child: SparkLineChart(
+                          data: chartData,
+                          color: color,
+                          height: 40,
                         ),
-                    ],
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  title,
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    color: Colors.black54,
+                    fontWeight: FontWeight.w600,
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    title,
-                    style: GoogleFonts.poppins(
-                      fontSize: 13,
-                      color: Colors.black54,
-                      fontWeight: FontWeight.w600,
-                    ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  value,
+                  style: GoogleFonts.poppins(
+                    fontSize: 28,
+                    color: color,
+                    fontWeight: FontWeight.w800,
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    value,
-                    style: GoogleFonts.poppins(
-                      fontSize: 28,
-                      color: color,
-                      fontWeight: FontWeight.w800,
-                    ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  subtitle,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: Colors.black45,
+                    fontWeight: FontWeight.w500,
                   ),
-                  const SizedBox(height: 6),
-                  Text(
-                    subtitle,
-                    style: GoogleFonts.poppins(
-                      fontSize: 12,
-                      color: Colors.black45,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -483,12 +479,10 @@ class _StudentDashboardState extends State<StudentDashboard> with TickerProvider
     final progressPercent = assignedHours > 0 ? (doneHours / assignedHours * 100).toStringAsFixed(1) : '0';
     final progress = assignedHours > 0 ? (doneHours / assignedHours).clamp(0.0, 1.0) : 0.0;
 
-    return SlideInUp(
-      delay: Duration(milliseconds: 50 + (index * 40)),
-      duration: const Duration(milliseconds: 600),
-      child: Padding(
-        padding: const EdgeInsets.only(bottom: 12),
-        child: Container(
+    return Padding(
+      key: ValueKey(moduleTitle + index.toString()),
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(18),
             color: Colors.white,
@@ -564,8 +558,7 @@ class _StudentDashboardState extends State<StudentDashboard> with TickerProvider
             ],
           ),
         ),
-      ),
-    );
+      );
   }
 
   Future<List<Map<String, dynamic>>> _getAllModulesWithProgress() async {

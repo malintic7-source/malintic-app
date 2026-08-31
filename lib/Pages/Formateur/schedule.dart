@@ -356,11 +356,9 @@ class _FormateurScheduleState extends State<FormateurSchedule>
     final students = slot.groupStudents;
     final moduleName = horaire.module ?? 'Tous les modules';
 
-    return SlideInUp(
-      delay: Duration(milliseconds: 40 + (index * 30)),
-      duration: const Duration(milliseconds: 500),
-      child: Container(
-        decoration: BoxDecoration(
+    return Container(
+      key: ValueKey('${formation.id}_${horaire.jour}_${horaire.heureDebut}_$index'),
+      decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
           color: Colors.white,
           border: Border.all(color: const Color(0xFFE2E8F0)),
@@ -630,8 +628,7 @@ class _FormateurScheduleState extends State<FormateurSchedule>
             ),
           ],
         ),
-      ),
-    );
+      );
   }
 
   void _showGroupMembersDialog(String moduleName, String formationTitle, List<User> students) {

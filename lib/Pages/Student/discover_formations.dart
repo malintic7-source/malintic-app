@@ -313,13 +313,11 @@ class _DiscoverFormationsPageState extends State<DiscoverFormationsPage> with Ti
     final formationId = formation.id;
     final isExpanded = _expandedFormationIds.contains(formationId);
 
-    return SlideInUp(
-      delay: Duration(milliseconds: 50 + (index * 40)),
-      duration: Duration(milliseconds: 500),
-      child: Padding(
-        padding: EdgeInsets.only(bottom: 8),
-        child: Container(
-          decoration: BoxDecoration(
+    return Padding(
+      key: ValueKey(formationId),
+      padding: EdgeInsets.only(bottom: 8),
+      child: Container(
+        decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
             boxShadow: [
               BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: Offset(0, 3)),
@@ -602,8 +600,7 @@ class _DiscoverFormationsPageState extends State<DiscoverFormationsPage> with Ti
             ),
           ),
         ),
-      ),
-    );
+      );
   }
 
   Widget _buildInfoTag(String text, IconData icon, Color color) {

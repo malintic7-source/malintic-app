@@ -564,11 +564,9 @@ class _FormateurApprenantsState extends State<FormateurApprenants> with TickerPr
 
     final progress = totalAssignedHours == 0 ? 0.0 : (totalDoneHours / totalAssignedHours).clamp(0.0, 1.0);
 
-    return SlideInUp(
-      delay: Duration(milliseconds: 50 + (index * 40)),
-      duration: const Duration(milliseconds: 600),
-      child: Container(
-        decoration: BoxDecoration(
+    return Container(
+      key: ValueKey(userId),
+      decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(14),
           color: Colors.white,
           boxShadow: [
@@ -730,8 +728,7 @@ class _FormateurApprenantsState extends State<FormateurApprenants> with TickerPr
             ],
           ),
         ),
-      ),
-    );
+      );
   }
 
   Map<String, List<String>> _getFormateurFormationsWithModules() {

@@ -332,11 +332,9 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
   }
 
   Widget _buildUserCardPremium(BuildContext context, User user, int index) {
-    return SlideInUp(
-      delay: Duration(milliseconds: 50 + (index * 40)),
-      duration: const Duration(milliseconds: 600),
-      child: Container(
-        decoration: BoxDecoration(
+    return Container(
+      key: ValueKey(user.id),
+      decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(14),
           color: Colors.white,
           boxShadow: [
@@ -598,8 +596,7 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
             ],
           ),
         ),
-      ),
-    );
+      );
   }
 
   List<User> _filterUsers(List<User> users) {

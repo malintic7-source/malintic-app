@@ -1158,12 +1158,10 @@ class _AdminFormationsState extends State<AdminFormations>
     final isExpanded = _expandedFormationIds.contains(formationId);
     final isMobile = MediaQuery.of(context).size.width < 600;
 
-    return SlideInUp(
-      delay: Duration(milliseconds: 30 + (index * 30)),
-      duration: const Duration(milliseconds: 380),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        decoration: BoxDecoration(
+    return Container(
+      key: ValueKey(formationId),
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(14),
           color: Colors.white,
           border: Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
@@ -1726,8 +1724,7 @@ class _AdminFormationsState extends State<AdminFormations>
             ),
           ],
         ),
-      ),
-    );
+      );
   }
 
   Widget _buildInfoRowCompact(String label, String value) {

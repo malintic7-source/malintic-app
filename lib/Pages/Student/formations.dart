@@ -266,13 +266,11 @@ class _StudentFormationsState extends State<StudentFormations> with TickerProvid
 
     final progressPercent = totalAssignedHours > 0 ? (totalDoneHours / totalAssignedHours * 100).toStringAsFixed(1) : '0';
 
-    return SlideInUp(
-      delay: Duration(milliseconds: 50 + (index * 40)),
-      duration: Duration(milliseconds: 600),
-      child: Padding(
-        padding: EdgeInsets.only(bottom: 16),
-        child: Container(
-          decoration: BoxDecoration(
+    return Padding(
+      key: ValueKey(formationId),
+      padding: EdgeInsets.only(bottom: 16),
+      child: Container(
+        decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
             color: Colors.white,
             boxShadow: [
@@ -451,8 +449,7 @@ class _StudentFormationsState extends State<StudentFormations> with TickerProvid
             ),
           ),
         ),
-      ),
-    );
+      );
   }
 
   Widget _buildFinancialProgressCard(String formationId) {

@@ -302,12 +302,19 @@ class LocalDataService {
           )
           .toList();
 
+      bool dataActuallyChanged = false;
+
       if (formations.isNotEmpty) {
-        _formations
-          ..clear()
-          ..addAll(formations);
-        _saveFormationsToStorage();
-        _formationsController.add(List.unmodifiable(_formations));
+        final currentFormationsJson = jsonEncode(_formations.map((f) => f.toMap()).toList());
+        final newFormationsJson = jsonEncode(formations.map((f) => f.toMap()).toList());
+        if (currentFormationsJson != newFormationsJson) {
+          _formations
+            ..clear()
+            ..addAll(formations);
+          _saveFormationsToStorage();
+          _formationsController.add(List.unmodifiable(_formations));
+          dataActuallyChanged = true;
+        }
       }
       if (users.isNotEmpty) {
         final deletedUserIds = _getDeletedDocs('users');
@@ -316,22 +323,27 @@ class LocalDataService {
             !deletedUserIds.contains(u.id) &&
             !deletedUserEmails.contains(u.email.trim().toLowerCase())
         ).toList();
-        final serverUserIds = validServerUsers.map((u) => u.id).toSet();
-        _users.removeWhere((u) =>
-            deletedUserIds.contains(u.id) ||
-            deletedUserEmails.contains(u.email.trim().toLowerCase()) ||
-            !serverUserIds.contains(u.id)
-        );
-        for (final user in validServerUsers) {
-          final existingIndex = _users.indexWhere((u) => u.id == user.id);
-          if (existingIndex >= 0) {
-            _users[existingIndex] = user;
-          } else {
-            _users.add(user);
+        final currentUsersJson = jsonEncode(_users.map((u) => u.toMap()).toList());
+        final newUsersJson = jsonEncode(validServerUsers.map((u) => u.toMap()).toList());
+        if (currentUsersJson != newUsersJson) {
+          final serverUserIds = validServerUsers.map((u) => u.id).toSet();
+          _users.removeWhere((u) =>
+              deletedUserIds.contains(u.id) ||
+              deletedUserEmails.contains(u.email.trim().toLowerCase()) ||
+              !serverUserIds.contains(u.id)
+          );
+          for (final user in validServerUsers) {
+            final existingIndex = _users.indexWhere((u) => u.id == user.id);
+            if (existingIndex >= 0) {
+              _users[existingIndex] = user;
+            } else {
+              _users.add(user);
+            }
           }
+          _saveUsersToStorage();
+          _usersController.add(List.unmodifiable(_users));
+          dataActuallyChanged = true;
         }
-        _saveUsersToStorage();
-        _usersController.add(List.unmodifiable(_users));
 
         for (final deletedId in deletedUserIds) {
           if (users.any((u) => u.id == deletedId)) {
@@ -350,25 +362,30 @@ class LocalDataService {
               !deletedUserIds.contains(i.id) &&
               (email.isEmpty || !deletedUserEmails.contains(email));
         }).toList();
-        final serverInscriptionIds = validInscriptions.map((i) => i.id).toSet();
-        _inscriptions.removeWhere((i) {
-          final email = i.email?.trim().toLowerCase() ?? '';
-          return deletedInscIds.contains(i.id) ||
-              deletedUserIds.contains(i.etudiantId) ||
-              deletedUserIds.contains(i.id) ||
-              (email.isNotEmpty && deletedUserEmails.contains(email)) ||
-              !serverInscriptionIds.contains(i.id);
-        });
-        for (final inscription in validInscriptions) {
-          final existingIndex = _inscriptions.indexWhere((i) => i.id == inscription.id);
-          if (existingIndex >= 0) {
-            _inscriptions[existingIndex] = inscription;
-          } else {
-            _inscriptions.add(inscription);
+        final currentInscJson = jsonEncode(_inscriptions.map((i) => i.toMap()).toList());
+        final newInscJson = jsonEncode(validInscriptions.map((i) => i.toMap()).toList());
+        if (currentInscJson != newInscJson) {
+          final serverInscriptionIds = validInscriptions.map((i) => i.id).toSet();
+          _inscriptions.removeWhere((i) {
+            final email = i.email?.trim().toLowerCase() ?? '';
+            return deletedInscIds.contains(i.id) ||
+                deletedUserIds.contains(i.etudiantId) ||
+                deletedUserIds.contains(i.id) ||
+                (email.isNotEmpty && deletedUserEmails.contains(email)) ||
+                !serverInscriptionIds.contains(i.id);
+          });
+          for (final inscription in validInscriptions) {
+            final existingIndex = _inscriptions.indexWhere((i) => i.id == inscription.id);
+            if (existingIndex >= 0) {
+              _inscriptions[existingIndex] = inscription;
+            } else {
+              _inscriptions.add(inscription);
+            }
           }
+          _saveInscriptionsToStorage();
+          _inscriptionsController.add(List.unmodifiable(_inscriptions));
+          dataActuallyChanged = true;
         }
-        _saveInscriptionsToStorage();
-        _inscriptionsController.add(List.unmodifiable(_inscriptions));
 
         for (final deletedId in deletedInscIds) {
           if (inscriptions.any((i) => i.id == deletedId)) {
@@ -377,58 +394,84 @@ class LocalDataService {
         }
       }
       if (payments.isNotEmpty) {
-        final serverPaymentIds = payments.map((p) => p.id).toSet();
-        _payments.removeWhere((p) => !serverPaymentIds.contains(p.id));
-        for (final payment in payments) {
-          final existingIndex = _payments.indexWhere((p) => p.id == payment.id);
-          if (existingIndex >= 0) {
-            _payments[existingIndex] = payment;
-          } else {
-            _payments.add(payment);
+        final currentPayJson = jsonEncode(_payments.map((p) => p.toMap()).toList());
+        final newPayJson = jsonEncode(payments.map((p) => p.toMap()).toList());
+        if (currentPayJson != newPayJson) {
+          final serverPaymentIds = payments.map((p) => p.id).toSet();
+          _payments.removeWhere((p) => !serverPaymentIds.contains(p.id));
+          for (final payment in payments) {
+            final existingIndex = _payments.indexWhere((p) => p.id == payment.id);
+            if (existingIndex >= 0) {
+              _payments[existingIndex] = payment;
+            } else {
+              _payments.add(payment);
+            }
           }
+          _savePaymentsToStorage();
+          _paymentsController.add(List.unmodifiable(_payments));
+          dataActuallyChanged = true;
         }
-        _savePaymentsToStorage();
-        _paymentsController.add(List.unmodifiable(_payments));
       }
       if (notifications.isNotEmpty) {
-        final serverNotificationIds = notifications.map((n) => n.id).toSet();
-        _notifications.removeWhere((n) => !serverNotificationIds.contains(n.id));
-        for (final notification in notifications) {
-          final existingIndex = _notifications.indexWhere((n) => n.id == notification.id);
-          if (existingIndex >= 0) {
-            _notifications[existingIndex] = notification;
-          } else {
-            _notifications.add(notification);
+        final currentNotifJson = jsonEncode(_notifications.map((n) => n.toMap()).toList());
+        final newNotifJson = jsonEncode(notifications.map((n) => n.toMap()).toList());
+        if (currentNotifJson != newNotifJson) {
+          final serverNotificationIds = notifications.map((n) => n.id).toSet();
+          _notifications.removeWhere((n) => !serverNotificationIds.contains(n.id));
+          for (final notification in notifications) {
+            final existingIndex = _notifications.indexWhere((n) => n.id == notification.id);
+            if (existingIndex >= 0) {
+              _notifications[existingIndex] = notification;
+            } else {
+              _notifications.add(notification);
+            }
           }
+          _notificationsController.add(List.unmodifiable(_notifications));
+          dataActuallyChanged = true;
         }
-        _notificationsController.add(List.unmodifiable(_notifications));
       }
       if (logs.isNotEmpty) {
-        final serverLogIds = logs.map((l) => l.id).toSet();
-        _auditLogs.removeWhere((l) => !serverLogIds.contains(l.id));
-        for (final log in logs) {
-          final existingIndex = _auditLogs.indexWhere((l) => l.id == log.id);
-          if (existingIndex >= 0) {
-            _auditLogs[existingIndex] = log;
-          } else {
-            _auditLogs.add(log);
+        final currentLogsJson = jsonEncode(_auditLogs.map((l) => l.toMap()).toList());
+        final newLogsJson = jsonEncode(logs.map((l) => l.toMap()).toList());
+        if (currentLogsJson != newLogsJson) {
+          final serverLogIds = logs.map((l) => l.id).toSet();
+          _auditLogs.removeWhere((l) => !serverLogIds.contains(l.id));
+          for (final log in logs) {
+            final existingIndex = _auditLogs.indexWhere((l) => l.id == log.id);
+            if (existingIndex >= 0) {
+              _auditLogs[existingIndex] = log;
+            } else {
+              _auditLogs.add(log);
+            }
           }
+          _auditLogsController.add(List.unmodifiable(_auditLogs));
+          dataActuallyChanged = true;
         }
-        _auditLogsController.add(List.unmodifiable(_auditLogs));
       }
       if (seances.isNotEmpty) {
-        final serverSeanceIds = seances.map((s) => s.id).toSet();
-        _seances.removeWhere((s) => !serverSeanceIds.contains(s.id));
-        for (final seance in seances) {
-          final existingIndex = _seances.indexWhere((s) => s.id == seance.id);
-          if (existingIndex >= 0) {
-            _seances[existingIndex] = seance;
-          } else {
-            _seances.add(seance);
+        final currentSeancesJson = jsonEncode(_seances.map((s) => s.toMap()).toList());
+        final newSeancesJson = jsonEncode(seances.map((s) => s.toMap()).toList());
+        if (currentSeancesJson != newSeancesJson) {
+          final serverSeanceIds = seances.map((s) => s.id).toSet();
+          _seances.removeWhere((s) => !serverSeanceIds.contains(s.id));
+          for (final seance in seances) {
+            final existingIndex = _seances.indexWhere((s) => s.id == seance.id);
+            if (existingIndex >= 0) {
+              _seances[existingIndex] = seance;
+            } else {
+              _seances.add(seance);
+            }
           }
+          _saveSeancesToStorage();
+          _seancesController.add(List.unmodifiable(_seances));
+          dataActuallyChanged = true;
         }
-        _saveSeancesToStorage();
-        _seancesController.add(List.unmodifiable(_seances));
+      }
+
+      if (dataActuallyChanged) {
+        if (!_dataChangesController.isClosed) {
+          _dataChangesController.add(null);
+        }
       }
       
       // ✅ Sync successful - record success for backoff optimization

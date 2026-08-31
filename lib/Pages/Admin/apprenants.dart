@@ -1275,11 +1275,9 @@ class _AdminApprenantsState extends State<AdminApprenants>
       eligibleAttestations.add({'inscription': ins, 'formation': f});
     }
 
-    return SlideInUp(
-      delay: Duration(milliseconds: 50 + (index * 40)),
-      duration: const Duration(milliseconds: 600),
-      child: Container(
-        decoration: BoxDecoration(
+    return Container(
+      key: ValueKey(userId),
+      decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
           color: Colors.white,
           border: Border.all(
@@ -1712,8 +1710,7 @@ class _AdminApprenantsState extends State<AdminApprenants>
             ],
           ),
         ),
-      ),
-    );
+      );
   }
 
   Future<void> _confirmDeleteApprenant(

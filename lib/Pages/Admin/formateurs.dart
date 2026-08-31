@@ -354,11 +354,9 @@ class _AdminFormateursState extends State<AdminFormateurs> with TickerProviderSt
     final specialite = (data['specialite'] ?? '').toString();
     final matricule = (data['matricule'] ?? '').toString();
 
-    return SlideInUp(
-      delay: Duration(milliseconds: 50 + (index * 40)),
-      duration: const Duration(milliseconds: 600),
-      child: Container(
-        decoration: BoxDecoration(
+    return Container(
+      key: ValueKey(userId),
+      decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
           color: Colors.white,
           border: Border.all(color: const Color(0xFFE2E8F0)),
@@ -853,8 +851,7 @@ class _AdminFormateursState extends State<AdminFormateurs> with TickerProviderSt
             ],
           ),
         ),
-      ),
-    );
+      );
   }
 
   Future<void> _toggleBlockUser(String userId, bool block) async {
