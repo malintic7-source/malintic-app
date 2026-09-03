@@ -15,10 +15,7 @@ import 'package:gestion_formations/utils/file_saver.dart';
 class ShareFormationDialog extends StatefulWidget {
   final Formation formation;
 
-  const ShareFormationDialog({
-    super.key,
-    required this.formation,
-  });
+  const ShareFormationDialog({super.key, required this.formation});
 
   static Future<void> show(BuildContext context, Formation formation) async {
     await showDialog(
@@ -34,11 +31,14 @@ class ShareFormationDialog extends StatefulWidget {
 class _ShareFormationDialogState extends State<ShareFormationDialog> {
   final GlobalKey _qrKey = GlobalKey();
   int _selectedMode = 0; // 0 = Vercel (Internet), 1 = Local (Wi-Fi / LAN)
-  
-  static const String _defaultVercelBase = 'https://malintic-app.vercel.app';
-  String _publicBase = _defaultVercelBase;
+
+  static const String _defaultPublicBase =
+      'https://reformist-pedicure-backfield.ngrok-free.dev';
+  String _publicBase = _defaultPublicBase;
   String _localBase = 'http://localhost';
   final TextEditingController _customIpController = TextEditingController();
+  final TextEditingController _customPublicUrlController =
+      TextEditingController();
   bool _isLoadingNetwork = false;
   final LocalStorage _storage = LocalStorage();
 
@@ -51,6 +51,7 @@ class _ShareFormationDialogState extends State<ShareFormationDialog> {
   @override
   void dispose() {
     _customIpController.dispose();
+    _customPublicUrlController.dispose();
     super.dispose();
   }
 
@@ -60,90 +61,134 @@ class _ShareFormationDialogState extends State<ShareFormationDialog> {
       final currentHost = Uri.base.host.toLowerCase();
       final currentPort = Uri.base.port;
 
-      // 1. Détection base Vercel / Internet
-      if (currentHost.contains('vercel.app')) {
+      // 1. Détection base Ngrok / Public (WAN)
+      final rawSavedPublicUrl =
+          _storage.getItem('preferred_public_url')?.trim() ?? '';
+      if (rawSavedPublicUrl.isNotEmpty) {
+        _publicBase = rawSavedPublicUrl.startsWith('http')
+            ? rawSavedPublicUrl
+            : 'https://$rawSavedPublicUrl';
+        _customPublicUrlController.text = rawSavedPublicUrl.replaceFirst(
+          RegExp(r'^https?:\/\/'),
+          '',
+        );
+      } else if (currentHost.contains('ngrok')) {
         _publicBase = Uri.base.origin;
+        _customPublicUrlController.text = Uri.base.host;
       } else {
-        _publicBase = _defaultVercelBase;
+        _publicBase = _defaultPublicBase;
+        _customPublicUrlController.text = _defaultPublicBase.replaceFirst(
+          'https://',
+          '',
+        );
       }
 
-      // 2. Récupérer l'IP LAN préférée enregistrée en local (si existante)
-      final rawSavedLanIp = _storage.getItem('preferred_lan_ip')?.trim() ?? '';
-      // Nettoyer tout port 8080 (réservé à Apache) ou 5001 pour garantir que le scan mobile tape sur Docker Nginx port 80
-      final savedLanIp = rawSavedLanIp.replaceAll(':8080', '').replaceAll(':5001', '');
-      if (savedLanIp != rawSavedLanIp) {
-        _storage.setItem('preferred_lan_ip', savedLanIp);
-      }
-
-      // 3. Détection base locale / LAN
-      String detectedLocalHost = currentHost.isNotEmpty ? currentHost : 'localhost';
+      // 2. Détection base locale / LAN dynamique (s'adapte à chaque changement de réseau Wi-Fi)
+      String detectedLocalHost = currentHost.isNotEmpty
+          ? currentHost
+          : 'localhost';
       String portSuffix = '';
-      if (currentPort != 80 && currentPort != 443 && currentPort != 0 && currentPort != 8080 && currentPort != 5001) {
+      if (currentPort != 80 &&
+          currentPort != 443 &&
+          currentPort != 0 &&
+          currentPort != 8080 &&
+          currentPort != 5001) {
         portSuffix = ':$currentPort';
       }
 
-      if (savedLanIp.isNotEmpty) {
-        final withHttp = savedLanIp.startsWith('http://') || savedLanIp.startsWith('https://')
-            ? savedLanIp
-            : 'http://$savedLanIp';
-        _localBase = withHttp;
-        _customIpController.text = savedLanIp.replaceFirst(RegExp(r'^https?:\/\/'), '');
-      } else if (!detectedLocalHost.startsWith('127.') &&
+      final isCurrentHostLanIp =
+          !detectedLocalHost.startsWith('127.') &&
           detectedLocalHost != 'localhost' &&
-          !detectedLocalHost.startsWith('172.')) {
+          !detectedLocalHost.startsWith('172.17.') &&
+          !detectedLocalHost.startsWith('172.18.') &&
+          !detectedLocalHost.startsWith('172.19.') &&
+          !detectedLocalHost.startsWith('172.20.') &&
+          !detectedLocalHost.contains('ngrok');
+
+      if (isCurrentHostLanIp) {
+        // L'utilisateur est actuellement connecté via son IP Wi-Fi active : l'utiliser en priorité absolue
         _localBase = 'http://$detectedLocalHost$portSuffix';
         _customIpController.text = '$detectedLocalHost$portSuffix';
-        _storage.setItem('preferred_lan_ip', '$detectedLocalHost$portSuffix');
       } else {
         _localBase = 'http://$detectedLocalHost$portSuffix';
         _customIpController.text = '$detectedLocalHost$portSuffix';
       }
 
-      // Si nous sommes sur localhost ou 127.0.0.1, interroger l'API pour obtenir la vraie IP LAN Wi-Fi de l'hôte Windows
-      if (detectedLocalHost == 'localhost' ||
-          detectedLocalHost.startsWith('127.') ||
-          detectedLocalHost.startsWith('172.')) {
-        try {
-          final apiUri = Uri.parse('/api/system/network-info');
-          final response = await http.get(apiUri).timeout(
-            const Duration(seconds: 2),
-            onTimeout: () => http.Response('{}', 408),
-          );
+      // Interroger l'API locale pour récupérer l'URL publique ngrok et l'IP LAN physique
+      try {
+        final apiUri = Uri.parse('/api/system/network-info');
+        final token = LocalStorage().getSessionItem('auth_token');
+        final headers = <String, String>{'ngrok-skip-browser-warning': 'true'};
+        if (token != null && token.isNotEmpty) {
+          headers['Authorization'] = 'Bearer $token';
+          headers['x-session-token'] = token;
+        }
+        final response = await http
+            .get(apiUri, headers: headers)
+            .timeout(
+              const Duration(seconds: 2),
+              onTimeout: () => http.Response('{}', 408),
+            );
 
-          if (response.statusCode == 200) {
-            final data = jsonDecode(response.body) as Map<String, dynamic>;
-            final primaryIp = data['primaryIp']?.toString();
-            final detectedIps = (data['detectedIps'] as List<dynamic>?)
-                ?.map((e) => e.toString())
-                .toList() ?? [];
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body) as Map<String, dynamic>;
+          final ngrokDomain = data['ngrokDomain']?.toString().trim();
+          final publicUrl = data['publicUrl']?.toString().trim();
 
-            // Filtrer les IP internes Docker et APIPA
-            final realIps = detectedIps
-                .where((ip) =>
+          if (rawSavedPublicUrl.isEmpty) {
+            if (publicUrl != null && publicUrl.isNotEmpty) {
+              _publicBase = publicUrl.startsWith('http')
+                  ? publicUrl
+                  : 'https://$publicUrl';
+              _customPublicUrlController.text = _publicBase.replaceFirst(
+                RegExp(r'^https?:\/\/'),
+                '',
+              );
+            } else if (ngrokDomain != null && ngrokDomain.isNotEmpty) {
+              _publicBase = 'https://$ngrokDomain';
+              _customPublicUrlController.text = ngrokDomain;
+            }
+          }
+
+          final primaryIp = data['primaryIp']?.toString();
+          final detectedIps =
+              (data['detectedIps'] as List<dynamic>?)
+                  ?.map((e) => e.toString())
+                  .toList() ??
+              [];
+
+          final realIps = detectedIps
+              .where(
+                (ip) =>
                     !ip.startsWith('172.') &&
                     !ip.startsWith('127.') &&
                     !ip.startsWith('169.254.') &&
-                    ip != '0.0.0.0')
-                .toList();
+                    ip != '0.0.0.0',
+              )
+              .toList();
 
-            final chosenIp = (primaryIp != null &&
-                    !primaryIp.startsWith('172.') &&
-                    !primaryIp.startsWith('127.') &&
-                    !primaryIp.startsWith('169.254.'))
-                ? primaryIp
-                : (realIps.isNotEmpty ? realIps.first : null);
+          final chosenIp =
+              (primaryIp != null &&
+                  !primaryIp.startsWith('172.') &&
+                  !primaryIp.startsWith('127.') &&
+                  !primaryIp.startsWith('169.254.'))
+              ? primaryIp
+              : (realIps.isNotEmpty ? realIps.first : null);
 
-            if (chosenIp != null && chosenIp.isNotEmpty) {
-              final finalPort = (currentPort != 80 && currentPort != 443 && currentPort != 0 && currentPort != 8080 && currentPort != 5001)
-                  ? ':$currentPort'
-                  : '';
-              _localBase = 'http://$chosenIp$finalPort';
-              _customIpController.text = '$chosenIp$finalPort';
-              _storage.setItem('preferred_lan_ip', '$chosenIp$finalPort');
-            }
+          if (chosenIp != null && chosenIp.isNotEmpty && !isCurrentHostLanIp) {
+            final finalPort =
+                (currentPort != 80 &&
+                    currentPort != 443 &&
+                    currentPort != 0 &&
+                    currentPort != 8080 &&
+                    currentPort != 5001)
+                ? ':$currentPort'
+                : '';
+            _localBase = 'http://$chosenIp$finalPort';
+            _customIpController.text = '$chosenIp$finalPort';
           }
-        } catch (_) {}
-      }
+        }
+      } catch (_) {}
     } catch (_) {}
 
     if (mounted) {
@@ -151,17 +196,22 @@ class _ShareFormationDialogState extends State<ShareFormationDialog> {
     }
   }
 
-  String get _publicUrl => '$_publicBase/formation.html?id=${widget.formation.id}';
-  String get _localUrl => '$_localBase/formation.html?id=${widget.formation.id}';
+  String get _publicUrl =>
+      '$_publicBase/formation.html?id=${widget.formation.id}';
+  String get _localUrl =>
+      '$_localBase/formation.html?id=${widget.formation.id}';
   String get _activeUrl => _selectedMode == 0 ? _publicUrl : _localUrl;
 
   Future<void> _shareWhatsApp() async {
-    final text = '📚 *${widget.formation.titre}*\n\n'
+    final text =
+        '📚 *${widget.formation.titre}*\n\n'
         '${widget.formation.description}\n\n'
         '💰 *Tarif:* ${widget.formation.prix} FCFA\n'
-        '⏱️ *Durée:* ${widget.formation.dureeSemaines} semaine(s)\n\n'
+        '*Durée :* ${widget.formation.dureeSemaines} semaine(s)\n\n'
         '👉 *Inscrivez-vous ici:*\n$_activeUrl';
-    final whatsappUri = Uri.parse('https://wa.me/?text=${Uri.encodeComponent(text)}');
+    final whatsappUri = Uri.parse(
+      'https://wa.me/?text=${Uri.encodeComponent(text)}',
+    );
     if (await canLaunchUrl(whatsappUri)) {
       await launchUrl(whatsappUri, mode: LaunchMode.externalApplication);
     }
@@ -174,7 +224,11 @@ class _ShareFormationDialogState extends State<ShareFormationDialog> {
       SnackBar(
         content: Row(
           children: [
-            const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
+            const Icon(
+              Icons.check_circle_rounded,
+              color: Colors.white,
+              size: 18,
+            ),
             const SizedBox(width: 8),
             Expanded(child: Text('📋 $label copié dans le presse-papier !')),
           ],
@@ -189,7 +243,8 @@ class _ShareFormationDialogState extends State<ShareFormationDialog> {
 
   Future<void> _downloadQrCode() async {
     try {
-      final boundary = _qrKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      final boundary =
+          _qrKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
       if (boundary == null) return;
       final image = await boundary.toImage(pixelRatio: 3.0);
       final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
@@ -211,7 +266,10 @@ class _ShareFormationDialogState extends State<ShareFormationDialog> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur téléchargement QR: $e'), backgroundColor: AppTheme.error),
+        SnackBar(
+          content: Text('Erreur téléchargement QR: $e'),
+          backgroundColor: AppTheme.error,
+        ),
       );
     }
   }
@@ -230,7 +288,8 @@ class _ShareFormationDialogState extends State<ShareFormationDialog> {
               width: size,
               height: size,
               fit: BoxFit.cover,
-              errorBuilder: (ctx, err, stack) => _buildFallbackPhoto(size, radius),
+              errorBuilder: (ctx, err, stack) =>
+                  _buildFallbackPhoto(size, radius),
             ),
           );
         } catch (_) {}
@@ -242,7 +301,8 @@ class _ShareFormationDialogState extends State<ShareFormationDialog> {
             width: size,
             height: size,
             fit: BoxFit.cover,
-            errorBuilder: (ctx, err, stack) => _buildFallbackPhoto(size, radius),
+            errorBuilder: (ctx, err, stack) =>
+                _buildFallbackPhoto(size, radius),
           ),
         );
       }
@@ -258,7 +318,11 @@ class _ShareFormationDialogState extends State<ShareFormationDialog> {
         color: AppTheme.primary.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(radius),
       ),
-      child: Icon(Icons.school_rounded, color: AppTheme.primary, size: size * 0.52),
+      child: Icon(
+        Icons.school_rounded,
+        color: AppTheme.primary,
+        size: size * 0.52,
+      ),
     );
   }
 
@@ -314,7 +378,11 @@ class _ShareFormationDialogState extends State<ShareFormationDialog> {
                     ),
                   ),
                   IconButton(
-                    icon: Icon(Icons.close_rounded, size: 20, color: subtextColor),
+                    icon: Icon(
+                      Icons.close_rounded,
+                      size: 20,
+                      color: subtextColor,
+                    ),
                     onPressed: () => Navigator.pop(context),
                     visualDensity: VisualDensity.compact,
                   ),
@@ -326,7 +394,9 @@ class _ShareFormationDialogState extends State<ShareFormationDialog> {
               Container(
                 padding: const EdgeInsets.all(3),
                 decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+                  color: isDark
+                      ? const Color(0xFF0F172A)
+                      : const Color(0xFFF1F5F9),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
@@ -340,13 +410,17 @@ class _ShareFormationDialogState extends State<ShareFormationDialog> {
                           padding: const EdgeInsets.symmetric(vertical: 8),
                           decoration: BoxDecoration(
                             color: isOnlineMode
-                                ? (isDark ? const Color(0xFF1E293B) : Colors.white)
+                                ? (isDark
+                                      ? const Color(0xFF1E293B)
+                                      : Colors.white)
                                 : Colors.transparent,
                             borderRadius: BorderRadius.circular(9),
                             boxShadow: isOnlineMode
                                 ? [
                                     BoxShadow(
-                                      color: Colors.black.withValues(alpha: 0.06),
+                                      color: Colors.black.withValues(
+                                        alpha: 0.06,
+                                      ),
                                       blurRadius: 4,
                                       offset: const Offset(0, 1),
                                     ),
@@ -359,15 +433,21 @@ class _ShareFormationDialogState extends State<ShareFormationDialog> {
                               Icon(
                                 Icons.public_rounded,
                                 size: 15,
-                                color: isOnlineMode ? const Color(0xFF16A34A) : subtextColor,
+                                color: isOnlineMode
+                                    ? const Color(0xFF16A34A)
+                                    : subtextColor,
                               ),
                               const SizedBox(width: 6),
                               Text(
                                 'Lien Public (WAN)',
                                 style: GoogleFonts.poppins(
                                   fontSize: 11.5,
-                                  fontWeight: isOnlineMode ? FontWeight.w700 : FontWeight.w500,
-                                  color: isOnlineMode ? const Color(0xFF16A34A) : subtextColor,
+                                  fontWeight: isOnlineMode
+                                      ? FontWeight.w700
+                                      : FontWeight.w500,
+                                  color: isOnlineMode
+                                      ? const Color(0xFF16A34A)
+                                      : subtextColor,
                                 ),
                               ),
                             ],
@@ -384,13 +464,17 @@ class _ShareFormationDialogState extends State<ShareFormationDialog> {
                           padding: const EdgeInsets.symmetric(vertical: 8),
                           decoration: BoxDecoration(
                             color: !isOnlineMode
-                                ? (isDark ? const Color(0xFF1E293B) : Colors.white)
+                                ? (isDark
+                                      ? const Color(0xFF1E293B)
+                                      : Colors.white)
                                 : Colors.transparent,
                             borderRadius: BorderRadius.circular(9),
                             boxShadow: !isOnlineMode
                                 ? [
                                     BoxShadow(
-                                      color: Colors.black.withValues(alpha: 0.06),
+                                      color: Colors.black.withValues(
+                                        alpha: 0.06,
+                                      ),
                                       blurRadius: 4,
                                       offset: const Offset(0, 1),
                                     ),
@@ -403,15 +487,21 @@ class _ShareFormationDialogState extends State<ShareFormationDialog> {
                               Icon(
                                 Icons.wifi_rounded,
                                 size: 15,
-                                color: !isOnlineMode ? AppTheme.primary : subtextColor,
+                                color: !isOnlineMode
+                                    ? AppTheme.primary
+                                    : subtextColor,
                               ),
                               const SizedBox(width: 6),
                               Text(
                                 'Wi-Fi Bureau (LAN)',
                                 style: GoogleFonts.poppins(
                                   fontSize: 11.5,
-                                  fontWeight: !isOnlineMode ? FontWeight.w700 : FontWeight.w500,
-                                  color: !isOnlineMode ? AppTheme.primary : subtextColor,
+                                  fontWeight: !isOnlineMode
+                                      ? FontWeight.w700
+                                      : FontWeight.w500,
+                                  color: !isOnlineMode
+                                      ? AppTheme.primary
+                                      : subtextColor,
                                 ),
                               ),
                             ],
@@ -434,7 +524,9 @@ class _ShareFormationDialogState extends State<ShareFormationDialog> {
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: isOnlineMode ? const Color(0xFFBBF7D0) : const Color(0xFFBFDBFE),
+                        color: isOnlineMode
+                            ? const Color(0xFFBBF7D0)
+                            : const Color(0xFFBFDBFE),
                         width: 2,
                       ),
                       boxShadow: [
@@ -453,25 +545,36 @@ class _ShareFormationDialogState extends State<ShareFormationDialog> {
                           version: QrVersions.auto,
                           size: 170,
                           backgroundColor: Colors.white,
-                          embeddedImage: const AssetImage('images/Malintic.png'),
+                          embeddedImage: const AssetImage(
+                            'images/Malintic.png',
+                          ),
                           embeddedImageStyle: const QrEmbeddedImageStyle(
                             size: Size(26, 26),
                           ),
                         ),
                         const SizedBox(height: 6),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 3,
+                          ),
                           decoration: BoxDecoration(
-                            color: isOnlineMode ? const Color(0xFFDCFCE7) : const Color(0xFFDBEAFE),
+                            color: isOnlineMode
+                                ? const Color(0xFFDCFCE7)
+                                : const Color(0xFFDBEAFE),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(
-                                isOnlineMode ? Icons.public_rounded : Icons.wifi_rounded,
+                                isOnlineMode
+                                    ? Icons.public_rounded
+                                    : Icons.wifi_rounded,
                                 size: 12,
-                                color: isOnlineMode ? const Color(0xFF166534) : const Color(0xFF1E40AF),
+                                color: isOnlineMode
+                                    ? const Color(0xFF166534)
+                                    : const Color(0xFF1E40AF),
                               ),
                               const SizedBox(width: 4),
                               Text(
@@ -481,7 +584,9 @@ class _ShareFormationDialogState extends State<ShareFormationDialog> {
                                 style: GoogleFonts.poppins(
                                   fontSize: 10,
                                   fontWeight: FontWeight.w700,
-                                  color: isOnlineMode ? const Color(0xFF166534) : const Color(0xFF1E40AF),
+                                  color: isOnlineMode
+                                      ? const Color(0xFF166534)
+                                      : const Color(0xFF1E40AF),
                                 ),
                               ),
                             ],
@@ -499,11 +604,17 @@ class _ShareFormationDialogState extends State<ShareFormationDialog> {
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
                   color: isOnlineMode
-                      ? (isDark ? const Color(0xFF064E3B).withValues(alpha: 0.25) : const Color(0xFFF0FDF4))
-                      : (isDark ? const Color(0xFF1E3A8A).withValues(alpha: 0.25) : const Color(0xFFEFF6FF)),
+                      ? (isDark
+                            ? const Color(0xFF064E3B).withValues(alpha: 0.25)
+                            : const Color(0xFFF0FDF4))
+                      : (isDark
+                            ? const Color(0xFF1E3A8A).withValues(alpha: 0.25)
+                            : const Color(0xFFEFF6FF)),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: isOnlineMode ? const Color(0xFF86EFAC) : const Color(0xFF93C5FD),
+                    color: isOnlineMode
+                        ? const Color(0xFF86EFAC)
+                        : const Color(0xFF93C5FD),
                     width: 1.2,
                   ),
                 ),
@@ -513,28 +624,44 @@ class _ShareFormationDialogState extends State<ShareFormationDialog> {
                     Row(
                       children: [
                         Icon(
-                          isOnlineMode ? Icons.public_rounded : Icons.wifi_rounded,
+                          isOnlineMode
+                              ? Icons.public_rounded
+                              : Icons.wifi_rounded,
                           size: 15,
-                          color: isOnlineMode ? const Color(0xFF16A34A) : AppTheme.primary,
+                          color: isOnlineMode
+                              ? const Color(0xFF16A34A)
+                              : AppTheme.primary,
                         ),
                         const SizedBox(width: 6),
                         Text(
-                          isOnlineMode ? 'Lien Inscription En Ligne :' : 'Lien Bureau (Wi-Fi / LAN) :',
+                          isOnlineMode
+                              ? 'Lien Inscription En Ligne :'
+                              : 'Lien Bureau (Wi-Fi / LAN) :',
                           style: GoogleFonts.poppins(
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
-                            color: isOnlineMode ? const Color(0xFF166534) : AppTheme.primaryDark,
+                            color: isOnlineMode
+                                ? const Color(0xFF166534)
+                                : AppTheme.primaryDark,
                           ),
                         ),
                         const Spacer(),
                         InkWell(
-                          onTap: () => _copyLink(_activeUrl, isOnlineMode ? 'Lien En Ligne' : 'Lien Wi-Fi'),
+                          onTap: () => _copyLink(
+                            _activeUrl,
+                            isOnlineMode ? 'Lien En Ligne' : 'Lien Wi-Fi',
+                          ),
                           borderRadius: BorderRadius.circular(6),
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
                             decoration: BoxDecoration(
                               color: isOnlineMode
-                                  ? const Color(0xFF16A34A).withValues(alpha: 0.15)
+                                  ? const Color(
+                                      0xFF16A34A,
+                                    ).withValues(alpha: 0.15)
                                   : AppTheme.primary.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(6),
                             ),
@@ -543,7 +670,9 @@ class _ShareFormationDialogState extends State<ShareFormationDialog> {
                                 Icon(
                                   Icons.copy_rounded,
                                   size: 12,
-                                  color: isOnlineMode ? const Color(0xFF16A34A) : AppTheme.primary,
+                                  color: isOnlineMode
+                                      ? const Color(0xFF16A34A)
+                                      : AppTheme.primary,
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
@@ -551,7 +680,9 @@ class _ShareFormationDialogState extends State<ShareFormationDialog> {
                                   style: GoogleFonts.poppins(
                                     fontSize: 11,
                                     fontWeight: FontWeight.w700,
-                                    color: isOnlineMode ? const Color(0xFF16A34A) : AppTheme.primary,
+                                    color: isOnlineMode
+                                        ? const Color(0xFF16A34A)
+                                        : AppTheme.primary,
                                   ),
                                 ),
                               ],
@@ -565,11 +696,77 @@ class _ShareFormationDialogState extends State<ShareFormationDialog> {
                       _activeUrl,
                       style: GoogleFonts.poppins(
                         fontSize: 11,
-                        color: isOnlineMode ? const Color(0xFF15803D) : AppTheme.primary,
+                        color: isOnlineMode
+                            ? const Color(0xFF15803D)
+                            : AppTheme.primary,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                    if (!isOnlineMode) ...[
+                    if (isOnlineMode) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: SizedBox(
+                              height: 30,
+                              child: TextField(
+                                controller: _customPublicUrlController,
+                                style: GoogleFonts.poppins(fontSize: 11),
+                                decoration: InputDecoration(
+                                  hintText: 'Ex: app-mntic.ngrok-free.dev',
+                                  labelText: 'Domaine / URL Ngrok Public',
+                                  labelStyle: GoogleFonts.poppins(fontSize: 10),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 0,
+                                  ),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  isDense: true,
+                                ),
+                                onChanged: (val) {
+                                  final clean = val.trim();
+                                  if (clean.isNotEmpty) {
+                                    setState(() {
+                                      if (clean.startsWith('http://') ||
+                                          clean.startsWith('https://')) {
+                                        _publicBase = clean;
+                                      } else {
+                                        _publicBase = 'https://$clean';
+                                      }
+                                    });
+                                    _storage.setItem(
+                                      'preferred_public_url',
+                                      clean,
+                                    );
+                                  }
+                                },
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          IconButton(
+                            icon: _isLoadingNetwork
+                                ? const SizedBox(
+                                    width: 14,
+                                    height: 14,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Icon(
+                                    Icons.refresh_rounded,
+                                    size: 17,
+                                    color: Color(0xFF16A34A),
+                                  ),
+                            tooltip: 'Détecter le lien Ngrok / Public',
+                            onPressed: _initUrls,
+                            visualDensity: VisualDensity.compact,
+                          ),
+                        ],
+                      ),
+                    ] else ...[
                       const SizedBox(height: 8),
                       Row(
                         children: [
@@ -580,26 +777,33 @@ class _ShareFormationDialogState extends State<ShareFormationDialog> {
                                 controller: _customIpController,
                                 style: GoogleFonts.poppins(fontSize: 11),
                                 decoration: InputDecoration(
-                                  hintText: 'Ex: 192.168.1.15 ou localhost',
-                                  labelText: 'IP / Hôte du réseau local',
+                                  hintText:
+                                      'Ex: 192.168.1.20:8000 ou 192.168.1.20',
+                                  labelText: 'IP / Hôte du réseau local Wi-Fi',
                                   labelStyle: GoogleFonts.poppins(fontSize: 10),
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 0,
+                                  ),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
                                   isDense: true,
                                 ),
-                                 onChanged: (val) {
-                                   final clean = val.trim();
-                                   if (clean.isNotEmpty) {
-                                     setState(() {
-                                       if (clean.startsWith('http://') || clean.startsWith('https://')) {
-                                         _localBase = clean;
-                                       } else {
-                                         _localBase = 'http://$clean';
-                                       }
-                                     });
-                                     _storage.setItem('preferred_lan_ip', clean);
-                                   }
-                                 },
+                                onChanged: (val) {
+                                  final clean = val.trim();
+                                  if (clean.isNotEmpty) {
+                                    setState(() {
+                                      if (clean.startsWith('http://') ||
+                                          clean.startsWith('https://')) {
+                                        _localBase = clean;
+                                      } else {
+                                        _localBase = 'http://$clean';
+                                      }
+                                    });
+                                    _storage.setItem('preferred_lan_ip', clean);
+                                  }
+                                },
                               ),
                             ),
                           ),
@@ -609,9 +813,15 @@ class _ShareFormationDialogState extends State<ShareFormationDialog> {
                                 ? const SizedBox(
                                     width: 14,
                                     height: 14,
-                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
                                   )
-                                : const Icon(Icons.refresh_rounded, size: 17, color: AppTheme.primary),
+                                : const Icon(
+                                    Icons.refresh_rounded,
+                                    size: 17,
+                                    color: AppTheme.primary,
+                                  ),
                             tooltip: 'Détecter automatiquement l\'IP Wi-Fi',
                             onPressed: _initUrls,
                             visualDensity: VisualDensity.compact,
@@ -633,14 +843,19 @@ class _ShareFormationDialogState extends State<ShareFormationDialog> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF25D366),
                         foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
                         padding: const EdgeInsets.symmetric(vertical: 10),
                         elevation: 0,
                       ),
                       icon: const Icon(Icons.chat_rounded, size: 16),
                       label: Text(
                         'WhatsApp',
-                        style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 12.5),
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 12.5,
+                        ),
                       ),
                       onPressed: _shareWhatsApp,
                     ),
@@ -651,14 +866,23 @@ class _ShareFormationDialogState extends State<ShareFormationDialog> {
                     child: OutlinedButton.icon(
                       style: OutlinedButton.styleFrom(
                         foregroundColor: textColor,
-                        side: BorderSide(color: isDark ? Colors.white24 : const Color(0xFFCBD5E1)),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        side: BorderSide(
+                          color: isDark
+                              ? Colors.white24
+                              : const Color(0xFFCBD5E1),
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
                         padding: const EdgeInsets.symmetric(vertical: 10),
                       ),
                       icon: const Icon(Icons.download_rounded, size: 15),
                       label: Text(
                         'QR Code',
-                        style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 11.5),
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 11.5,
+                        ),
                       ),
                       onPressed: _downloadQrCode,
                     ),
@@ -670,18 +894,26 @@ class _ShareFormationDialogState extends State<ShareFormationDialog> {
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppTheme.primary,
                         side: const BorderSide(color: AppTheme.primary),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
                         padding: const EdgeInsets.symmetric(vertical: 10),
                       ),
                       icon: const Icon(Icons.open_in_new_rounded, size: 15),
                       label: Text(
                         'Ouvrir',
-                        style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 11.5),
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 11.5,
+                        ),
                       ),
                       onPressed: () async {
                         final uri = Uri.parse(_activeUrl);
                         if (await canLaunchUrl(uri)) {
-                          await launchUrl(uri, mode: LaunchMode.externalApplication);
+                          await launchUrl(
+                            uri,
+                            mode: LaunchMode.externalApplication,
+                          );
                         }
                       },
                     ),

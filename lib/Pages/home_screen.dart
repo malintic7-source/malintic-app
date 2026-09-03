@@ -32,13 +32,12 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late int _selectedIndex;
-  late List<NavigationItem> navigationItems;
+  List<NavigationItem> get navigationItems => _getNavigationItems();
 
   @override
   void initState() {
     super.initState();
     _selectedIndex = 0;
-    navigationItems = _getNavigationItems();
   }
 
   @override

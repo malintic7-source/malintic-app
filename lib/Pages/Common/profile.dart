@@ -64,7 +64,7 @@ class _ProfilePageState extends State<ProfilePage>
           child: Container(
             decoration: BoxDecoration(
               color: AppTheme.surface,
-              borderRadius: BorderRadius.circular(24),
+              borderRadius: BorderRadius.circular(16),
               boxShadow: AppTheme.cardShadow,
             ),
             padding: const EdgeInsets.all(20),
@@ -131,7 +131,7 @@ class _ProfilePageState extends State<ProfilePage>
             Container(
               padding: const EdgeInsets.all(2),
               decoration: BoxDecoration(
-                gradient: AppTheme.heroGradient,
+                color: AppTheme.primary,
                 borderRadius: BorderRadius.circular(16),
               ),
               child: CircleAvatar(
@@ -612,13 +612,13 @@ class _ProfilePageState extends State<ProfilePage>
                           isEditing = false;
                         });
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('✅ Profil mis à jour')),
+                          SnackBar(content: Text('Profil mis à jour.')),
                         );
                       } catch (e) {
                         if (!mounted) return;
                         ScaffoldMessenger.of(
                           context,
-                        ).showSnackBar(SnackBar(content: Text('❌ Erreur: $e')));
+                        ).showSnackBar(SnackBar(content: Text('Erreur : $e')));
                       }
                     },
                     borderRadius: BorderRadius.circular(12),
@@ -893,7 +893,7 @@ class _ProfilePageState extends State<ProfilePage>
                             if (!localContext.mounted) return;
                             ScaffoldMessenger.of(
                               localContext,
-                            ).showSnackBar(SnackBar(content: Text('❌ $e')));
+                            ).showSnackBar(SnackBar(content: Text('$e')));
                           }
                         },
                         borderRadius: BorderRadius.circular(12),

@@ -1,143 +1,91 @@
 @echo off
-setlocal enabledelayedexpansion
+setlocal
 pushd "%~dp0"
-title Deploiement Securise - M@LINTIC-APP
+title M@LINTIC - DEPLOIEMENT LOCAL DOCKER
 
-echo ======================================================================
-echo   DEPLOIEMENT ^& MISE A JOUR SECURISEE - M@LINTIC-APP
-echo   Dossier : %CD%
-echo ======================================================================
+echo ============================================================
+echo   M@LINTIC - DEPLOIEMENT LOCAL DOCKER
+echo   PostgreSQL local ^| API ^| Frontend ^| Ngrok
+echo ============================================================
 echo.
 
-:: 1. Verification de Docker
-echo [1/6] Verification de Docker...
 where docker >nul 2>&1
-if %ERRORLEVEL% neq 0 (
-    echo [ERREUR] Docker n'est pas accessible. Assurez-vous que Docker Desktop est lance.
-    pause
+if errorlevel 1 (
+    echo [ERREUR] Docker Desktop est introuvable dans le PATH.
     popd
     exit /b 1
 )
-echo [OK] Docker operationnel.
 
-:: 2. Sauvegarde Preventive Automatique des Donnees Actuelles (Photos, Formations, Stagiaires, etc.)
-echo.
-echo [2/6] Sauvegarde automatique preventive des donnees de production...
-if not exist "backup" mkdir "backup" >nul 2>&1
-docker exec malintic_api test -f /data/database.json >nul 2>&1
-if %ERRORLEVEL% equ 0 (
-    docker cp malintic_api:/data/database.json "backup\database_auto_backup.json" >nul 2>&1
-    echo [OK] Copie de securite creee dans backup\database_auto_backup.json.
-) else (
-    echo [INFO] Aucune donnee anterieure a sauvegarder.
+docker info >nul 2>&1
+if errorlevel 1 (
+    echo [ERREUR] Docker Desktop n'est pas demarre.
+    echo Demarrez Docker Desktop puis relancez ce script.
+    popd
+    exit /b 1
 )
 
-:: 3. Liaison Réseau Carte Physique ^<^> WSL & Pare-Feu
-echo.
-echo [3/6] Configuration du routage reseau Carte Physique ^<^> WSL (Ports 80 et 8080)...
-netsh interface portproxy add v4tov4 listenaddress=0.0.0.0 listenport=8080 connectaddress=127.0.0.1 connectport=8080 >nul 2>&1
-netsh interface portproxy add v4tov4 listenaddress=0.0.0.0 listenport=80 connectaddress=127.0.0.1 connectport=80 >nul 2>&1
-
-:: Autorisation Pare-Feu Windows pour tous les profils (Prive, Public, Domaine)
-netsh advfirewall firewall delete rule name="MNTIC_App_LAN_8080" >nul 2>&1
-netsh advfirewall firewall delete rule name="MNTIC_App_LAN_80" >nul 2>&1
-netsh advfirewall firewall add rule name="MNTIC_App_LAN_8080" dir=in action=allow protocol=TCP localport=8080 profile=any >nul 2>&1
-netsh advfirewall firewall add rule name="MNTIC_App_LAN_80" dir=in action=allow protocol=TCP localport=80 profile=any >nul 2>&1
-echo [OK] Routage reseau physique/WSL et Pare-feu configures avec succes.
-
-:: 4. Compilation des images Docker
-echo.
-echo [4/6] Compilation des nouvelles images applicatives...
-docker compose -p malintic_app build app api
-if %ERRORLEVEL% neq 0 (
-    docker-compose -p malintic_app build app api
-    if %ERRORLEVEL% neq 0 (
-        echo [ERREUR] La compilation des images a echoue. L'ancienne version reste active.
-        pause
-        popd
-        exit /b 1
-    )
-)
-echo [OK] Images a jour compilees.
-
-:: 5. Mise a jour des conteneurs (Volume de donnees conserve intact)
-echo.
-echo [5/6] Application de la mise a jour (Toutes donnees conservees)...
-docker compose -p malintic_app up -d --remove-orphans
-if %ERRORLEVEL% neq 0 (
-    docker-compose -p malintic_app up -d --remove-orphans
-    if %ERRORLEVEL% neq 0 (
-        echo [ERREUR] Le redemarrage des services a echoue.
-        pause
-        popd
-        exit /b 1
-    )
-)
-echo [OK] Services applicatifs et tunnels redemarres.
-
-:: 6. Verification de la base de donnees
-echo.
-echo [6/6] Verification des donnees...
-docker exec malintic_api test -f /data/database.json >nul 2>&1
-if %ERRORLEVEL% neq 0 (
-    if exist "server\initial_database.json" (
-        echo Initialisation initiale de la base...
-        docker cp "server\initial_database.json" malintic_api:/data/database.json >nul 2>&1
-        docker compose -p malintic_app restart api >nul 2>&1
-        echo [OK] Base initiale installee.
-    )
-) else (
-    echo [OK] Base de donnees intacte et active (100%% des photos, formations et stagiaires preserves).
+if not exist ".env" (
+    echo [ERREUR] Le fichier .env est absent.
+    echo Copiez .env.example vers .env et renseignez les secrets locaux.
+    popd
+    exit /b 1
 )
 
-:: Configuration automatique du domaine local mntic_app.local dans hosts
-findstr /c:"mntic_app.local" "%SystemRoot%\System32\drivers\etc\hosts" >nul 2>&1
-if %ERRORLEVEL% neq 0 (
-    echo 127.0.0.1 mntic_app.local mntic-app.local >> "%SystemRoot%\System32\drivers\etc\hosts" 2>nul
+echo [1/5] Validation de la configuration Compose...
+docker compose config --quiet
+if errorlevel 1 (
+    echo [ERREUR] docker-compose.yml est invalide.
+    popd
+    exit /b 1
 )
 
-:: Detection automatique et intelligente de l'adresse IP locale physique (Wi-Fi / Ethernet)
-set LOCAL_IP=
-for /f "tokens=2 delims=:" %%a in ('ipconfig ^| findstr /c:"IPv4" /c:"Adresse IPv4"') do (
-    set "TMP_IP=%%a"
-    set "TMP_IP=!TMP_IP: =!"
-    if not "!TMP_IP!"=="" (
-        if "!TMP_IP:~0,8!"=="192.168." set "LOCAL_IP=!TMP_IP!"
-        if "!TMP_IP:~0,3!"=="10." if not defined LOCAL_IP set "LOCAL_IP=!TMP_IP!"
-    )
+echo [2/5] Compilation Flutter Web...
+where flutter >nul 2>&1
+if errorlevel 1 (
+    echo [ERREUR] Flutter est introuvable dans le PATH.
+    popd
+    exit /b 1
 )
-if not defined LOCAL_IP (
-    for /f "tokens=2 delims=:" %%a in ('ipconfig ^| findstr /c:"IPv4" /c:"Adresse IPv4"') do (
-        set "TMP_IP=%%a"
-        set "TMP_IP=!TMP_IP: =!"
-        if not "!TMP_IP!"=="" (
-            if not "!TMP_IP:~0,3!"=="127" if not "!TMP_IP:~0,8!"=="169.254" if not "!TMP_IP:~0,4!"=="172." (
-                set "LOCAL_IP=!TMP_IP!"
-            )
-        )
-    )
+call flutter build web --release --pwa-strategy=none --no-tree-shake-icons
+if errorlevel 1 (
+    echo [ERREUR] La compilation Flutter a echoue.
+    popd
+    exit /b 1
+)
+
+echo [3/5] Sauvegarde PostgreSQL...
+if not exist "backup" mkdir "backup"
+docker compose exec -T postgres pg_dump -U malintic -d malintic > "backup\malintic_pre_deploy.sql"
+if errorlevel 1 (
+    echo [INFO] Sauvegarde PostgreSQL non disponible, premier deploiement probable.
+)
+
+echo [4/5] Construction et demarrage des services...
+docker compose up -d --build --remove-orphans
+if errorlevel 1 (
+    echo [ERREUR] Le demarrage Docker a echoue.
+    popd
+    exit /b 1
+)
+
+echo [5/5] Verification de sante...
+docker compose ps
+docker compose exec -T postgres pg_isready -U malintic -d malintic
+if errorlevel 1 (
+    echo [ERREUR] PostgreSQL n'est pas pret.
+    popd
+    exit /b 1
 )
 
 echo.
-echo Statut des services actifs :
-docker compose -p malintic_app ps
-
+echo [OK] Deploiement local termine.
+echo Application : http://localhost
+echo API         : http://localhost:8000/api/health
+echo PostgreSQL  : reseau Docker uniquement
 echo.
-echo ======================================================================
-echo   DEPLOIEMENT REUSSI - TOUTES DONNEES PRESERVEES A 100%% !
-echo ======================================================================
+echo Administration optionnelle :
+echo   docker compose --profile admin up -d pgadmin
+echo   docker compose --profile monitoring up -d prometheus grafana
 echo.
-echo   [1] ACCES LOCAL (LAN / Wi-Fi Bureau) :
-echo       - Domaine Local Pro  : http://mntic_app.local
-if defined LOCAL_IP (
-echo       - Adresse IP Directe : http://!LOCAL_IP!
-)
-echo       - Local sur serveur  : http://localhost
-echo.
-echo   [2] ACCES DISTANT (Internet / WhatsApp / Extranet) :
-echo       - Lien Public Securise : https://malintic-app.vercel.app
-echo.
-echo ======================================================================
-echo.
-pause
 popd
+exit /b 0

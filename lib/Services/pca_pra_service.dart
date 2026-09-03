@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'package:gestion_formations/Services/supabase_config.dart';
+import 'package:gestion_formations/Services/local_storage.dart';
 
 /// Statut de santé d'un nœud de l'infrastructure
 class NodeHealth {
@@ -62,7 +62,7 @@ class PraSnapshotInfo {
 /// État global PCA / PRA
 class PcaPraReport {
   final NodeHealth dockerNode;
-  final NodeHealth supabaseNode;
+  final NodeHealth postgresNode;
   final NodeHealth vercelNode;
   final NodeHealth ngrokNode;
   final int totalLocalDocuments;
@@ -72,7 +72,7 @@ class PcaPraReport {
 
   const PcaPraReport({
     required this.dockerNode,
-    required this.supabaseNode,
+    required this.postgresNode,
     required this.vercelNode,
     required this.ngrokNode,
     required this.totalLocalDocuments,
@@ -90,6 +90,7 @@ class PcaPraService {
 
   final _reportController = StreamController<PcaPraReport>.broadcast();
   Stream<PcaPraReport> get reportStream => _reportController.stream;
+  final LocalStorage _localStorage = LocalStorage();
 
   PcaPraReport? _lastReport;
   PcaPraReport? get lastReport => _lastReport;
@@ -113,6 +114,20 @@ class PcaPraService {
       (Uri.base.scheme == 'http' || Uri.base.scheme == 'https') &&
       Uri.base.hasAuthority;
 
+  Map<String, String> _apiHeaders({bool jsonBody = false}) {
+    final headers = <String, String>{
+      'ngrok-skip-browser-warning': 'true',
+      'Accept': 'application/json',
+    };
+    if (jsonBody) headers['Content-Type'] = 'application/json';
+    final token = _localStorage.getSessionItem('auth_token');
+    if (token != null && token.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $token';
+      headers['x-session-token'] = token;
+    }
+    return headers;
+  }
+
   /// Vérifie la santé de tous les nœuds et produit un rapport complet
   Future<PcaPraReport> checkHealth() async {
     final now = DateTime.now();
@@ -128,7 +143,7 @@ class PcaPraService {
       try {
         final res = await http.get(
           _apiUri('pca/status'),
-          headers: const {'ngrok-skip-browser-warning': 'true', 'Accept': 'application/json'},
+          headers: _apiHeaders(),
         ).timeout(const Duration(seconds: 4));
         sw.stop();
         if (res.statusCode == 200) {
@@ -144,39 +159,14 @@ class PcaPraService {
       }
     }
 
-    // 2. Supabase Cloud Check
-    bool supabaseOnline = false;
-    int? supabaseLatency;
-    String supabaseDetails = 'Non configuré';
-
-    if (SupabaseConfig.isEnabled && SupabaseConfig.isConfigured) {
-      final sw = Stopwatch()..start();
-      try {
-        final res = await http.get(
-          Uri.parse('${SupabaseConfig.url}/rest/v1/formations?select=id&limit=1'),
-          headers: SupabaseConfig.headers,
-        ).timeout(const Duration(seconds: 5));
-        sw.stop();
-        if (res.statusCode == 200 || res.statusCode == 206) {
-          supabaseOnline = true;
-          supabaseLatency = sw.elapsedMilliseconds;
-          supabaseDetails = 'PostgreSQL Cloud Connecté (${supabaseLatency}ms)';
-        } else {
-          supabaseDetails = 'Code HTTP ${res.statusCode}';
-        }
-      } catch (e) {
-        supabaseDetails = 'Erreur réseau: ${e.toString()}';
-      }
-    }
-
-    // 3. Vercel CDN / Frontend Node
+    // 2. Frontend node
     final isWebHosted = kIsWeb && Uri.base.host.isNotEmpty;
     final vercelOnline = isWebHosted;
     final vercelDetails = isWebHosted
         ? 'SPA active sur ${Uri.base.host}'
         : 'Exécution locale / mobile';
 
-    // 4. Ngrok Tunnel Check
+    // 3. Ngrok Tunnel Check
     bool ngrokDetected = false;
     String ngrokDetails = 'Aucun tunnel actif';
     if (Uri.base.host.contains('ngrok') || Uri.base.host.contains('ngrok-free.app')) {
@@ -190,7 +180,7 @@ class PcaPraService {
       try {
         final snapListRes = await http.get(
           _apiUri('pra/snapshots'),
-          headers: const {'ngrok-skip-browser-warning': 'true'},
+          headers: _apiHeaders(),
         ).timeout(const Duration(seconds: 4));
         if (snapListRes.statusCode == 200) {
           final body = jsonDecode(snapListRes.body) as Map<String, dynamic>;
@@ -219,12 +209,12 @@ class PcaPraService {
         details: dockerDetails,
         lastChecked: now,
       ),
-      supabaseNode: NodeHealth(
-        name: 'Supabase Cloud (PostgreSQL)',
-        type: 'supabase',
-        isOnline: supabaseOnline,
-        latencyMs: supabaseLatency,
-        details: supabaseDetails,
+      postgresNode: NodeHealth(
+        name: 'PostgreSQL local',
+        type: 'postgres',
+        isOnline: dockerOnline,
+        latencyMs: dockerLatency,
+        details: dockerOnline ? 'Disponible via l’API locale' : 'API locale indisponible',
         lastChecked: now,
       ),
       vercelNode: NodeHealth(
@@ -260,10 +250,7 @@ class PcaPraService {
     try {
       final res = await http.post(
         _apiUri('pra/snapshot'),
-        headers: {
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true',
-        },
+        headers: _apiHeaders(jsonBody: true),
         body: jsonEncode({'label': label, 'reason': reason}),
       ).timeout(const Duration(seconds: 8));
       await checkHealth();
@@ -279,10 +266,7 @@ class PcaPraService {
     try {
       final res = await http.post(
         _apiUri('pra/reconcile'),
-        headers: {
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true',
-        },
+        headers: _apiHeaders(jsonBody: true),
       ).timeout(const Duration(seconds: 15));
       await checkHealth();
       return res.statusCode == 200;
@@ -297,10 +281,7 @@ class PcaPraService {
     try {
       final res = await http.post(
         _apiUri('pra/restore'),
-        headers: {
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true',
-        },
+        headers: _apiHeaders(jsonBody: true),
         body: jsonEncode({'filename': filename}),
       ).timeout(const Duration(seconds: 15));
       await checkHealth();

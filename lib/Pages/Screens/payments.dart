@@ -5,9 +5,7 @@ import 'package:gestion_formations/Models/inscription.dart';
 import 'package:gestion_formations/Models/payment.dart';
 import 'package:gestion_formations/Models/user.dart';
 import 'package:gestion_formations/Services/db_services.dart';
-import 'package:gestion_formations/Services/invoice_service.dart';
 import 'package:gestion_formations/Services/pdf_service.dart';
-import 'package:gestion_formations/Services/pdf_helper.dart';
 import 'package:gestion_formations/config/theme.dart';
 
 class PaymentsPage extends StatefulWidget {
@@ -19,14 +17,18 @@ class PaymentsPage extends StatefulWidget {
   State<PaymentsPage> createState() => _PaymentsPageState();
 }
 
-class _PaymentsPageState extends State<PaymentsPage> with TickerProviderStateMixin {
+class _PaymentsPageState extends State<PaymentsPage>
+    with TickerProviderStateMixin {
   final LocalDataService _db = LocalDataService();
   late AnimationController _fadeController;
 
   @override
   void initState() {
     super.initState();
-    _fadeController = AnimationController(duration: const Duration(milliseconds: 600), vsync: this)..forward();
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    )..forward();
   }
 
   @override
@@ -72,7 +74,6 @@ class _PaymentsPageState extends State<PaymentsPage> with TickerProviderStateMix
     );
   }
 
-
   Widget _buildPageWrapper({
     required Widget child,
     EdgeInsetsGeometry? padding,
@@ -85,11 +86,13 @@ class _PaymentsPageState extends State<PaymentsPage> with TickerProviderStateMix
       child: ConstrainedBox(
         constraints: BoxConstraints(maxWidth: maxWidth),
         child: SingleChildScrollView(
-          padding: padding ?? const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+          padding:
+              padding ??
+              const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
           child: Container(
             decoration: BoxDecoration(
               color: AppTheme.surface,
-              borderRadius: BorderRadius.circular(24),
+              borderRadius: BorderRadius.circular(16),
               boxShadow: AppTheme.cardShadow,
             ),
             padding: const EdgeInsets.all(20),
@@ -100,7 +103,6 @@ class _PaymentsPageState extends State<PaymentsPage> with TickerProviderStateMix
     );
   }
 
-
   Widget _buildStudentPaymentsList() {
     return StreamBuilder<List<Payment>>(
       stream: _db.watchPayments(),
@@ -110,7 +112,9 @@ class _PaymentsPageState extends State<PaymentsPage> with TickerProviderStateMix
         }
 
         final allPayments = snapshot.data ?? [];
-        final payments = allPayments.where((p) => p.etudiantId == widget.user.id).toList();
+        final payments = allPayments
+            .where((p) => p.etudiantId == widget.user.id)
+            .toList();
 
         if (payments.isEmpty) {
           return Container(
@@ -122,7 +126,11 @@ class _PaymentsPageState extends State<PaymentsPage> with TickerProviderStateMix
             child: Center(
               child: Column(
                 children: [
-                  const Icon(Icons.receipt_long_rounded, size: 56, color: AppTheme.textSecondary),
+                  const Icon(
+                    Icons.receipt_long_rounded,
+                    size: 56,
+                    color: AppTheme.textSecondary,
+                  ),
                   const SizedBox(height: 14),
                   Text(
                     'Aucun paiement enregistré',
@@ -198,7 +206,10 @@ class _PaymentsPageState extends State<PaymentsPage> with TickerProviderStateMix
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 5,
+                      ),
                       decoration: BoxDecoration(
                         color: statusColor.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(8),
@@ -244,14 +255,22 @@ class _PaymentsPageState extends State<PaymentsPage> with TickerProviderStateMix
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.primary,
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
                         elevation: 0,
                       ),
                       icon: const Icon(Icons.picture_as_pdf_rounded, size: 16),
                       label: Text(
                         'Reçu PDF',
-                        style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w700),
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                   ],
@@ -284,16 +303,44 @@ class _PaymentsPageState extends State<PaymentsPage> with TickerProviderStateMix
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              _buildDetailSection('Montant', '${payment.montant.toStringAsFixed(0)} FCFA', AppTheme.primary),
-              _buildDetailSection('Statut', _getStatusLabel(payment.status), _getStatusColor(payment.status)),
-              _buildDetailSection('Méthode', _getMethodLabel(payment.methode), AppTheme.primaryDark),
-              _buildDetailSection('Date création', '${payment.dateCreation.day}/${payment.dateCreation.month}/${payment.dateCreation.year}', AppTheme.primary),
+              _buildDetailSection(
+                'Montant',
+                '${payment.montant.toStringAsFixed(0)} FCFA',
+                AppTheme.primary,
+              ),
+              _buildDetailSection(
+                'Statut',
+                _getStatusLabel(payment.status),
+                _getStatusColor(payment.status),
+              ),
+              _buildDetailSection(
+                'Méthode',
+                _getMethodLabel(payment.methode),
+                AppTheme.primaryDark,
+              ),
+              _buildDetailSection(
+                'Date création',
+                '${payment.dateCreation.day}/${payment.dateCreation.month}/${payment.dateCreation.year}',
+                AppTheme.primary,
+              ),
               if (payment.dateEffectuation != null)
-                _buildDetailSection('Date effectuation', '${payment.dateEffectuation!.day}/${payment.dateEffectuation!.month}/${payment.dateEffectuation!.year}', const Color(0xFF10B981)),
+                _buildDetailSection(
+                  'Date effectuation',
+                  '${payment.dateEffectuation!.day}/${payment.dateEffectuation!.month}/${payment.dateEffectuation!.year}',
+                  const Color(0xFF10B981),
+                ),
               if (payment.referenceTransaction != null)
-                _buildDetailSection('Référence', payment.referenceTransaction!, AppTheme.primary),
+                _buildDetailSection(
+                  'Référence',
+                  payment.referenceTransaction!,
+                  AppTheme.primary,
+                ),
               if (payment.motifEchec != null)
-                _buildDetailSection('Motif échec', payment.motifEchec!, const Color(0xFFEF4444)),
+                _buildDetailSection(
+                  'Motif échec',
+                  payment.motifEchec!,
+                  const Color(0xFFEF4444),
+                ),
             ],
           ),
         ),
@@ -333,19 +380,33 @@ class _PaymentsPageState extends State<PaymentsPage> with TickerProviderStateMix
     );
   }
 
-  Future<void> _downloadReceipt(Payment payment, {bool directPrint = false}) async {
+  Future<void> _downloadReceipt(
+    Payment payment, {
+    bool directPrint = false,
+  }) async {
     try {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(directPrint ? '🖨️ Préparation de l\'impression du reçu certifié...' : '📄 Génération du reçu officiel certifié en cours...'),
+          content: Text(
+            directPrint
+                ? 'Préparation de l\'impression du reçu certifié...'
+                : 'Génération du reçu officiel certifié en cours...',
+          ),
           duration: const Duration(seconds: 2),
         ),
       );
 
-      final inscription = _db.getInscriptionById(payment.inscriptionId) ??
-          _db.getInscriptions().where((i) =>
-              i.id == payment.inscriptionId ||
-              (i.etudiantId == widget.user.id && i.formationId == payment.formationId)).firstOrNull ??
+      final inscription =
+          _db.getInscriptionById(payment.inscriptionId) ??
+          _db
+              .getInscriptions()
+              .where(
+                (i) =>
+                    i.id == payment.inscriptionId ||
+                    (i.etudiantId == widget.user.id &&
+                        i.formationId == payment.formationId),
+              )
+              .firstOrNull ??
           Inscription(
             id: payment.inscriptionId,
             etudiantId: widget.user.id,
@@ -359,8 +420,11 @@ class _PaymentsPageState extends State<PaymentsPage> with TickerProviderStateMix
             telephone: widget.user.phone,
           );
 
-      final formation = _db.getFormationById(payment.formationId) ??
-          (inscription.formationId.isNotEmpty ? _db.getFormationById(inscription.formationId) : null) ??
+      final formation =
+          _db.getFormationById(payment.formationId) ??
+          (inscription.formationId.isNotEmpty
+              ? _db.getFormationById(inscription.formationId)
+              : null) ??
           Formation(
             id: payment.formationId,
             titre: 'Formation M@LI-NTIC',
@@ -381,8 +445,8 @@ class _PaymentsPageState extends State<PaymentsPage> with TickerProviderStateMix
       final matricule = widget.user.matricule?.isNotEmpty == true
           ? widget.user.matricule!
           : (widget.user.id.startsWith('MAT-')
-              ? widget.user.id
-              : 'MAT-${widget.user.id.length > 6 ? widget.user.id.substring(widget.user.id.length - 6) : widget.user.id}');
+                ? widget.user.id
+                : 'MAT-${widget.user.id.length > 6 ? widget.user.id.substring(widget.user.id.length - 6) : widget.user.id}');
 
       final pdfBytes = await PdfService().generatePaymentReceiptPdf(
         payment: payment,
@@ -397,19 +461,25 @@ class _PaymentsPageState extends State<PaymentsPage> with TickerProviderStateMix
       if (directPrint) {
         await PdfService().directPrintPdf(
           pdfBytes: pdfBytes,
-          name: 'Recu_Paiement_${payment.referenceTransaction ?? payment.id}.pdf',
+          name:
+              'Recu_Paiement_${payment.referenceTransaction ?? payment.id}.pdf',
         );
       } else {
         await PdfService().printOrDownloadPdf(
           pdfBytes: pdfBytes,
-          filename: 'Recu_Paiement_${payment.referenceTransaction ?? payment.id}.pdf',
+          filename:
+              'Recu_Paiement_${payment.referenceTransaction ?? payment.id}.pdf',
         );
       }
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(directPrint ? '🖨️ Boîte de dialogue d\'impression ouverte !' : '✅ Reçu officiel téléchargé avec succès !'),
+          content: Text(
+            directPrint
+                ? 'Boîte de dialogue d\'impression ouverte.'
+                : 'Reçu officiel téléchargé avec succès.',
+          ),
           backgroundColor: AppTheme.success,
         ),
       );
@@ -417,7 +487,7 @@ class _PaymentsPageState extends State<PaymentsPage> with TickerProviderStateMix
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('❌ Erreur de génération du reçu PDF: $e'),
+          content: Text('Erreur de génération du reçu PDF : $e'),
           backgroundColor: AppTheme.error,
         ),
       );
@@ -460,7 +530,6 @@ class _PaymentsPageState extends State<PaymentsPage> with TickerProviderStateMix
     );
   }
 
-
   Color _getStatusColor(PaymentStatus status) {
     switch (status) {
       case PaymentStatus.effectue:
@@ -468,7 +537,7 @@ class _PaymentsPageState extends State<PaymentsPage> with TickerProviderStateMix
       case PaymentStatus.echoue:
         return Color(0xFFEF4444);
       case PaymentStatus.enAttente:
-      return Color(0xFFFB923C);
+        return Color(0xFFFB923C);
     }
   }
 
@@ -479,7 +548,7 @@ class _PaymentsPageState extends State<PaymentsPage> with TickerProviderStateMix
       case PaymentStatus.echoue:
         return 'Échoué';
       case PaymentStatus.enAttente:
-      return 'En attente';
+        return 'En attente';
     }
   }
 

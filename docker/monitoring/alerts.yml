@@ -1,0 +1,11 @@
+groups:
+  - name: malintic-infrastructure
+    rules:
+      - alert: PrometheusTargetDown
+        expr: up == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Cible Prometheus indisponible"
+          description: "La cible {{ $labels.job }} est indisponible depuis plus de 2 minutes."

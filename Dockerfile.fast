@@ -6,6 +6,8 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # Copy built web files
 COPY build/web /usr/share/nginx/html
+# The public QR registration page is maintained outside Flutter's build output.
+COPY web/formation.html /usr/share/nginx/html/formation.html
 
 # Remove default nginx configs backup if any
 RUN rm -f /etc/nginx/conf.d/default.conf.bak

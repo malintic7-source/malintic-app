@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:animate_do/animate_do.dart';
 import 'package:gestion_formations/Models/user.dart';
 import 'package:gestion_formations/Models/formation.dart';
 import 'package:gestion_formations/Models/inscription.dart';
@@ -54,7 +53,7 @@ class _StudentFormationsState extends State<StudentFormations> with TickerProvid
           child: Container(
             decoration: BoxDecoration(
               color: AppTheme.surface,
-              borderRadius: BorderRadius.circular(24),
+              borderRadius: BorderRadius.circular(16),
               boxShadow: AppTheme.cardShadow,
             ),
             padding: const EdgeInsets.all(20),
@@ -508,7 +507,7 @@ class _StudentFormationsState extends State<StudentFormations> with TickerProvid
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  isSettled ? '✅ Soldé à 100%' : 'Reste : ${balance.toStringAsFixed(0)} FCFA',
+                  isSettled ? 'Soldé à 100%' : 'Reste : ${balance.toStringAsFixed(0)} FCFA',
                   style: GoogleFonts.poppins(
                     fontSize: 10.5,
                     fontWeight: FontWeight.w700,

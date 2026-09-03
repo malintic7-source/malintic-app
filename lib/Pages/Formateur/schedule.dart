@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:animate_do/animate_do.dart';
 import 'package:gestion_formations/Models/formation.dart';
 import 'package:gestion_formations/Models/user.dart';
 import 'package:gestion_formations/Services/db_services.dart';
@@ -60,7 +59,9 @@ class _FormateurScheduleState extends State<FormateurSchedule>
     return StreamBuilder<List<Formation>>(
       stream: _db.watchFormationsForFormateur(widget.user.id),
       builder: (context, formationsSnap) {
-        final formations = formationsSnap.data ?? _db.getFormationsForFormateur(widget.user.id);
+        final formations =
+            formationsSnap.data ??
+            _db.getFormationsForFormateur(widget.user.id);
 
         return StreamBuilder<List<User>>(
           stream: _db.watchStudentsForFormateur(widget.user.id),
@@ -69,28 +70,40 @@ class _FormateurScheduleState extends State<FormateurSchedule>
             final allSlots = <_FormateurSlotItem>[];
 
             for (final formation in formations) {
-              final trainerModules = _db.getModulesForFormateur(formation, widget.user.id).toSet();
+              final trainerModules = _db
+                  .getModulesForFormateur(formation, widget.user.id)
+                  .toSet();
 
               for (int i = 0; i < formation.horaires.length; i++) {
                 final horaire = formation.horaires[i];
                 final slotModule = horaire.module;
 
                 // Check if this slot belongs to one of this trainer's assigned modules
-                final isMyModule = slotModule != null && trainerModules.contains(slotModule);
-                final isSharedOrAssigned = slotModule == null &&
-                    (trainerModules.isNotEmpty || formation.formateurIds.contains(widget.user.id));
+                final isMyModule =
+                    slotModule != null && trainerModules.contains(slotModule);
+                final isSharedOrAssigned =
+                    slotModule == null &&
+                    (trainerModules.isNotEmpty ||
+                        formation.formateurIds.contains(widget.user.id));
 
                 if (!isMyModule && !isSharedOrAssigned) continue;
 
                 // Compute automatic dynamic group for this module
-                final enrolledStudents = _db.getStudentsForFormationModule(formation.id, slotModule);
+                final enrolledStudents = _db.getStudentsForFormationModule(
+                  formation.id,
+                  slotModule,
+                );
 
                 allSlots.add(
                   _FormateurSlotItem(
                     formation: formation,
                     horaire: horaire,
                     horaireIndex: i,
-                    moduleTitle: slotModule ?? (trainerModules.isNotEmpty ? trainerModules.first : formation.titre),
+                    moduleTitle:
+                        slotModule ??
+                        (trainerModules.isNotEmpty
+                            ? trainerModules.first
+                            : formation.titre),
                     groupStudents: enrolledStudents,
                   ),
                 );
@@ -99,15 +112,21 @@ class _FormateurScheduleState extends State<FormateurSchedule>
 
             // Filter slots
             final filteredSlots = allSlots.where((slot) {
-              if (_selectedDay != 'Tous' && slot.horaire.jour != _selectedDay) return false;
-              if (_filterFormationId != null && slot.formation.id != _filterFormationId) return false;
-              if (_filterModule != null && slot.horaire.module != _filterModule) return false;
+              if (_selectedDay != 'Tous' && slot.horaire.jour != _selectedDay)
+                return false;
+              if (_filterFormationId != null &&
+                  slot.formation.id != _filterFormationId)
+                return false;
+              if (_filterModule != null && slot.horaire.module != _filterModule)
+                return false;
               return true;
             }).toList();
 
             // Sort by day and time
             filteredSlots.sort((a, b) {
-              final dayCmp = _dayOrder(a.horaire.jour).compareTo(_dayOrder(b.horaire.jour));
+              final dayCmp = _dayOrder(
+                a.horaire.jour,
+              ).compareTo(_dayOrder(b.horaire.jour));
               if (dayCmp != 0) return dayCmp;
               return a.horaire.heureDebut.compareTo(b.horaire.heureDebut);
             });
@@ -116,11 +135,14 @@ class _FormateurScheduleState extends State<FormateurSchedule>
               child: ConstrainedBox(
                 constraints: BoxConstraints(maxWidth: maxWidth),
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 20,
+                    horizontal: 16,
+                  ),
                   child: Container(
                     decoration: BoxDecoration(
                       color: AppTheme.surface,
-                      borderRadius: BorderRadius.circular(24),
+                      borderRadius: BorderRadius.circular(16),
                       boxShadow: AppTheme.cardShadow,
                     ),
                     padding: const EdgeInsets.all(20),
@@ -198,7 +220,9 @@ class _FormateurScheduleState extends State<FormateurSchedule>
             ),
           ),
           ElevatedButton.icon(
-            onPressed: formations.isEmpty ? null : () => _showAddOrEditSlotDialog(formations: formations),
+            onPressed: formations.isEmpty
+                ? null
+                : () => _showAddOrEditSlotDialog(formations: formations),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.primary,
               foregroundColor: Colors.white,
@@ -242,16 +266,27 @@ class _FormateurScheduleState extends State<FormateurSchedule>
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String?>(
               value: _filterFormationId,
-              hint: Text('Toutes mes formations', style: GoogleFonts.poppins(fontSize: 12)),
+              hint: Text(
+                'Toutes mes formations',
+                style: GoogleFonts.poppins(fontSize: 12),
+              ),
               items: [
                 DropdownMenuItem<String?>(
                   value: null,
-                  child: Text('Toutes mes formations', style: GoogleFonts.poppins(fontSize: 12)),
+                  child: Text(
+                    'Toutes mes formations',
+                    style: GoogleFonts.poppins(fontSize: 12),
+                  ),
                 ),
-                ...formations.map((f) => DropdownMenuItem<String?>(
-                      value: f.id,
-                      child: Text(f.titre, style: GoogleFonts.poppins(fontSize: 12)),
-                    )),
+                ...formations.map(
+                  (f) => DropdownMenuItem<String?>(
+                    value: f.id,
+                    child: Text(
+                      f.titre,
+                      style: GoogleFonts.poppins(fontSize: 12),
+                    ),
+                  ),
+                ),
               ],
               onChanged: (val) {
                 setState(() {
@@ -312,7 +347,11 @@ class _FormateurScheduleState extends State<FormateurSchedule>
           padding: const EdgeInsets.symmetric(vertical: 40),
           child: Column(
             children: [
-              const Icon(Icons.event_busy_rounded, size: 48, color: Colors.black12),
+              const Icon(
+                Icons.event_busy_rounded,
+                size: 48,
+                color: Colors.black12,
+              ),
               const SizedBox(height: 16),
               Text(
                 'Aucun créneau pour cette sélection',
@@ -325,10 +364,7 @@ class _FormateurScheduleState extends State<FormateurSchedule>
               const SizedBox(height: 6),
               Text(
                 'Cliquez sur "Ajouter un créneau" pour programmer vos séances par module.',
-                style: GoogleFonts.poppins(
-                  fontSize: 12,
-                  color: Colors.black38,
-                ),
+                style: GoogleFonts.poppins(fontSize: 12, color: Colors.black38),
               ),
             ],
           ),
@@ -350,288 +386,375 @@ class _FormateurScheduleState extends State<FormateurSchedule>
     );
   }
 
-  Widget _buildSlotCard(_FormateurSlotItem slot, int index, List<Formation> formations) {
+  Widget _buildSlotCard(
+    _FormateurSlotItem slot,
+    int index,
+    List<Formation> formations,
+  ) {
     final horaire = slot.horaire;
     final formation = slot.formation;
     final students = slot.groupStudents;
     final moduleName = horaire.module ?? 'Tous les modules';
 
     return Container(
-      key: ValueKey('${formation.id}_${horaire.jour}_${horaire.heureDebut}_$index'),
+      key: ValueKey(
+        '${formation.id}_${horaire.jour}_${horaire.heureDebut}_$index',
+      ),
       decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          color: Colors.white,
-          border: Border.all(color: const Color(0xFFE2E8F0)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Top row: Day badge, time, and quick actions
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primary.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    horaire.jour,
-                    style: GoogleFonts.poppins(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: AppTheme.primary,
-                    ),
-                  ),
+        borderRadius: BorderRadius.circular(16),
+        color: Colors.white,
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Top row: Day badge, time, and quick actions
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
                 ),
-                const SizedBox(width: 10),
-                Icon(Icons.access_time_rounded, size: 16, color: Colors.grey.shade600),
-                const SizedBox(width: 4),
-                Text(
-                  '${horaire.heureDebut} - ${horaire.heureFin}',
+                decoration: BoxDecoration(
+                  color: AppTheme.primary.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  horaire.jour,
                   style: GoogleFonts.poppins(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black87,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.primary,
                   ),
                 ),
-                const Spacer(),
-                // Edit & Delete actions
-                IconButton(
-                  icon: const Icon(Icons.edit_rounded, size: 18),
-                  tooltip: 'Modifier ce créneau',
-                  color: Colors.grey.shade700,
-                  onPressed: () => _showAddOrEditSlotDialog(
-                    formations: formations,
-                    existingFormationId: formation.id,
-                    existingHoraireIndex: slot.horaireIndex,
-                    existingHoraire: horaire,
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.delete_outline_rounded, size: 18),
-                  tooltip: 'Supprimer ce créneau',
-                  color: Colors.red.shade400,
-                  onPressed: () => _confirmDeleteSlot(formation.id, slot.horaireIndex),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-
-            // Formation title & module
-            Text(
-              formation.titre,
-              style: GoogleFonts.poppins(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                color: Colors.black87,
               ),
-            ),
-            const SizedBox(height: 4),
-
-            // Dynamic Auto-Group Card
-            Container(
-              margin: const EdgeInsets.symmetric(vertical: 8),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF8FAFC),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
+              const SizedBox(width: 10),
+              Icon(
+                Icons.access_time_rounded,
+                size: 16,
+                color: Colors.grey.shade600,
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              const SizedBox(width: 4),
+              Text(
+                '${horaire.heureDebut} - ${horaire.heureFin}',
+                style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black87,
+                ),
+              ),
+              const Spacer(),
+              // Edit & Delete actions
+              IconButton(
+                icon: const Icon(Icons.edit_rounded, size: 18),
+                tooltip: 'Modifier ce créneau',
+                color: Colors.grey.shade700,
+                onPressed: () => _showAddOrEditSlotDialog(
+                  formations: formations,
+                  existingFormationId: formation.id,
+                  existingHoraireIndex: slot.horaireIndex,
+                  existingHoraire: horaire,
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete_outline_rounded, size: 18),
+                tooltip: 'Supprimer ce créneau',
+                color: Colors.red.shade400,
+                onPressed: () =>
+                    _confirmDeleteSlot(formation.id, slot.horaireIndex),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          // Formation title & module
+          Text(
+            formation.titre,
+            style: GoogleFonts.poppins(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 4),
+
+          // Dynamic Auto-Group Card
+          Container(
+            margin: const EdgeInsets.symmetric(vertical: 8),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEEF2FF),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.auto_awesome_rounded,
+                            size: 14,
+                            color: AppTheme.primary,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Groupe Automatique',
+                            style: GoogleFonts.poppins(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: AppTheme.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        moduleName,
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    // Student count chip
+                    InkWell(
+                      onTap: () => _showGroupMembersDialog(
+                        moduleName,
+                        formation.titre,
+                        students,
+                      ),
+                      borderRadius: BorderRadius.circular(6),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFEEF2FF),
+                          color: students.isNotEmpty
+                              ? Colors.green.withValues(alpha: 0.12)
+                              : Colors.orange.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.auto_awesome_rounded, size: 14, color: AppTheme.primary),
+                            Icon(
+                              Icons.people_rounded,
+                              size: 14,
+                              color: students.isNotEmpty
+                                  ? Colors.green.shade800
+                                  : Colors.orange.shade800,
+                            ),
                             const SizedBox(width: 4),
                             Text(
-                              'Groupe Automatique',
+                              '${students.length} apprenant${students.length > 1 ? 's' : ''}',
                               style: GoogleFonts.poppins(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w700,
-                                color: AppTheme.primary,
+                                color: students.isNotEmpty
+                                    ? Colors.green.shade800
+                                    : Colors.orange.shade800,
                               ),
                             ),
                           ],
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          moduleName,
-                          style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black87,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      // Student count chip
-                      InkWell(
-                        onTap: () => _showGroupMembersDialog(moduleName, formation.titre, students),
-                        borderRadius: BorderRadius.circular(6),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: students.isNotEmpty
-                                ? Colors.green.withValues(alpha: 0.12)
-                                : Colors.orange.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.people_rounded,
-                                size: 14,
-                                color: students.isNotEmpty ? Colors.green.shade800 : Colors.orange.shade800,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                '${students.length} apprenant${students.length > 1 ? 's' : ''}',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                  color: students.isNotEmpty ? Colors.green.shade800 : Colors.orange.shade800,
+                    ),
+                  ],
+                ),
+                if (students.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    children: [
+                      ...students
+                          .take(4)
+                          .map(
+                            (st) => Chip(
+                              avatar: CircleAvatar(
+                                radius: 8,
+                                backgroundColor: AppTheme.primary.withValues(
+                                  alpha: 0.2,
                                 ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (students.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 4,
-                      children: [
-                        ...students.take(4).map(
-                              (st) => Chip(
-                                avatar: CircleAvatar(
-                                  radius: 8,
-                                  backgroundColor: AppTheme.primary.withValues(alpha: 0.2),
-                                  child: Text(
-                                    st.prenom.isNotEmpty ? st.prenom[0].toUpperCase() : '?',
-                                    style: const TextStyle(fontSize: 8, color: AppTheme.primary),
+                                child: Text(
+                                  st.prenom.isNotEmpty
+                                      ? st.prenom[0].toUpperCase()
+                                      : '?',
+                                  style: const TextStyle(
+                                    fontSize: 8,
+                                    color: AppTheme.primary,
                                   ),
                                 ),
-                                label: Text(st.nomComplet, style: const TextStyle(fontSize: 10)),
-                                padding: EdgeInsets.zero,
-                                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                visualDensity: VisualDensity.compact,
                               ),
-                            ),
-                        if (students.length > 4)
-                          InkWell(
-                            onTap: () => _showGroupMembersDialog(moduleName, formation.titre, students),
-                            child: Chip(
                               label: Text(
-                                '+${students.length - 4}',
-                                style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                                st.nomComplet,
+                                style: const TextStyle(fontSize: 10),
                               ),
                               padding: EdgeInsets.zero,
-                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              materialTapTargetSize:
+                                  MaterialTapTargetSize.shrinkWrap,
                               visualDensity: VisualDensity.compact,
                             ),
                           ),
-                      ],
-                    ),
-                  ],
-                ],
-              ),
-            ),
-
-            // Bottom row: Modalité / Salle and Emargement Actions
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              alignment: WrapAlignment.spaceBetween,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                if (horaire.lieuOuLien != null && horaire.lieuOuLien!.isNotEmpty)
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        horaire.modalite == 'En ligne' ? Icons.videocam_rounded : Icons.room_rounded,
-                        size: 16,
-                        color: Colors.grey.shade600,
-                      ),
-                      const SizedBox(width: 4),
-                      Flexible(
-                        child: Text(
-                          horaire.lieuOuLien!,
-                          style: GoogleFonts.poppins(fontSize: 12, color: Colors.black54),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                      if (students.length > 4)
+                        InkWell(
+                          onTap: () => _showGroupMembersDialog(
+                            moduleName,
+                            formation.titre,
+                            students,
+                          ),
+                          child: Chip(
+                            label: Text(
+                              '+${students.length - 4}',
+                              style: const TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            padding: EdgeInsets.zero,
+                            materialTapTargetSize:
+                                MaterialTapTargetSize.shrinkWrap,
+                            visualDensity: VisualDensity.compact,
+                          ),
                         ),
-                      ),
                     ],
                   ),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 6,
+                ],
+              ],
+            ),
+          ),
+
+          // Bottom row: Modalité / Salle and Emargement Actions
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              if (horaire.lieuOuLien != null && horaire.lieuOuLien!.isNotEmpty)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    OutlinedButton.icon(
-                      onPressed: () => _printAttendanceSheet(formation.titre, moduleName, students),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFFDC2626),
-                        side: const BorderSide(color: Color(0xFFDC2626)),
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                      icon: const Icon(Icons.picture_as_pdf_rounded, size: 15),
-                      label: Text(
-                        'Feuille PDF',
-                        style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600),
-                      ),
+                    Icon(
+                      horaire.modalite == 'En ligne'
+                          ? Icons.videocam_rounded
+                          : Icons.room_rounded,
+                      size: 16,
+                      color: Colors.grey.shade600,
                     ),
-                    ElevatedButton.icon(
-                      onPressed: () => _showEmargementDialog(formation.id, formation.titre, moduleName, students),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        elevation: 0,
-                      ),
-                      icon: const Icon(Icons.how_to_reg_rounded, size: 16),
-                      label: Text(
-                        'Émargement',
-                        style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w700),
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Text(
+                        horaire.lieuOuLien!,
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          color: Colors.black54,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
                 ),
-              ],
-            ),
-          ],
-        ),
-      );
+              Wrap(
+                spacing: 8,
+                runSpacing: 6,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: () => _printAttendanceSheet(
+                      formation.titre,
+                      moduleName,
+                      students,
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFFDC2626),
+                      side: const BorderSide(color: Color(0xFFDC2626)),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    icon: const Icon(Icons.picture_as_pdf_rounded, size: 15),
+                    label: Text(
+                      'Feuille PDF',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: () => _showEmargementDialog(
+                      formation.id,
+                      formation.titre,
+                      moduleName,
+                      students,
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 8,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      elevation: 0,
+                    ),
+                    icon: const Icon(Icons.how_to_reg_rounded, size: 16),
+                    label: Text(
+                      'Émargement',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 
-  void _showGroupMembersDialog(String moduleName, String formationTitle, List<User> students) {
+  void _showGroupMembersDialog(
+    String moduleName,
+    String formationTitle,
+    List<User> students,
+  ) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -639,9 +762,22 @@ class _FormateurScheduleState extends State<FormateurSchedule>
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Groupe Automatique', style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16)),
+            Text(
+              'Groupe Automatique',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w700,
+                fontSize: 16,
+              ),
+            ),
             const SizedBox(height: 2),
-            Text('$formationTitle • $moduleName', style: GoogleFonts.poppins(fontSize: 12, color: AppTheme.primary, fontWeight: FontWeight.w600)),
+            Text(
+              '$formationTitle • $moduleName',
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                color: AppTheme.primary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ],
         ),
         content: SizedBox(
@@ -650,7 +786,13 @@ class _FormateurScheduleState extends State<FormateurSchedule>
               ? Padding(
                   padding: const EdgeInsets.symmetric(vertical: 20),
                   child: Center(
-                    child: Text('Aucun apprenant inscrit à ce module pour l\'instant.', style: GoogleFonts.poppins(fontSize: 13, color: Colors.black54)),
+                    child: Text(
+                      'Aucun apprenant inscrit à ce module pour l\'instant.',
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        color: Colors.black54,
+                      ),
+                    ),
                   ),
                 )
               : ListView.separated(
@@ -666,29 +808,56 @@ class _FormateurScheduleState extends State<FormateurSchedule>
                         radius: 16,
                         backgroundColor: AppTheme.primary,
                         child: Text(
-                          st.prenom.isNotEmpty ? st.prenom[0].toUpperCase() : '?',
-                          style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                          st.prenom.isNotEmpty
+                              ? st.prenom[0].toUpperCase()
+                              : '?',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
-                      title: Text(st.nomComplet, style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13)),
-                      subtitle: Text('${st.email} • ${st.phone}', style: GoogleFonts.poppins(fontSize: 11)),
+                      title: Text(
+                        st.nomComplet,
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        ),
+                      ),
+                      subtitle: Text(
+                        '${st.email} • ${st.phone}',
+                        style: GoogleFonts.poppins(fontSize: 11),
+                      ),
                     );
                   },
                 ),
         ),
         actions: [
           ElevatedButton.icon(
-            onPressed: () => _printAttendanceSheet(formationTitle, moduleName, students),
+            onPressed: () =>
+                _printAttendanceSheet(formationTitle, moduleName, students),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFDC2626),
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
             icon: const Icon(Icons.picture_as_pdf_rounded, size: 16),
-            label: Text('Feuille d\'émargement PDF', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600)),
+            label: Text(
+              'Feuille d\'émargement PDF',
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Fermer')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Fermer'),
+          ),
         ],
       ),
     );
@@ -701,28 +870,45 @@ class _FormateurScheduleState extends State<FormateurSchedule>
     Horaire? existingHoraire,
   }) async {
     String selectedFormationId = existingFormationId ?? formations.first.id;
-    Formation currentFormation = formations.firstWhere((f) => f.id == selectedFormationId, orElse: () => formations.first);
-    List<String> trainerModules = _db.getModulesForFormateur(currentFormation, widget.user.id);
+    Formation currentFormation = formations.firstWhere(
+      (f) => f.id == selectedFormationId,
+      orElse: () => formations.first,
+    );
+    List<String> trainerModules = _db.getModulesForFormateur(
+      currentFormation,
+      widget.user.id,
+    );
     if (trainerModules.isEmpty && currentFormation.modules.isNotEmpty) {
       trainerModules = currentFormation.modules;
     }
-    String? selectedModule = existingHoraire?.module ?? (trainerModules.isNotEmpty ? trainerModules.first : null);
+    String? selectedModule =
+        existingHoraire?.module ??
+        (trainerModules.isNotEmpty ? trainerModules.first : null);
     String selectedDay = existingHoraire?.jour ?? 'Lundi';
     String heureDebut = existingHoraire?.heureDebut ?? '09:00';
     String heureFin = existingHoraire?.heureFin ?? '11:00';
     String modalite = existingHoraire?.modalite ?? 'Présentiel';
-    final lieuController = TextEditingController(text: existingHoraire?.lieuOuLien ?? 'Salle Principale');
+    final lieuController = TextEditingController(
+      text: existingHoraire?.lieuOuLien ?? 'Salle Principale',
+    );
 
     await showDialog(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setModalState) {
-          final moduleStudents = _db.getStudentsForFormationModule(currentFormation.id, selectedModule);
+          final moduleStudents = _db.getStudentsForFormationModule(
+            currentFormation.id,
+            selectedModule,
+          );
 
           return AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
             title: Text(
-              existingHoraire != null ? 'Modifier le créneau' : 'Ajouter un créneau',
+              existingHoraire != null
+                  ? 'Modifier le créneau'
+                  : 'Ajouter un créneau',
               style: GoogleFonts.poppins(fontWeight: FontWeight.w700),
             ),
             content: SizedBox(
@@ -733,24 +919,52 @@ class _FormateurScheduleState extends State<FormateurSchedule>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Formation Dropdown
-                    Text('Formation *', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600)),
+                    Text(
+                      'Formation *',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                     const SizedBox(height: 6),
                     DropdownButtonFormField<String>(
                       initialValue: selectedFormationId,
                       decoration: InputDecoration(
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
                       ),
-                      items: formations.map((f) => DropdownMenuItem(value: f.id, child: Text(f.titre, style: const TextStyle(fontSize: 13)))).toList(),
+                      items: formations
+                          .map(
+                            (f) => DropdownMenuItem(
+                              value: f.id,
+                              child: Text(
+                                f.titre,
+                                style: const TextStyle(fontSize: 13),
+                              ),
+                            ),
+                          )
+                          .toList(),
                       onChanged: existingHoraire != null
                           ? null
                           : (newId) {
                               if (newId != null) {
                                 setModalState(() {
                                   selectedFormationId = newId;
-                                  currentFormation = formations.firstWhere((f) => f.id == newId);
-                                  trainerModules = _db.getModulesForFormateur(currentFormation, widget.user.id);
-                                  selectedModule = trainerModules.isNotEmpty ? trainerModules.first : null;
+                                  currentFormation = formations.firstWhere(
+                                    (f) => f.id == newId,
+                                  );
+                                  trainerModules = _db.getModulesForFormateur(
+                                    currentFormation,
+                                    widget.user.id,
+                                  );
+                                  selectedModule = trainerModules.isNotEmpty
+                                      ? trainerModules.first
+                                      : null;
                                 });
                               }
                             },
@@ -758,38 +972,75 @@ class _FormateurScheduleState extends State<FormateurSchedule>
                     const SizedBox(height: 14),
 
                     // Module Dropdown
-                    Text('Module assigné (Groupe automatique) *', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600)),
+                    Text(
+                      'Module assigné (Groupe automatique) *',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                     const SizedBox(height: 6),
                     DropdownButtonFormField<String?>(
                       initialValue: selectedModule,
                       decoration: InputDecoration(
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
                       ),
                       items: [
                         if (trainerModules.isEmpty)
-                          DropdownMenuItem<String?>(value: null, child: Text(currentFormation.titre, style: const TextStyle(fontSize: 13))),
-                        ...trainerModules.map((m) => DropdownMenuItem<String?>(value: m, child: Text(m, style: const TextStyle(fontSize: 13)))),
+                          DropdownMenuItem<String?>(
+                            value: null,
+                            child: Text(
+                              currentFormation.titre,
+                              style: const TextStyle(fontSize: 13),
+                            ),
+                          ),
+                        ...trainerModules.map(
+                          (m) => DropdownMenuItem<String?>(
+                            value: m,
+                            child: Text(
+                              m,
+                              style: const TextStyle(fontSize: 13),
+                            ),
+                          ),
+                        ),
                       ],
-                      onChanged: (val) => setModalState(() => selectedModule = val),
+                      onChanged: (val) =>
+                          setModalState(() => selectedModule = val),
                     ),
                     const SizedBox(height: 8),
 
                     // Auto-Group Indicator
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 8,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFFF1F5F9),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.groups_rounded, size: 18, color: AppTheme.primary),
+                          const Icon(
+                            Icons.groups_rounded,
+                            size: 18,
+                            color: AppTheme.primary,
+                          ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               'Groupe auto : ${moduleStudents.length} apprenant${moduleStudents.length > 1 ? 's' : ''} inscrits',
-                              style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black87),
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black87,
+                              ),
                             ),
                           ),
                         ],
@@ -798,15 +1049,37 @@ class _FormateurScheduleState extends State<FormateurSchedule>
                     const SizedBox(height: 14),
 
                     // Day selection
-                    Text('Jour *', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600)),
+                    Text(
+                      'Jour *',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                     const SizedBox(height: 6),
                     DropdownButtonFormField<String>(
                       initialValue: selectedDay,
                       decoration: InputDecoration(
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
                       ),
-                      items: _days.where((d) => d != 'Tous').map((d) => DropdownMenuItem(value: d, child: Text(d, style: const TextStyle(fontSize: 13)))).toList(),
+                      items: _days
+                          .where((d) => d != 'Tous')
+                          .map(
+                            (d) => DropdownMenuItem(
+                              value: d,
+                              child: Text(
+                                d,
+                                style: const TextStyle(fontSize: 13),
+                              ),
+                            ),
+                          )
+                          .toList(),
                       onChanged: (val) {
                         if (val != null) setModalState(() => selectedDay = val);
                       },
@@ -820,13 +1093,24 @@ class _FormateurScheduleState extends State<FormateurSchedule>
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Heure début *', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600)),
+                              Text(
+                                'Heure début *',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                               const SizedBox(height: 6),
                               TextFormField(
                                 initialValue: heureDebut,
                                 decoration: InputDecoration(
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 10,
+                                  ),
                                   hintText: '09:00',
                                 ),
                                 onChanged: (val) => heureDebut = val.trim(),
@@ -839,13 +1123,24 @@ class _FormateurScheduleState extends State<FormateurSchedule>
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Heure fin *', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600)),
+                              Text(
+                                'Heure fin *',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                               const SizedBox(height: 6),
                               TextFormField(
                                 initialValue: heureFin,
                                 decoration: InputDecoration(
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 10,
+                                  ),
                                   hintText: '11:00',
                                 ),
                                 onChanged: (val) => heureFin = val.trim(),
@@ -858,18 +1153,37 @@ class _FormateurScheduleState extends State<FormateurSchedule>
                     const SizedBox(height: 14),
 
                     // Modalite
-                    Text('Modalité & Salle / Lien', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600)),
+                    Text(
+                      'Modalité & Salle / Lien',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                     const SizedBox(height: 6),
                     Row(
                       children: [
                         DropdownButton<String>(
                           value: modalite,
                           items: const [
-                            DropdownMenuItem(value: 'Présentiel', child: Text('Présentiel', style: TextStyle(fontSize: 13))),
-                            DropdownMenuItem(value: 'En ligne', child: Text('En ligne', style: TextStyle(fontSize: 13))),
+                            DropdownMenuItem(
+                              value: 'Présentiel',
+                              child: Text(
+                                'Présentiel',
+                                style: TextStyle(fontSize: 13),
+                              ),
+                            ),
+                            DropdownMenuItem(
+                              value: 'En ligne',
+                              child: Text(
+                                'En ligne',
+                                style: TextStyle(fontSize: 13),
+                              ),
+                            ),
                           ],
                           onChanged: (val) {
-                            if (val != null) setModalState(() => modalite = val);
+                            if (val != null)
+                              setModalState(() => modalite = val);
                           },
                         ),
                         const SizedBox(width: 8),
@@ -877,9 +1191,16 @@ class _FormateurScheduleState extends State<FormateurSchedule>
                           child: TextField(
                             controller: lieuController,
                             decoration: InputDecoration(
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                              hintText: modalite == 'En ligne' ? 'Lien Google Meet / Zoom' : 'Salle ou labo',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 10,
+                              ),
+                              hintText: modalite == 'En ligne'
+                                  ? 'Lien Google Meet / Zoom'
+                                  : 'Salle ou labo',
                             ),
                           ),
                         ),
@@ -890,12 +1211,17 @@ class _FormateurScheduleState extends State<FormateurSchedule>
               ),
             ),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Annuler')),
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Annuler'),
+              ),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.primary,
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
                 onPressed: () async {
                   final newHoraire = Horaire(
@@ -905,13 +1231,22 @@ class _FormateurScheduleState extends State<FormateurSchedule>
                     module: selectedModule,
                     groupe: 'Groupe $selectedModule',
                     modalite: modalite,
-                    lieuOuLien: lieuController.text.trim().isEmpty ? null : lieuController.text.trim(),
+                    lieuOuLien: lieuController.text.trim().isEmpty
+                        ? null
+                        : lieuController.text.trim(),
                   );
 
                   if (existingHoraireIndex != null) {
-                    await _db.updateHoraireInFormation(selectedFormationId, existingHoraireIndex, newHoraire);
+                    await _db.updateHoraireInFormation(
+                      selectedFormationId,
+                      existingHoraireIndex,
+                      newHoraire,
+                    );
                   } else {
-                    await _db.addHoraireToFormation(selectedFormationId, newHoraire);
+                    await _db.addHoraireToFormation(
+                      selectedFormationId,
+                      newHoraire,
+                    );
                   }
 
                   if (!dialogContext.mounted) return;
@@ -919,14 +1254,22 @@ class _FormateurScheduleState extends State<FormateurSchedule>
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text(existingHoraireIndex != null ? 'Créneau modifié avec succès.' : 'Créneau assigné au groupe avec succès.'),
+                        content: Text(
+                          existingHoraireIndex != null
+                              ? 'Créneau modifié avec succès.'
+                              : 'Créneau assigné au groupe avec succès.',
+                        ),
                         backgroundColor: AppTheme.success,
                       ),
                     );
                     setState(() {});
                   }
                 },
-                child: Text(existingHoraireIndex != null ? 'Enregistrer' : 'Créer le créneau'),
+                child: Text(
+                  existingHoraireIndex != null
+                      ? 'Enregistrer'
+                      : 'Créer le créneau',
+                ),
               ),
             ],
           );
@@ -941,11 +1284,19 @@ class _FormateurScheduleState extends State<FormateurSchedule>
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Supprimer ce créneau ?'),
-        content: const Text('Ce créneau sera retiré de votre emploi du temps et de celui des apprenants du module.'),
+        content: const Text(
+          'Ce créneau sera retiré de votre emploi du temps et de celui des apprenants du module.',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Annuler')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Annuler'),
+          ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Supprimer'),
           ),
@@ -957,7 +1308,10 @@ class _FormateurScheduleState extends State<FormateurSchedule>
       await _db.deleteHoraireFromFormation(formationId, horaireIndex);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Créneau supprimé.'), backgroundColor: AppTheme.primary),
+          const SnackBar(
+            content: Text('Créneau supprimé.'),
+            backgroundColor: AppTheme.primary,
+          ),
         );
         setState(() {});
       }
@@ -978,17 +1332,36 @@ class _FormateurScheduleState extends State<FormateurSchedule>
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setModalState) {
-          final presentCount = attendance.values.where((v) => v == 'present').length;
-          final absentCount = attendance.values.where((v) => v == 'absent').length;
+          final presentCount = attendance.values
+              .where((v) => v == 'present')
+              .length;
+          final absentCount = attendance.values
+              .where((v) => v == 'absent')
+              .length;
 
           return AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
             title: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Feuille d\'émargement', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700)),
+                Text(
+                  'Feuille d\'émargement',
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
                 const SizedBox(height: 4),
-                Text('$formationTitle • $moduleTitle', style: GoogleFonts.poppins(fontSize: 12, color: AppTheme.primary, fontWeight: FontWeight.w600)),
+                Text(
+                  '$formationTitle • $moduleTitle',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: AppTheme.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ],
             ),
             content: SizedBox(
@@ -1000,15 +1373,35 @@ class _FormateurScheduleState extends State<FormateurSchedule>
                     Row(
                       children: [
                         Chip(
-                          avatar: const Icon(Icons.check_circle, color: Colors.green, size: 16),
-                          label: Text('$presentCount Présents', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600)),
+                          avatar: const Icon(
+                            Icons.check_circle,
+                            color: Colors.green,
+                            size: 16,
+                          ),
+                          label: Text(
+                            '$presentCount Présents',
+                            style: GoogleFonts.poppins(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                           backgroundColor: Colors.green.withValues(alpha: 0.12),
                           side: BorderSide.none,
                         ),
                         const SizedBox(width: 8),
                         Chip(
-                          avatar: const Icon(Icons.cancel, color: Colors.red, size: 16),
-                          label: Text('$absentCount Absents', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600)),
+                          avatar: const Icon(
+                            Icons.cancel,
+                            color: Colors.red,
+                            size: 16,
+                          ),
+                          label: Text(
+                            '$absentCount Absents',
+                            style: GoogleFonts.poppins(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                           backgroundColor: Colors.red.withValues(alpha: 0.12),
                           side: BorderSide.none,
                         ),
@@ -1020,7 +1413,10 @@ class _FormateurScheduleState extends State<FormateurSchedule>
                         padding: const EdgeInsets.symmetric(vertical: 20),
                         child: Text(
                           'Aucun apprenant inscrit dans ce groupe de module.',
-                          style: GoogleFonts.poppins(fontSize: 13, color: Colors.black54),
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            color: Colors.black54,
+                          ),
                         ),
                       )
                     else
@@ -1028,7 +1424,10 @@ class _FormateurScheduleState extends State<FormateurSchedule>
                         final currentStatus = attendance[st.id] ?? 'present';
                         return Container(
                           margin: const EdgeInsets.only(bottom: 8),
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
                           decoration: BoxDecoration(
                             color: const Color(0xFFF8FAFC),
                             borderRadius: BorderRadius.circular(12),
@@ -1041,16 +1440,40 @@ class _FormateurScheduleState extends State<FormateurSchedule>
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(st.nomComplet, style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600)),
-                                    Text(st.email, style: GoogleFonts.poppins(fontSize: 11, color: Colors.black54)),
+                                    Text(
+                                      st.nomComplet,
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    Text(
+                                      st.email,
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 11,
+                                        color: Colors.black54,
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ),
                               SegmentedButton<String>(
                                 showSelectedIcon: false,
                                 segments: const [
-                                  ButtonSegment(value: 'present', label: Text('Présent', style: TextStyle(fontSize: 11))),
-                                  ButtonSegment(value: 'absent', label: Text('Absent', style: TextStyle(fontSize: 11))),
+                                  ButtonSegment(
+                                    value: 'present',
+                                    label: Text(
+                                      'Présent',
+                                      style: TextStyle(fontSize: 11),
+                                    ),
+                                  ),
+                                  ButtonSegment(
+                                    value: 'absent',
+                                    label: Text(
+                                      'Absent',
+                                      style: TextStyle(fontSize: 11),
+                                    ),
+                                  ),
                                 ],
                                 selected: {currentStatus},
                                 onSelectionChanged: (newSelection) {
@@ -1070,7 +1493,10 @@ class _FormateurScheduleState extends State<FormateurSchedule>
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: Text('Annuler', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+                child: Text(
+                  'Annuler',
+                  style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                ),
               ),
               ElevatedButton.icon(
                 onPressed: students.isEmpty
@@ -1088,20 +1514,34 @@ class _FormateurScheduleState extends State<FormateurSchedule>
                         Navigator.of(context).pop();
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text('✅ Feuille d\'émargement enregistrée avec succès !'),
+                            content: Text(
+                              'Feuille d\'émargement enregistrée avec succès.',
+                            ),
                             backgroundColor: AppTheme.success,
                           ),
                         );
                       },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.primary,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
-                icon: const Icon(Icons.check_circle_rounded, size: 18, color: Colors.white),
+                icon: const Icon(
+                  Icons.check_circle_rounded,
+                  size: 18,
+                  color: Colors.white,
+                ),
                 label: Text(
                   'Valider l\'émargement',
-                  style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w700),
+                  style: GoogleFonts.poppins(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ],
@@ -1111,14 +1551,22 @@ class _FormateurScheduleState extends State<FormateurSchedule>
     );
   }
 
-  Future<void> _printAttendanceSheet(String formationTitre, String moduleName, List<User> students) async {
+  Future<void> _printAttendanceSheet(
+    String formationTitre,
+    String moduleName,
+    List<User> students,
+  ) async {
     try {
-      final studentsData = students.map((s) => {
-        'prenom': s.prenom,
-        'nom': s.nom,
-        'email': s.email,
-        'telephone': s.phone,
-      }).toList();
+      final studentsData = students
+          .map(
+            (s) => {
+              'prenom': s.prenom,
+              'nom': s.nom,
+              'email': s.email,
+              'telephone': s.phone,
+            },
+          )
+          .toList();
 
       final pdfBytes = await PdfService().generateAttendanceSheetPdf(
         formationTitre: formationTitre,
@@ -1128,7 +1576,10 @@ class _FormateurScheduleState extends State<FormateurSchedule>
         dateSeance: DateTime.now(),
       );
 
-      final safeName = '${formationTitre}_$moduleName'.replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_');
+      final safeName = '${formationTitre}_$moduleName'.replaceAll(
+        RegExp(r'[^a-zA-Z0-9_-]'),
+        '_',
+      );
       await PdfService().printOrDownloadPdf(
         pdfBytes: pdfBytes,
         filename: 'Emargement_$safeName.pdf',
@@ -1137,7 +1588,7 @@ class _FormateurScheduleState extends State<FormateurSchedule>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('📄 Feuille d\'émargement PDF générée avec succès !'),
+            content: Text('Feuille d\'émargement PDF générée avec succès.'),
             backgroundColor: AppTheme.success,
           ),
         );
@@ -1145,7 +1596,10 @@ class _FormateurScheduleState extends State<FormateurSchedule>
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur génération émargement: $e'), backgroundColor: AppTheme.error),
+          SnackBar(
+            content: Text('Erreur génération émargement: $e'),
+            backgroundColor: AppTheme.error,
+          ),
         );
       }
     }

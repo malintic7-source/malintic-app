@@ -10,13 +10,11 @@ import 'package:gestion_formations/Models/notification.dart';
 import 'package:gestion_formations/Models/audit_log.dart';
 import 'package:gestion_formations/Models/seance.dart';
 import 'package:gestion_formations/Services/local_storage.dart';
-import 'package:gestion_formations/Services/supabase_config.dart';
-import 'package:gestion_formations/Services/supabase_mapper.dart';
 import 'package:gestion_formations/Services/polling_config.dart';
 
 class LocalDataService {
   static final LocalDataService _instance = LocalDataService._internal();
-  static const _cacheSchemaVersion = '6';
+  static const _cacheSchemaVersion = '7';
   static const _cacheSchemaKey = 'malintic_cache_schema';
   factory LocalDataService() => _instance;
 
@@ -24,13 +22,13 @@ class LocalDataService {
     // Initialiser la configuration de polling (development par défaut)
     _pollingConfig = _determinePollingConfig();
     _pollingController = PollingController(_pollingConfig);
-    
+
     _invalidateObsoleteCache();
     _initInitialData();
     _loadFromStorage();
     _initLocalApiSync();
   }
-  
+
   /// Déterminer la configuration de polling selon l'environnement
   PollingConfig _determinePollingConfig() {
     if (kDebugMode) {
@@ -39,18 +37,16 @@ class LocalDataService {
       return PollingConfig.production();
     }
   }
-  
+
   /// Obtenir le contrôleur de polling (pour tests/monitoring)
   PollingController getPollingController() => _pollingController;
-  
+
   /// Obtenir la configuration de polling
   PollingConfig getPollingConfig() => _pollingConfig;
 
   final LocalStorage _localStorage = LocalStorage();
   late final PollingController _pollingController;
   late final PollingConfig _pollingConfig;
-
-
 
   // ignore: unused_field
   Timer? _apiPollingTimer;
@@ -92,20 +88,20 @@ class LocalDataService {
   void _initLocalApiSync() {
     final isTestRuntime = Uri.base.scheme == 'file';
     if (isTestRuntime) return;
-    if (!_hasLocalApi && !SupabaseConfig.isEnabled) return;
-    
+    if (!_hasLocalApi) return;
+
     _syncFromLocalApi();
-    
+
     // Lancer le polling avec l'intervalle initial
     _scheduleNextSync();
   }
-  
+
   /// Planifier le prochain sync avec l'intervalle actuel
   void _scheduleNextSync() {
     _apiPollingTimer?.cancel();
-    
+
     final interval = _pollingController.getCurrentInterval();
-    
+
     _apiPollingTimer = Timer(interval, () {
       _syncFromLocalApi();
       // Toujours replanifier après sync
@@ -128,29 +124,45 @@ class LocalDataService {
     try {
       final set = _getDeletedDocs(collection);
       set.add(docId);
-      _localStorage.setItem('app_deleted_ids_$collection', jsonEncode(set.toList()));
+      _localStorage.setItem(
+        'app_deleted_ids_$collection',
+        jsonEncode(set.toList()),
+      );
     } catch (_) {}
   }
 
   Set<String> getDeletedDocs(String collection) => _getDeletedDocs(collection);
-  void recordDeletedDoc(String collection, String docId) => _recordDeletedDoc(collection, docId);
+  void recordDeletedDoc(String collection, String docId) =>
+      _recordDeletedDoc(collection, docId);
 
   void _unrecordDeletedDoc(String collection, String docId) {
     try {
       final set = _getDeletedDocs(collection);
       if (set.remove(docId)) {
-        _localStorage.setItem('app_deleted_ids_$collection', jsonEncode(set.toList()));
+        _localStorage.setItem(
+          'app_deleted_ids_$collection',
+          jsonEncode(set.toList()),
+        );
       }
     } catch (_) {}
   }
-  void unrecordDeletedDoc(String collection, String docId) => _unrecordDeletedDoc(collection, docId);
 
-  void _enqueuePendingSync(String collection, String docId, String method, Map<String, dynamic>? data) {
+  void unrecordDeletedDoc(String collection, String docId) =>
+      _unrecordDeletedDoc(collection, docId);
+
+  void _enqueuePendingSync(
+    String collection,
+    String docId,
+    String method,
+    Map<String, dynamic>? data,
+  ) {
     try {
       final raw = _localStorage.getItem('app_pending_sync_queue');
       List<dynamic> queue = [];
       if (raw != null && raw.isNotEmpty) {
-        try { queue = jsonDecode(raw) as List<dynamic>; } catch (_) {}
+        try {
+          queue = jsonDecode(raw) as List<dynamic>;
+        } catch (_) {}
       }
       queue.add({
         'collection': collection,
@@ -175,23 +187,26 @@ class LocalDataService {
         final collection = item['collection']?.toString() ?? '';
         final docId = item['docId']?.toString() ?? '';
         final method = item['method']?.toString() ?? 'PUT';
-        final data = item['data'] is Map ? Map<String, dynamic>.from(item['data']) : null;
+        final data = item['data'] is Map
+            ? Map<String, dynamic>.from(item['data'])
+            : null;
 
         try {
           if (method == 'DELETE') {
-            await http.delete(
-              _apiUri('$collection/${Uri.encodeComponent(docId)}'),
-              headers: const {'ngrok-skip-browser-warning': 'true'},
-            ).timeout(const Duration(seconds: 10));
+            await http
+                .delete(
+                  _apiUri('$collection/${Uri.encodeComponent(docId)}'),
+                  headers: _buildApiHeaders(jsonBody: false),
+                )
+                .timeout(const Duration(seconds: 10));
           } else if (data != null) {
-            await http.put(
-              _apiUri('$collection/${Uri.encodeComponent(docId)}'),
-              headers: const {
-                'Content-Type': 'application/json',
-                'ngrok-skip-browser-warning': 'true',
-              },
-              body: jsonEncode(data),
-            ).timeout(const Duration(seconds: 10));
+            await http
+                .put(
+                  _apiUri('$collection/${Uri.encodeComponent(docId)}'),
+                  headers: _buildApiHeaders(jsonBody: true),
+                  body: jsonEncode(data),
+                )
+                .timeout(const Duration(seconds: 10));
           }
         } catch (_) {
           remaining.add(item);
@@ -211,17 +226,10 @@ class LocalDataService {
     try {
       await _flushPendingSyncQueue();
 
-      if (!_hasLocalApi) {
-        if (SupabaseConfig.isEnabled) {
-          await _syncFromSupabase();
-        }
-        return;
-      }
+      if (!_hasLocalApi) return;
 
-      final headers = <String, String>{
-        'ngrok-skip-browser-warning': 'true',
-        'Accept': 'application/json',
-      };
+      final headers = _buildApiHeaders(jsonBody: false)
+        ..['Accept'] = 'application/json';
       if (_lastStateEtag != null && _lastStateEtag!.isNotEmpty) {
         headers['If-None-Match'] = _lastStateEtag!;
       }
@@ -241,9 +249,6 @@ class LocalDataService {
         // ❌ Erreur API
         _pollingController.recordError();
         _scheduleNextSync();
-        if (SupabaseConfig.isEnabled) {
-          await _syncFromSupabase();
-        }
         return;
       }
       if (response.headers['etag'] != null) {
@@ -311,9 +316,13 @@ class LocalDataService {
 
       bool dataActuallyChanged = false;
 
-      if (formations.isNotEmpty) {
-        final currentFormationsJson = jsonEncode(_formations.map((f) => f.toMap()).toList());
-        final newFormationsJson = jsonEncode(formations.map((f) => f.toMap()).toList());
+      if (state.containsKey('formations')) {
+        final currentFormationsJson = jsonEncode(
+          _formations.map((f) => f.toMap()).toList(),
+        );
+        final newFormationsJson = jsonEncode(
+          formations.map((f) => f.toMap()).toList(),
+        );
         if (currentFormationsJson != newFormationsJson) {
           _formations
             ..clear()
@@ -323,21 +332,29 @@ class LocalDataService {
           dataActuallyChanged = true;
         }
       }
-      if (users.isNotEmpty) {
+      if (state.containsKey('users')) {
         final deletedUserIds = _getDeletedDocs('users');
         final deletedUserEmails = _getDeletedDocs('user_emails');
-        final validServerUsers = users.where((u) =>
-            !deletedUserIds.contains(u.id) &&
-            !deletedUserEmails.contains(u.email.trim().toLowerCase())
-        ).toList();
-        final currentUsersJson = jsonEncode(_users.map((u) => u.toMap()).toList());
-        final newUsersJson = jsonEncode(validServerUsers.map((u) => u.toMap()).toList());
+        final validServerUsers = users
+            .where(
+              (u) =>
+                  !deletedUserIds.contains(u.id) &&
+                  !deletedUserEmails.contains(u.email.trim().toLowerCase()),
+            )
+            .toList();
+        final currentUsersJson = jsonEncode(
+          _users.map((u) => u.toMap()).toList(),
+        );
+        final newUsersJson = jsonEncode(
+          validServerUsers.map((u) => u.toMap()).toList(),
+        );
         if (currentUsersJson != newUsersJson) {
           final serverUserIds = validServerUsers.map((u) => u.id).toSet();
-          _users.removeWhere((u) =>
-              deletedUserIds.contains(u.id) ||
-              deletedUserEmails.contains(u.email.trim().toLowerCase()) ||
-              !serverUserIds.contains(u.id)
+          _users.removeWhere(
+            (u) =>
+                deletedUserIds.contains(u.id) ||
+                deletedUserEmails.contains(u.email.trim().toLowerCase()) ||
+                !serverUserIds.contains(u.id),
           );
           for (final user in validServerUsers) {
             final existingIndex = _users.indexWhere((u) => u.id == user.id);
@@ -358,7 +375,7 @@ class LocalDataService {
           }
         }
       }
-      if (inscriptions.isNotEmpty) {
+      if (state.containsKey('inscriptions')) {
         final deletedInscIds = _getDeletedDocs('inscriptions');
         final deletedUserIds = _getDeletedDocs('users');
         final deletedUserEmails = _getDeletedDocs('user_emails');
@@ -369,10 +386,16 @@ class LocalDataService {
               !deletedUserIds.contains(i.id) &&
               (email.isEmpty || !deletedUserEmails.contains(email));
         }).toList();
-        final currentInscJson = jsonEncode(_inscriptions.map((i) => i.toMap()).toList());
-        final newInscJson = jsonEncode(validInscriptions.map((i) => i.toMap()).toList());
+        final currentInscJson = jsonEncode(
+          _inscriptions.map((i) => i.toMap()).toList(),
+        );
+        final newInscJson = jsonEncode(
+          validInscriptions.map((i) => i.toMap()).toList(),
+        );
         if (currentInscJson != newInscJson) {
-          final serverInscriptionIds = validInscriptions.map((i) => i.id).toSet();
+          final serverInscriptionIds = validInscriptions
+              .map((i) => i.id)
+              .toSet();
           _inscriptions.removeWhere((i) {
             final email = i.email?.trim().toLowerCase() ?? '';
             return deletedInscIds.contains(i.id) ||
@@ -382,7 +405,9 @@ class LocalDataService {
                 !serverInscriptionIds.contains(i.id);
           });
           for (final inscription in validInscriptions) {
-            final existingIndex = _inscriptions.indexWhere((i) => i.id == inscription.id);
+            final existingIndex = _inscriptions.indexWhere(
+              (i) => i.id == inscription.id,
+            );
             if (existingIndex >= 0) {
               _inscriptions[existingIndex] = inscription;
             } else {
@@ -400,14 +425,18 @@ class LocalDataService {
           }
         }
       }
-      if (payments.isNotEmpty) {
-        final currentPayJson = jsonEncode(_payments.map((p) => p.toMap()).toList());
+      if (state.containsKey('payments')) {
+        final currentPayJson = jsonEncode(
+          _payments.map((p) => p.toMap()).toList(),
+        );
         final newPayJson = jsonEncode(payments.map((p) => p.toMap()).toList());
         if (currentPayJson != newPayJson) {
           final serverPaymentIds = payments.map((p) => p.id).toSet();
           _payments.removeWhere((p) => !serverPaymentIds.contains(p.id));
           for (final payment in payments) {
-            final existingIndex = _payments.indexWhere((p) => p.id == payment.id);
+            final existingIndex = _payments.indexWhere(
+              (p) => p.id == payment.id,
+            );
             if (existingIndex >= 0) {
               _payments[existingIndex] = payment;
             } else {
@@ -419,14 +448,22 @@ class LocalDataService {
           dataActuallyChanged = true;
         }
       }
-      if (notifications.isNotEmpty) {
-        final currentNotifJson = jsonEncode(_notifications.map((n) => n.toMap()).toList());
-        final newNotifJson = jsonEncode(notifications.map((n) => n.toMap()).toList());
+      if (state.containsKey('notifications')) {
+        final currentNotifJson = jsonEncode(
+          _notifications.map((n) => n.toMap()).toList(),
+        );
+        final newNotifJson = jsonEncode(
+          notifications.map((n) => n.toMap()).toList(),
+        );
         if (currentNotifJson != newNotifJson) {
           final serverNotificationIds = notifications.map((n) => n.id).toSet();
-          _notifications.removeWhere((n) => !serverNotificationIds.contains(n.id));
+          _notifications.removeWhere(
+            (n) => !serverNotificationIds.contains(n.id),
+          );
           for (final notification in notifications) {
-            final existingIndex = _notifications.indexWhere((n) => n.id == notification.id);
+            final existingIndex = _notifications.indexWhere(
+              (n) => n.id == notification.id,
+            );
             if (existingIndex >= 0) {
               _notifications[existingIndex] = notification;
             } else {
@@ -437,8 +474,10 @@ class LocalDataService {
           dataActuallyChanged = true;
         }
       }
-      if (logs.isNotEmpty) {
-        final currentLogsJson = jsonEncode(_auditLogs.map((l) => l.toMap()).toList());
+      if (state.containsKey('audit_logs')) {
+        final currentLogsJson = jsonEncode(
+          _auditLogs.map((l) => l.toMap()).toList(),
+        );
         final newLogsJson = jsonEncode(logs.map((l) => l.toMap()).toList());
         if (currentLogsJson != newLogsJson) {
           final serverLogIds = logs.map((l) => l.id).toSet();
@@ -455,9 +494,13 @@ class LocalDataService {
           dataActuallyChanged = true;
         }
       }
-      if (seances.isNotEmpty) {
-        final currentSeancesJson = jsonEncode(_seances.map((s) => s.toMap()).toList());
-        final newSeancesJson = jsonEncode(seances.map((s) => s.toMap()).toList());
+      if (state.containsKey('seances')) {
+        final currentSeancesJson = jsonEncode(
+          _seances.map((s) => s.toMap()).toList(),
+        );
+        final newSeancesJson = jsonEncode(
+          seances.map((s) => s.toMap()).toList(),
+        );
         if (currentSeancesJson != newSeancesJson) {
           final serverSeanceIds = seances.map((s) => s.id).toSet();
           _seances.removeWhere((s) => !serverSeanceIds.contains(s.id));
@@ -480,198 +523,18 @@ class LocalDataService {
           _dataChangesController.add(null);
         }
       }
-      
+
       // ✅ Sync successful - record success for backoff optimization
       _pollingController.recordSuccess();
       _scheduleNextSync();
     } catch (e) {
       debugPrint('[Malintic] Erreur sync API: $e');
-      
+
       // ❌ Sync failed - record error for exponential backoff
       _pollingController.recordError();
       _scheduleNextSync();
-      
-      if (SupabaseConfig.isEnabled) {
-        try {
-          await _syncFromSupabase();
-        } catch (_) {}
-      }
     } finally {
       _syncInProgress = false;
-    }
-  }
-
-  Uri _supabaseUri(String collection) {
-    final select = SupabaseMapper.selectFor(collection);
-    return Uri.parse('${SupabaseConfig.url}/rest/v1/$collection?select=$select');
-  }
-
-  Future<void> _syncFromSupabase() async {
-    if (!SupabaseConfig.isEnabled || !SupabaseConfig.isConfigured) return;
-    try {
-      final headers = SupabaseConfig.headers;
-
-      final results = await Future.wait([
-        http.get(_supabaseUri('formations'), headers: headers),
-        http.get(_supabaseUri('users'), headers: headers),
-        http.get(_supabaseUri('inscriptions'), headers: headers),
-        http.get(_supabaseUri('payments'), headers: headers),
-        http.get(_supabaseUri('seances'), headers: headers),
-        http.get(_supabaseUri('audit_logs'), headers: headers),
-        http.get(_supabaseUri('notifications'), headers: headers),
-      ]).timeout(const Duration(seconds: 15));
-
-      bool hasDataChanged = false;
-
-      if (results[0].statusCode == 200) {
-        final list = jsonDecode(results[0].body) as List<dynamic>;
-        final formations = list
-            .whereType<Map>()
-            .map((m) => SupabaseMapper.formationFromRow(Map<String, dynamic>.from(m)))
-            .toList();
-        if (formations.isNotEmpty) {
-          final oldHash = _formations.map((f) => '${f.id}:${f.nombreInscrits}:${f.prix}').join(',');
-          final newHash = formations.map((f) => '${f.id}:${f.nombreInscrits}:${f.prix}').join(',');
-          if (oldHash != newHash) {
-            _formations
-              ..clear()
-              ..addAll(formations);
-            _saveFormationsToStorage(notify: false);
-            _formationsController.add(List.unmodifiable(_formations));
-            hasDataChanged = true;
-          }
-        }
-      }
-
-      if (results[1].statusCode == 200) {
-        final list = jsonDecode(results[1].body) as List<dynamic>;
-        final users = list
-            .whereType<Map>()
-            .map((m) => SupabaseMapper.userFromRow(Map<String, dynamic>.from(m)))
-            .toList();
-        final deletedUserIds = _getDeletedDocs('users');
-        final deletedUserEmails = _getDeletedDocs('user_emails');
-        final validUsers = users
-            .where(
-              (u) =>
-                  !deletedUserIds.contains(u.id) &&
-                  !deletedUserEmails.contains(u.email.trim().toLowerCase()),
-            )
-            .toList();
-        if (validUsers.isNotEmpty) {
-          final oldHash = _users.map((u) => '${u.id}:${u.doitChangerMotDePasse}:${u.estActif}').join(',');
-          final newHash = validUsers.map((u) => '${u.id}:${u.doitChangerMotDePasse}:${u.estActif}').join(',');
-          if (oldHash != newHash) {
-            _users
-              ..clear()
-              ..addAll(validUsers);
-            _saveUsersToStorage(notify: false);
-            _usersController.add(List.unmodifiable(_users));
-            hasDataChanged = true;
-          }
-        }
-      }
-
-      if (results[2].statusCode == 200) {
-        final list = jsonDecode(results[2].body) as List<dynamic>;
-        final inscriptions = list
-            .whereType<Map>()
-            .map((m) => SupabaseMapper.inscriptionFromRow(Map<String, dynamic>.from(m)))
-            .toList();
-        final deletedInscIds = _getDeletedDocs('inscriptions');
-        final deletedUserIds = _getDeletedDocs('users');
-        final deletedUserEmails = _getDeletedDocs('user_emails');
-        final validInscriptions = inscriptions.where((i) {
-          final email = i.email?.trim().toLowerCase() ?? '';
-          return !deletedInscIds.contains(i.id) &&
-              !deletedUserIds.contains(i.etudiantId) &&
-              !deletedUserIds.contains(i.id) &&
-              (email.isEmpty || !deletedUserEmails.contains(email));
-        }).toList();
-        final oldHash = _inscriptions.map((i) => '${i.id}:${i.status}:${i.paiementEffectue}').join(',');
-        final newHash = validInscriptions.map((i) => '${i.id}:${i.status}:${i.paiementEffectue}').join(',');
-        if (oldHash != newHash) {
-          _inscriptions
-            ..clear()
-            ..addAll(validInscriptions);
-          _saveInscriptionsToStorage(notify: false);
-          _inscriptionsController.add(List.unmodifiable(_inscriptions));
-          hasDataChanged = true;
-        }
-      }
-
-      if (results[3].statusCode == 200) {
-        final list = jsonDecode(results[3].body) as List<dynamic>;
-        final payments = list
-            .whereType<Map>()
-            .map((m) => SupabaseMapper.paymentFromRow(Map<String, dynamic>.from(m)))
-            .toList();
-        final oldHash = _payments.map((p) => '${p.id}:${p.montant}:${p.status}').join(',');
-        final newHash = payments.map((p) => '${p.id}:${p.montant}:${p.status}').join(',');
-        if (oldHash != newHash) {
-          _payments
-            ..clear()
-            ..addAll(payments);
-          _savePaymentsToStorage(notify: false);
-          _paymentsController.add(List.unmodifiable(_payments));
-          hasDataChanged = true;
-        }
-      }
-
-      if (results[4].statusCode == 200) {
-        final list = jsonDecode(results[4].body) as List<dynamic>;
-        final seances = list
-            .whereType<Map>()
-            .map((m) => SupabaseMapper.seanceFromRow(Map<String, dynamic>.from(m)))
-            .toList();
-        final oldHash = _seances.map((s) => s.id).join(',');
-        final newHash = seances.map((s) => s.id).join(',');
-        if (oldHash != newHash) {
-          _seances
-            ..clear()
-            ..addAll(seances);
-          _saveSeancesToStorage(notify: false);
-          _seancesController.add(List.unmodifiable(_seances));
-          hasDataChanged = true;
-        }
-      }
-
-      if (results[5].statusCode == 200) {
-        final list = jsonDecode(results[5].body) as List<dynamic>;
-        final logs = list
-            .whereType<Map>()
-            .map((m) => SupabaseMapper.auditLogFromRow(Map<String, dynamic>.from(m)))
-            .toList();
-        if (logs.length != _auditLogs.length) {
-          _auditLogs
-            ..clear()
-            ..addAll(logs);
-          _saveAuditLogsToStorage(notify: false);
-          _auditLogsController.add(List.unmodifiable(_auditLogs));
-          hasDataChanged = true;
-        }
-      }
-
-      if (results[6].statusCode == 200) {
-        final list = jsonDecode(results[6].body) as List<dynamic>;
-        final notifications = list
-            .whereType<Map>()
-            .map((m) => SupabaseMapper.notificationFromRow(Map<String, dynamic>.from(m)))
-            .toList();
-        if (notifications.isNotEmpty && notifications.length != _notifications.length) {
-          _notifications
-            ..clear()
-            ..addAll(notifications);
-          _notificationsController.add(List.unmodifiable(_notifications));
-          hasDataChanged = true;
-        }
-      }
-
-      if (hasDataChanged) {
-        _notifyDataChanged();
-      }
-    } catch (e) {
-      debugPrint('[Malintic] Erreur sync Supabase: $e');
     }
   }
 
@@ -685,6 +548,19 @@ class LocalDataService {
     return _syncFromLocalApi();
   }
 
+  Map<String, String> _buildApiHeaders({bool jsonBody = false}) {
+    final headers = <String, String>{'ngrok-skip-browser-warning': 'true'};
+    if (jsonBody) {
+      headers['Content-Type'] = 'application/json';
+    }
+    final token = _localStorage.getSessionItem('auth_token');
+    if (token != null && token.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $token';
+      headers['x-session-token'] = token;
+    }
+    return headers;
+  }
+
   Future<void> _syncDocToLocalApi(
     String collection,
     String docId,
@@ -696,10 +572,7 @@ class LocalDataService {
         final response = await http
             .put(
               _apiUri('$collection/${Uri.encodeComponent(docId)}'),
-              headers: const {
-                'Content-Type': 'application/json',
-                'ngrok-skip-browser-warning': 'true',
-              },
+              headers: _buildApiHeaders(jsonBody: true),
               body: jsonEncode(data),
             )
             .timeout(const Duration(seconds: 10));
@@ -709,21 +582,6 @@ class LocalDataService {
       } catch (_) {}
       if (!localSuccess) {
         _enqueuePendingSync(collection, docId, 'PUT', data);
-      }
-    }
-
-    if (SupabaseConfig.isEnabled && SupabaseConfig.isConfigured) {
-      try {
-        final row = SupabaseMapper.toRow(collection, data);
-        await http
-            .post(
-              Uri.parse('${SupabaseConfig.url}/rest/v1/$collection'),
-              headers: SupabaseConfig.writeHeaders,
-              body: jsonEncode(row),
-            )
-            .timeout(const Duration(seconds: 10));
-      } catch (e) {
-        debugPrint('[Malintic] Erreur sync Supabase $collection/$docId: $e');
       }
     }
   }
@@ -736,7 +594,7 @@ class LocalDataService {
         final response = await http
             .delete(
               _apiUri('$collection/${Uri.encodeComponent(docId)}'),
-              headers: const {'ngrok-skip-browser-warning': 'true'},
+              headers: _buildApiHeaders(jsonBody: false),
             )
             .timeout(const Duration(seconds: 10));
         if (response.statusCode >= 200 && response.statusCode < 300) {
@@ -745,21 +603,6 @@ class LocalDataService {
       } catch (_) {}
       if (!localSuccess) {
         _enqueuePendingSync(collection, docId, 'DELETE', null);
-      }
-    }
-
-    if (SupabaseConfig.isEnabled && SupabaseConfig.isConfigured) {
-      try {
-        await http
-            .delete(
-              Uri.parse(
-                '${SupabaseConfig.url}/rest/v1/$collection?id=eq.${Uri.encodeComponent(docId)}',
-              ),
-              headers: SupabaseConfig.headers,
-            )
-            .timeout(const Duration(seconds: 10));
-      } catch (e) {
-        debugPrint('[Malintic] Erreur delete Supabase $collection/$docId: $e');
       }
     }
   }
@@ -783,9 +626,14 @@ class LocalDataService {
       if (data['users'] is List) {
         final users = (data['users'] as List)
             .whereType<Map>()
-            .map((item) => User.fromMap(Map<String, dynamic>.from(item), item['id']?.toString() ?? ''))
+            .map(
+              (item) => User.fromMap(
+                Map<String, dynamic>.from(item),
+                item['id']?.toString() ?? '',
+              ),
+            )
             .toList();
-        if (users.isNotEmpty) {
+        if (data['users'] is List) {
           _users
             ..clear()
             ..addAll(users);
@@ -796,54 +644,66 @@ class LocalDataService {
       if (data['formations'] is List) {
         final formations = (data['formations'] as List)
             .whereType<Map>()
-            .map((item) => Formation.fromMap(Map<String, dynamic>.from(item), item['id']?.toString() ?? ''))
+            .map(
+              (item) => Formation.fromMap(
+                Map<String, dynamic>.from(item),
+                item['id']?.toString() ?? '',
+              ),
+            )
             .toList();
-        if (formations.isNotEmpty) {
-          _formations
-            ..clear()
-            ..addAll(formations);
-          _saveFormationsToStorage();
-          _formationsController.add(List.unmodifiable(_formations));
-        }
+        _formations
+          ..clear()
+          ..addAll(formations);
+        _saveFormationsToStorage();
+        _formationsController.add(List.unmodifiable(_formations));
       }
       if (data['inscriptions'] is List) {
         final inscriptions = (data['inscriptions'] as List)
             .whereType<Map>()
-            .map((item) => Inscription.fromMap(Map<String, dynamic>.from(item), item['id']?.toString() ?? ''))
+            .map(
+              (item) => Inscription.fromMap(
+                Map<String, dynamic>.from(item),
+                item['id']?.toString() ?? '',
+              ),
+            )
             .toList();
-        if (inscriptions.isNotEmpty) {
-          _inscriptions
-            ..clear()
-            ..addAll(inscriptions);
-          _saveInscriptionsToStorage();
-          _inscriptionsController.add(List.unmodifiable(_inscriptions));
-        }
+        _inscriptions
+          ..clear()
+          ..addAll(inscriptions);
+        _saveInscriptionsToStorage();
+        _inscriptionsController.add(List.unmodifiable(_inscriptions));
       }
       if (data['payments'] is List) {
         final payments = (data['payments'] as List)
             .whereType<Map>()
-            .map((item) => Payment.fromMap(Map<String, dynamic>.from(item), item['id']?.toString() ?? ''))
+            .map(
+              (item) => Payment.fromMap(
+                Map<String, dynamic>.from(item),
+                item['id']?.toString() ?? '',
+              ),
+            )
             .toList();
-        if (payments.isNotEmpty) {
-          _payments
-            ..clear()
-            ..addAll(payments);
-          _savePaymentsToStorage();
-          _paymentsController.add(List.unmodifiable(_payments));
-        }
+        _payments
+          ..clear()
+          ..addAll(payments);
+        _savePaymentsToStorage();
+        _paymentsController.add(List.unmodifiable(_payments));
       }
       if (data['seances'] is List) {
         final seances = (data['seances'] as List)
             .whereType<Map>()
-            .map((item) => Seance.fromMap(Map<String, dynamic>.from(item), item['id']?.toString() ?? ''))
+            .map(
+              (item) => Seance.fromMap(
+                Map<String, dynamic>.from(item),
+                item['id']?.toString() ?? '',
+              ),
+            )
             .toList();
-        if (seances.isNotEmpty) {
-          _seances
-            ..clear()
-            ..addAll(seances);
-          _saveSeancesToStorage();
-          _seancesController.add(List.unmodifiable(_seances));
-        }
+        _seances
+          ..clear()
+          ..addAll(seances);
+        _saveSeancesToStorage();
+        _seancesController.add(List.unmodifiable(_seances));
       }
       return true;
     } catch (e) {
@@ -861,7 +721,9 @@ class LocalDataService {
         '@mali-ntic.ml',
         '@malintic.ml',
       );
-      if (deletedUserIds.contains(u.id) || deletedUserEmails.contains(normEmail) || deletedUserEmails.contains(u.email.trim().toLowerCase())) {
+      if (deletedUserIds.contains(u.id) ||
+          deletedUserEmails.contains(normEmail) ||
+          deletedUserEmails.contains(u.email.trim().toLowerCase())) {
         continue;
       }
       final cleanName =
@@ -1001,7 +863,10 @@ class LocalDataService {
         final List<dynamic> list = jsonDecode(savedUsersRaw);
         for (final item in list) {
           if (item is Map) {
-            final user = User.fromMap(Map<String, dynamic>.from(item), item['id']?.toString() ?? '');
+            final user = User.fromMap(
+              Map<String, dynamic>.from(item),
+              item['id']?.toString() ?? '',
+            );
             if (!deletedUserIds.contains(user.id) &&
                 !deletedUserEmails.contains(user.email.trim().toLowerCase())) {
               _users.add(user);
@@ -1009,9 +874,13 @@ class LocalDataService {
           }
         }
       } else {
-        _users.addAll(_defaultBaselineUsers().where((u) =>
-            !deletedUserIds.contains(u.id) &&
-            !deletedUserEmails.contains(u.email.trim().toLowerCase())));
+        _users.addAll(
+          _defaultBaselineUsers().where(
+            (u) =>
+                !deletedUserIds.contains(u.id) &&
+                !deletedUserEmails.contains(u.email.trim().toLowerCase()),
+          ),
+        );
         _saveUsersToStorage();
       }
       _deduplicateAndNormalizeUsers();
@@ -1022,7 +891,10 @@ class LocalDataService {
         _formations.clear();
         for (final item in list) {
           if (item is Map) {
-            final formation = Formation.fromMap(Map<String, dynamic>.from(item), item['id']?.toString() ?? '');
+            final formation = Formation.fromMap(
+              Map<String, dynamic>.from(item),
+              item['id']?.toString() ?? '',
+            );
             _formations.add(formation);
           }
         }
@@ -1034,7 +906,10 @@ class LocalDataService {
         _inscriptions.clear();
         for (final item in list) {
           if (item is Map) {
-            final insc = Inscription.fromMap(Map<String, dynamic>.from(item), item['id']?.toString() ?? '');
+            final insc = Inscription.fromMap(
+              Map<String, dynamic>.from(item),
+              item['id']?.toString() ?? '',
+            );
             final email = insc.email?.trim().toLowerCase() ?? '';
             if (!deletedInscIds.contains(insc.id) &&
                 !deletedUserIds.contains(insc.etudiantId) &&
@@ -1052,7 +927,10 @@ class LocalDataService {
         _payments.clear();
         for (final item in payList) {
           if (item is Map) {
-            final pay = Payment.fromMap(Map<String, dynamic>.from(item), item['id']?.toString() ?? '');
+            final pay = Payment.fromMap(
+              Map<String, dynamic>.from(item),
+              item['id']?.toString() ?? '',
+            );
             _payments.add(pay);
           }
         }
@@ -1064,7 +942,10 @@ class LocalDataService {
         _seances.clear();
         for (final item in seanceList) {
           if (item is Map) {
-            final seance = Seance.fromMap(Map<String, dynamic>.from(item), item['id']?.toString() ?? '');
+            final seance = Seance.fromMap(
+              Map<String, dynamic>.from(item),
+              item['id']?.toString() ?? '',
+            );
             _seances.add(seance);
           }
         }
@@ -1084,7 +965,9 @@ class LocalDataService {
       final list = _formations.map((f) => f.toMap()).toList();
       _localStorage.setItem('app_saved_formations', jsonEncode(list));
       if (notify) _notifyDataChanged();
-    } catch (e) { debugPrint('[Malintic] Erreur sauvegarde formations: $e'); }
+    } catch (e) {
+      debugPrint('[Malintic] Erreur sauvegarde formations: $e');
+    }
   }
 
   void _saveUsersToStorage({bool notify = true}) {
@@ -1092,7 +975,9 @@ class LocalDataService {
       final list = _users.map((u) => u.toMap()).toList();
       _localStorage.setItem('app_saved_users', jsonEncode(list));
       if (notify) _notifyDataChanged();
-    } catch (e) { debugPrint('[Malintic] Erreur sauvegarde users: $e'); }
+    } catch (e) {
+      debugPrint('[Malintic] Erreur sauvegarde users: $e');
+    }
   }
 
   void _saveInscriptionsToStorage({bool notify = true}) {
@@ -1100,7 +985,9 @@ class LocalDataService {
       final list = _inscriptions.map((i) => i.toMap()).toList();
       _localStorage.setItem('app_saved_inscriptions', jsonEncode(list));
       if (notify) _notifyDataChanged();
-    } catch (e) { debugPrint('[Malintic] Erreur sauvegarde inscriptions: $e'); }
+    } catch (e) {
+      debugPrint('[Malintic] Erreur sauvegarde inscriptions: $e');
+    }
   }
 
   void _savePaymentsToStorage({bool notify = true}) {
@@ -1108,7 +995,9 @@ class LocalDataService {
       final list = _payments.map((p) => p.toMap()).toList();
       _localStorage.setItem('app_saved_payments', jsonEncode(list));
       if (notify) _notifyDataChanged();
-    } catch (e) { debugPrint('[Malintic] Erreur sauvegarde paiements: $e'); }
+    } catch (e) {
+      debugPrint('[Malintic] Erreur sauvegarde paiements: $e');
+    }
   }
 
   void _saveSeancesToStorage({bool notify = true}) {
@@ -1116,7 +1005,9 @@ class LocalDataService {
       final list = _seances.map((s) => s.toMap()).toList();
       _localStorage.setItem('app_saved_seances', jsonEncode(list));
       if (notify) _notifyDataChanged();
-    } catch (e) { debugPrint('[Malintic] Erreur sauvegarde séances: $e'); }
+    } catch (e) {
+      debugPrint('[Malintic] Erreur sauvegarde séances: $e');
+    }
   }
 
   void _saveAuditLogsToStorage({bool notify = true}) {
@@ -1124,17 +1015,21 @@ class LocalDataService {
       final list = _auditLogs.map((l) => l.toMap()).toList();
       _localStorage.setItem('app_saved_audit_logs', jsonEncode(list));
       if (notify) _notifyDataChanged();
-    } catch (e) { debugPrint('[Malintic] Erreur sauvegarde logs: $e'); }
+    } catch (e) {
+      debugPrint('[Malintic] Erreur sauvegarde logs: $e');
+    }
   }
 
   // Reactive Data Controllers
   final _dataChangesController = StreamController<void>.broadcast();
   final _usersController = StreamController<List<User>>.broadcast();
   final _formationsController = StreamController<List<Formation>>.broadcast();
-  final _inscriptionsController = StreamController<List<Inscription>>.broadcast();
+  final _inscriptionsController =
+      StreamController<List<Inscription>>.broadcast();
   final _paymentsController = StreamController<List<Payment>>.broadcast();
   final _seancesController = StreamController<List<Seance>>.broadcast();
-  final _notificationsController = StreamController<List<AppNotification>>.broadcast();
+  final _notificationsController =
+      StreamController<List<AppNotification>>.broadcast();
   final _auditLogsController = StreamController<List<AuditLog>>.broadcast();
 
   /// Flux global réactif déclenché lors de toute modification de données (inscriptions, paiements, formations, users, etc.)
@@ -1178,10 +1073,41 @@ class LocalDataService {
   final List<Seance> _seances = [];
   final List<AppNotification> _notifications = [];
   final List<AuditLog> _auditLogs = [
-    AuditLog(id: 'log_1', userNom: 'Mamadou Toure', userRole: 'Admin', action: 'Validation Inscription', description: 'Inscription validée pour le stagiaire Seydou Coulibaly (Développement Mobile Flutter)', timestamp: DateTime.now().subtract(const Duration(minutes: 15))),
-    AuditLog(id: 'log_2', userNom: 'Système SFP', userRole: 'Système', action: 'Paiement Enregistré', description: 'Acompte Orange Money reçu (75 000 FCFA) par Fatoumata Sidibé (REF-OM-88392)', timestamp: DateTime.now().subtract(const Duration(hours: 1, minutes: 20))),
-    AuditLog(id: 'log_3', userNom: 'Dr. Ousmane Diarra', userRole: 'Formateur', action: 'Pointage Présence', description: 'Pointage effectué pour le module bases de Dart (18/20 stagiaires présents)', timestamp: DateTime.now().subtract(const Duration(hours: 3))),
-    AuditLog(id: 'log_4', userNom: 'Admin SFP', userRole: 'Admin', action: 'Création Formation', description: 'Ajout de la nouvelle session SFP5', timestamp: DateTime.now().subtract(const Duration(days: 1))),
+    AuditLog(
+      id: 'log_1',
+      userNom: 'Mamadou Toure',
+      userRole: 'Admin',
+      action: 'Validation Inscription',
+      description:
+          'Inscription validée pour le stagiaire Seydou Coulibaly (Développement Mobile Flutter)',
+      timestamp: DateTime.now().subtract(const Duration(minutes: 15)),
+    ),
+    AuditLog(
+      id: 'log_2',
+      userNom: 'Système SFP',
+      userRole: 'Système',
+      action: 'Paiement Enregistré',
+      description:
+          'Acompte Orange Money reçu (75 000 FCFA) par Fatoumata Sidibé (REF-OM-88392)',
+      timestamp: DateTime.now().subtract(const Duration(hours: 1, minutes: 20)),
+    ),
+    AuditLog(
+      id: 'log_3',
+      userNom: 'Dr. Ousmane Diarra',
+      userRole: 'Formateur',
+      action: 'Pointage Présence',
+      description:
+          'Pointage effectué pour le module bases de Dart (18/20 stagiaires présents)',
+      timestamp: DateTime.now().subtract(const Duration(hours: 3)),
+    ),
+    AuditLog(
+      id: 'log_4',
+      userNom: 'Admin SFP',
+      userRole: 'Admin',
+      action: 'Création Formation',
+      description: 'Ajout de la nouvelle session SFP5',
+      timestamp: DateTime.now().subtract(const Duration(days: 1)),
+    ),
   ];
 
   Stream<List<AuditLog>> watchAuditLogs() async* {
@@ -1191,11 +1117,33 @@ class LocalDataService {
 
   List<AuditLog> getAuditLogs() => List.unmodifiable(_auditLogs);
 
-  Future<void> logAction({required String userNom, required String userRole, required String action, required String description, String? targetId, String? targetType, AuditSeverity severity = AuditSeverity.info}) async {
-    final log = AuditLog(id: 'log_${DateTime.now().millisecondsSinceEpoch}', userNom: userNom, userRole: userRole, action: action, description: description, timestamp: DateTime.now(), targetId: targetId, targetType: targetType, severity: severity);
+  Future<void> logAction({
+    required String userNom,
+    required String userRole,
+    required String action,
+    required String description,
+    String? targetId,
+    String? targetType,
+    AuditSeverity severity = AuditSeverity.info,
+  }) async {
+    final log = AuditLog(
+      id: 'log_${DateTime.now().millisecondsSinceEpoch}',
+      userNom: userNom,
+      userRole: userRole,
+      action: action,
+      description: description,
+      timestamp: DateTime.now(),
+      targetId: targetId,
+      targetType: targetType,
+      severity: severity,
+    );
     _auditLogs.insert(0, log);
     _auditLogsController.add(List.unmodifiable(_auditLogs));
-    try { await _syncDocToLocalApi('audit_logs', log.id, log.toMap()); } catch (e) { debugPrint('[Malintic] Erreur sync audit: $e'); }
+    try {
+      await _syncDocToLocalApi('audit_logs', log.id, log.toMap());
+    } catch (e) {
+      debugPrint('[Malintic] Erreur sync audit: $e');
+    }
   }
 
   void _initInitialData() {
@@ -1631,7 +1579,9 @@ class LocalDataService {
     );
     if (isNew) {
       logAction(
-        userNom: '${user.prenom} ${user.nom}'.trim().isNotEmpty ? '${user.prenom} ${user.nom}'.trim() : 'Utilisateur',
+        userNom: '${user.prenom} ${user.nom}'.trim().isNotEmpty
+            ? '${user.prenom} ${user.nom}'.trim()
+            : 'Utilisateur',
         userRole: user.role.name,
         action: 'Création compte',
         description: 'Compte ${user.role.name} créé (${user.email})',
@@ -1667,7 +1617,8 @@ class LocalDataService {
         userNom: 'Administration',
         userRole: 'admin',
         action: isActive ? 'Déblocage utilisateur' : 'Blocage utilisateur',
-        description: '${old.prenom} ${old.nom} (${old.email}) - Statut: ${isActive ? "Actif" : "Bloqué"}',
+        description:
+            '${old.prenom} ${old.nom} (${old.email}) - Statut: ${isActive ? "Actif" : "Bloqué"}',
       );
     }
   }
@@ -1679,7 +1630,11 @@ class LocalDataService {
     if (oldEmail.isNotEmpty) {
       _recordDeletedDoc('user_emails', oldEmail);
     }
-    _users.removeWhere((u) => u.id == userId || (oldEmail.isNotEmpty && u.email.trim().toLowerCase() == oldEmail));
+    _users.removeWhere(
+      (u) =>
+          u.id == userId ||
+          (oldEmail.isNotEmpty && u.email.trim().toLowerCase() == oldEmail),
+    );
     _saveUsersToStorage();
     _usersController.add(List.unmodifiable(_users));
     try {
@@ -1691,20 +1646,33 @@ class LocalDataService {
     } catch (_) {}
 
     // Cascade deletion of all inscriptions linked to this user
-    final linkedInscriptions = _inscriptions.where((i) =>
-        i.etudiantId == userId ||
-        i.id == userId ||
-        (oldEmail.isNotEmpty && (i.email?.trim().toLowerCase() == oldEmail))
-    ).toList();
+    final linkedInscriptions = _inscriptions
+        .where(
+          (i) =>
+              i.etudiantId == userId ||
+              i.id == userId ||
+              (oldEmail.isNotEmpty &&
+                  (i.email?.trim().toLowerCase() == oldEmail)),
+        )
+        .toList();
     for (final ins in linkedInscriptions) {
       await deleteInscription(ins.id);
     }
+
+    // Cascade deletion of all payments linked to this user
+    _payments.removeWhere(
+      (p) => p.etudiantId == userId || (old != null && p.etudiantId == old.id),
+    );
+    _savePaymentsToStorage();
+    _paymentsController.add(List.unmodifiable(_payments));
 
     logAction(
       userNom: 'Administration',
       userRole: 'admin',
       action: 'Suppression utilisateur',
-      description: old != null ? '${old.prenom} ${old.nom} (${old.email} - ${old.role.name})' : 'ID: $userId',
+      description: old != null
+          ? '${old.prenom} ${old.nom} (${old.email} - ${old.role.name})'
+          : 'ID: $userId',
     );
   }
 
@@ -1727,7 +1695,8 @@ class LocalDataService {
           .toList();
       var repaired = 0;
       for (final student in List<User>.from(_users)) {
-        if (!student.isEtudiant || student.matricule?.trim().isNotEmpty == true) {
+        if (!student.isEtudiant ||
+            student.matricule?.trim().isNotEmpty == true) {
           continue;
         }
         final isValidated = accepted.any(
@@ -1773,23 +1742,25 @@ class LocalDataService {
 
   /// Returns only the formations a trainer is responsible for. Both module-level
   /// and formation-level assignments are fully supported across all formation types.
-  List<Formation> getFormationsForFormateur(String formateurId) => _formations
-      .where(
-        (formation) {
-          final hasExplicitModule = formation.modules.any(
-            (module) => formation.moduleFormateurIds[module] == formateurId,
-          );
-          final isExplicitNonModularTrainer =
-              formation.modules.isEmpty && formation.formateurIds.contains(formateurId);
-          return hasExplicitModule || isExplicitNonModularTrainer;
-        },
-      )
-      .toList();
+  List<Formation> getFormationsForFormateur(String formateurId) =>
+      _formations.where((formation) {
+        final hasExplicitModule = formation.modules.any(
+          (module) => formation.moduleFormateurIds[module] == formateurId,
+        );
+        final isExplicitNonModularTrainer =
+            formation.modules.isEmpty &&
+            formation.formateurIds.contains(formateurId);
+        return hasExplicitModule || isExplicitNonModularTrainer;
+      }).toList();
 
   /// Returns a reactive stream of formations assigned to a specific formateur
-  Stream<List<Formation>> watchFormationsForFormateur(String formateurId) async* {
+  Stream<List<Formation>> watchFormationsForFormateur(
+    String formateurId,
+  ) async* {
     yield getFormationsForFormateur(formateurId);
-    yield* _formationsController.stream.map((_) => getFormationsForFormateur(formateurId));
+    yield* _formationsController.stream.map(
+      (_) => getFormationsForFormateur(formateurId),
+    );
   }
 
   /// Returns all learners strictly enrolled in any module taught by this trainer.
@@ -1830,7 +1801,9 @@ class LocalDataService {
   /// Returns a stream of learners enrolled only in modules assigned to this formateur.
   Stream<List<User>> watchStudentsForFormateur(String formateurId) async* {
     yield getStudentsForFormateur(formateurId);
-    yield* _usersController.stream.map((_) => getStudentsForFormateur(formateurId));
+    yield* _usersController.stream.map(
+      (_) => getStudentsForFormateur(formateurId),
+    );
   }
 
   /// Returns exactly the modules assigned to a trainer within one formation.
@@ -1923,7 +1896,8 @@ class LocalDataService {
       AppNotification(
         id: 'notif_form_${DateTime.now().microsecondsSinceEpoch}',
         title: 'Attribution de formations',
-        description: 'Vos cours et modules assignés ont été mis à jour dans le catalogue.',
+        description:
+            'Vos cours et modules assignés ont été mis à jour dans le catalogue.',
         senderId: 'admin_malintic',
         senderEmail: 'admin@malintic.ml',
         targetRoles: ['formateur'],
@@ -1939,7 +1913,8 @@ class LocalDataService {
 
   int _defaultModuleHours(Formation formation) {
     final match = RegExp(r'\d+').firstMatch(formation.dureeHeures ?? '');
-    final totalHours = int.tryParse(match?.group(0) ?? '') ??
+    final totalHours =
+        int.tryParse(match?.group(0) ?? '') ??
         (formation.dureeSemaines > 0 ? formation.dureeSemaines * 10 : 10);
     if (formation.modules.isEmpty) return totalHours.clamp(1, 999);
     return (totalHours / formation.modules.length).ceil().clamp(1, 999);
@@ -1968,7 +1943,8 @@ class LocalDataService {
       final formation = getFormationById(formationId);
       if (formation == null) continue;
 
-      final selectedModules = modulesByFormationId[formationId] ?? const <String>[];
+      final selectedModules =
+          modulesByFormationId[formationId] ?? const <String>[];
       if (selectedModules.isEmpty) continue;
 
       final hoursPerModule = _defaultModuleHours(formation);
@@ -1978,9 +1954,9 @@ class LocalDataService {
       final previousModules = assignmentIndex == -1
           ? <Map<String, dynamic>>[]
           : (assignments[assignmentIndex]['modules'] as List<dynamic>? ?? [])
-              .whereType<Map>()
-              .map((item) => Map<String, dynamic>.from(item))
-              .toList();
+                .whereType<Map>()
+                .map((item) => Map<String, dynamic>.from(item))
+                .toList();
 
       final assignedModules = selectedModules.map((module) {
         final previous = previousModules
@@ -2107,7 +2083,8 @@ class LocalDataService {
       userNom: 'Administration',
       userRole: 'admin',
       action: 'Création formation',
-      description: 'Nouvelle formation: "${syncedFormation.titre}" (${syncedFormation.modules.length} modules, ${syncedFormation.prix.toStringAsFixed(0)} FCFA)',
+      description:
+          'Nouvelle formation: "${syncedFormation.titre}" (${syncedFormation.modules.length} modules, ${syncedFormation.prix.toStringAsFixed(0)} FCFA)',
     );
   }
 
@@ -2147,7 +2124,10 @@ class LocalDataService {
 
   /// Returns all learners enrolled in a specific module of a formation.
   /// If [moduleTitle] is null or empty, returns all learners enrolled in the formation.
-  List<User> getStudentsForFormationModule(String formationId, String? moduleTitle) {
+  List<User> getStudentsForFormationModule(
+    String formationId,
+    String? moduleTitle,
+  ) {
     return _users.where((user) {
       if (user.role != UserRole.apprenant) return false;
       return user.assignedFormations.any((assignment) {
@@ -2173,7 +2153,10 @@ class LocalDataService {
   }
 
   /// Adds a slot to a formation and persists the change
-  Future<void> addHoraireToFormation(String formationId, Horaire horaire) async {
+  Future<void> addHoraireToFormation(
+    String formationId,
+    Horaire horaire,
+  ) async {
     final formation = getFormationById(formationId);
     if (formation == null) return;
     final horaires = [...formation.horaires, horaire];
@@ -2181,9 +2164,14 @@ class LocalDataService {
   }
 
   /// Updates a slot in a formation at a specific index
-  Future<void> updateHoraireInFormation(String formationId, int index, Horaire horaire) async {
+  Future<void> updateHoraireInFormation(
+    String formationId,
+    int index,
+    Horaire horaire,
+  ) async {
     final formation = getFormationById(formationId);
-    if (formation == null || index < 0 || index >= formation.horaires.length) return;
+    if (formation == null || index < 0 || index >= formation.horaires.length)
+      return;
     final horaires = List<Horaire>.from(formation.horaires);
     horaires[index] = horaire;
     await updateFormation(formation.copyWith(horaires: horaires));
@@ -2192,15 +2180,21 @@ class LocalDataService {
   /// Removes a slot from a formation at a specific index
   Future<void> deleteHoraireFromFormation(String formationId, int index) async {
     final formation = getFormationById(formationId);
-    if (formation == null || index < 0 || index >= formation.horaires.length) return;
+    if (formation == null || index < 0 || index >= formation.horaires.length)
+      return;
     final horaires = List<Horaire>.from(formation.horaires)..removeAt(index);
     await updateFormation(formation.copyWith(horaires: horaires));
   }
 
   /// Duplicates a slot to another day
-  Future<void> duplicateHoraireInFormation(String formationId, int index, String targetDay) async {
+  Future<void> duplicateHoraireInFormation(
+    String formationId,
+    int index,
+    String targetDay,
+  ) async {
     final formation = getFormationById(formationId);
-    if (formation == null || index < 0 || index >= formation.horaires.length) return;
+    if (formation == null || index < 0 || index >= formation.horaires.length)
+      return;
     final source = formation.horaires[index];
     final duplicated = Horaire(
       jour: targetDay,
@@ -2260,19 +2254,26 @@ class LocalDataService {
             salleOuLien.trim().isNotEmpty &&
             h.lieuOuLien != null &&
             h.lieuOuLien!.trim().isNotEmpty &&
-            h.lieuOuLien!.trim().toLowerCase() == salleOuLien.trim().toLowerCase()) {
-          conflicts.add('La salle "$salleOuLien" est déjà occupée par "${formation.titre}" ($day ${h.heureDebut}-${h.heureFin}).');
+            h.lieuOuLien!.trim().toLowerCase() ==
+                salleOuLien.trim().toLowerCase()) {
+          conflicts.add(
+            'La salle "$salleOuLien" est déjà occupée par "${formation.titre}" ($day ${h.heureDebut}-${h.heureFin}).',
+          );
         }
 
         // Check trainer conflict
         if (formateurId != null && formateurId.isNotEmpty) {
           final slotTrainer = h.module != null
               ? formation.moduleFormateurIds[h.module]
-              : (formation.formateurIds.isNotEmpty ? formation.formateurIds.first : null);
+              : (formation.formateurIds.isNotEmpty
+                    ? formation.formateurIds.first
+                    : null);
           if (slotTrainer == formateurId) {
             final trainerUser = getUserById(formateurId);
             final trainerName = trainerUser?.nomComplet ?? 'Le formateur';
-            conflicts.add('$trainerName donne déjà le cours "${h.module ?? formation.titre}" le $day de ${h.heureDebut} à ${h.heureFin}.');
+            conflicts.add(
+              '$trainerName donne déjà le cours "${h.module ?? formation.titre}" le $day de ${h.heureDebut} à ${h.heureFin}.',
+            );
           }
         }
       }
@@ -2295,12 +2296,13 @@ class LocalDataService {
     for (final formation in _formations) {
       for (int i = 0; i < formation.horaires.length; i++) {
         final h = formation.horaires[i];
-        final trainerId = h.module != null &&
+        final trainerId =
+            h.module != null &&
                 formation.moduleFormateurIds.containsKey(h.module)
             ? formation.moduleFormateurIds[h.module]
             : (formation.formateurIds.isNotEmpty
-                ? formation.formateurIds.first
-                : null);
+                  ? formation.formateurIds.first
+                  : null);
         final trainerUser = trainerId != null ? getUserById(trainerId) : null;
 
         allSessions.add({
@@ -2436,7 +2438,8 @@ class LocalDataService {
           normalizedEmail.isNotEmpty &&
           (item.email?.trim().toLowerCase() ?? '') == normalizedEmail;
       final sameStudent =
-          effectiveApprenantId.isNotEmpty && item.apprenantId == effectiveApprenantId;
+          effectiveApprenantId.isNotEmpty &&
+          item.apprenantId == effectiveApprenantId;
       return sameFormation && (sameEmail || sameStudent);
     }).firstOrNull;
     if (existing != null) {
@@ -2474,23 +2477,29 @@ class LocalDataService {
     _saveInscriptionsToStorage();
     await _syncDocToLocalApi('inscriptions', newInsc.id, newInsc.toMap());
 
-    final studentName = [prenom, nom].where((s) => s != null && s.isNotEmpty).join(' ');
-    await addNotification(
-      AppNotification(
-        id: 'notif_insc_${DateTime.now().microsecondsSinceEpoch}',
-        title: 'Nouvelle Inscription',
-        description: '${studentName.isNotEmpty ? studentName : "Un apprenant"} a soumis une inscription pour ${formation.titre}.',
-        senderId: 'system',
-        senderEmail: 'system@malintic.ml',
-        targetRoles: ['admin', 'assistant', 'dg', 'comptable'],
-        targetUserIds: [],
-        audience: ['admin', 'assistant'],
-        readBy: [],
-        reminderCount: 0,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      ),
-    );
+    final studentName = [
+      prenom,
+      nom,
+    ].where((s) => s != null && s.isNotEmpty).join(' ');
+    try {
+      await addNotification(
+        AppNotification(
+          id: 'notif_insc_${DateTime.now().microsecondsSinceEpoch}',
+          title: 'Nouvelle Inscription',
+          description:
+              '${studentName.isNotEmpty ? studentName : "Un apprenant"} a soumis une inscription pour ${formation.titre}.',
+          senderId: 'system',
+          senderEmail: 'system@malintic.ml',
+          targetRoles: ['admin', 'assistant', 'dg', 'comptable'],
+          targetUserIds: [],
+          audience: ['admin', 'assistant'],
+          readBy: [],
+          reminderCount: 0,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        ),
+      );
+    } catch (_) {}
 
     return newInsc;
   }
@@ -2898,7 +2907,8 @@ class LocalDataService {
       userNom: 'Administration',
       userRole: 'admin',
       action: 'Validation inscription',
-      description: 'Dossier validé pour ${updatedStudent.prenom} ${updatedStudent.nom} - Formation: ${formation.titre}',
+      description:
+          'Dossier validé pour ${updatedStudent.prenom} ${updatedStudent.nom} - Formation: ${formation.titre}',
     );
 
     return updatedStudent;
@@ -3004,10 +3014,9 @@ class LocalDataService {
       final effectiveDiscount = payment.remise > existingDiscount
           ? payment.remise
           : existingDiscount;
-      final totalDue =
-          (base - effectiveDiscount)
-              .clamp(0, double.infinity)
-              .toDouble();
+      final totalDue = (base - effectiveDiscount)
+          .clamp(0, double.infinity)
+          .toDouble();
       final alreadyPaid = getInscriptionPaidAmount(payment.inscriptionId);
       final proposedPaid = alreadyPaid + payment.montant;
       // Tolérance epsilon de 0.01 pour éviter les erreurs d'arrondis IEEE 754
@@ -3033,15 +3042,18 @@ class LocalDataService {
     final stud = insc != null ? getUserById(insc.etudiantId) : null;
     final studName = stud != null
         ? '${stud.prenom} ${stud.nom}'
-        : (insc != null && ((insc.prenom?.isNotEmpty == true) || (insc.nom?.isNotEmpty == true))
-            ? '${insc.prenom ?? ""} ${insc.nom ?? ""}'.trim()
-            : 'Un étudiant');
+        : (insc != null &&
+                  ((insc.prenom?.isNotEmpty == true) ||
+                      (insc.nom?.isNotEmpty == true))
+              ? '${insc.prenom ?? ""} ${insc.nom ?? ""}'.trim()
+              : 'Un étudiant');
 
     logAction(
       userNom: studName,
       userRole: stud?.role.name ?? 'apprenant',
       action: 'Paiement effectué',
-      description: 'Versement de ${payment.montant.toStringAsFixed(0)} FCFA (${payment.methode.name.toUpperCase()}) pour ${form?.titre ?? "Formation"} (Tranche ${payment.trancheNumero}/${payment.nombreTranches})',
+      description:
+          'Versement de ${payment.montant.toStringAsFixed(0)} FCFA (${payment.methode.name.toUpperCase()}) pour ${form?.titre ?? "Formation"} (Tranche ${payment.trancheNumero}/${payment.nombreTranches})',
     );
 
     // Notify Admins & Accounting
@@ -3049,7 +3061,8 @@ class LocalDataService {
       AppNotification(
         id: 'notif_pay_${DateTime.now().microsecondsSinceEpoch}',
         title: 'Paiement reçu',
-        description: 'Versement de ${payment.montant.toStringAsFixed(0)} FCFA reçu de $studName (${form?.titre ?? "Formation"}).',
+        description:
+            'Versement de ${payment.montant.toStringAsFixed(0)} FCFA reçu de $studName (${form?.titre ?? "Formation"}).',
         senderId: 'system',
         senderEmail: 'comptabilite@malintic.ml',
         targetRoles: ['admin', 'comptable', 'daf', 'dg'],
@@ -3068,7 +3081,8 @@ class LocalDataService {
         AppNotification(
           id: 'notif_stud_${DateTime.now().microsecondsSinceEpoch}',
           title: 'Confirmation de versement',
-          description: 'Votre paiement de ${payment.montant.toStringAsFixed(0)} FCFA pour ${form?.titre ?? "votre formation"} a été validé avec succès.',
+          description:
+              'Votre paiement de ${payment.montant.toStringAsFixed(0)} FCFA pour ${form?.titre ?? "votre formation"} a été validé avec succès.',
           senderId: 'comptabilite',
           senderEmail: 'comptabilite@malintic.ml',
           targetRoles: ['apprenant'],
@@ -3112,8 +3126,10 @@ class LocalDataService {
           targetInsc != null &&
           targetInsc.formationId.isNotEmpty &&
           payment.formationId == targetInsc.formationId &&
-          ((targetInsc.etudiantId.isNotEmpty && payment.etudiantId == targetInsc.etudiantId) ||
-           (targetInsc.apprenantId.isNotEmpty && payment.etudiantId == targetInsc.apprenantId))) {
+          ((targetInsc.etudiantId.isNotEmpty &&
+                  payment.etudiantId == targetInsc.etudiantId) ||
+              (targetInsc.apprenantId.isNotEmpty &&
+                  payment.etudiantId == targetInsc.apprenantId))) {
         return true;
       }
       return false;
@@ -3151,7 +3167,8 @@ class LocalDataService {
           0,
           (total, module) => total + (formation.modulePrices[module] ?? 0),
         );
-        if (modulesTotal > 0 && (moduleIds.length < formation.modules.length || basePrice == 0)) {
+        if (modulesTotal > 0 &&
+            (moduleIds.length < formation.modules.length || basePrice == 0)) {
           return modulesTotal;
         }
       }
@@ -3175,7 +3192,11 @@ class LocalDataService {
     // installment. Keep the highest recorded decision instead of adding it.
     final deletedPaymentIds = getDeletedDocs('payments');
     return getPaymentsForInscription(inscriptionId)
-        .where((payment) => !deletedPaymentIds.contains(payment.id) && payment.status != PaymentStatus.echoue)
+        .where(
+          (payment) =>
+              !deletedPaymentIds.contains(payment.id) &&
+              payment.status != PaymentStatus.echoue,
+        )
         .fold<double>(
           0,
           (value, payment) => payment.remise > value ? payment.remise : value,
@@ -3191,7 +3212,11 @@ class LocalDataService {
   double getInscriptionPaidAmount(String inscriptionId) {
     final deletedPaymentIds = getDeletedDocs('payments');
     return getPaymentsForInscription(inscriptionId)
-        .where((payment) => !deletedPaymentIds.contains(payment.id) && payment.status == PaymentStatus.effectue)
+        .where(
+          (payment) =>
+              !deletedPaymentIds.contains(payment.id) &&
+              payment.status == PaymentStatus.effectue,
+        )
         .fold<double>(0, (total, payment) => total + payment.montant);
   }
 
@@ -3229,18 +3254,21 @@ class LocalDataService {
     }).toList();
 
     // Inscriptions comptabilisées : acceptées ou avec acompte/paiement
-    final billableInscriptions = activeInscriptions.where((i) =>
-        i.status == InscriptionStatus.acceptee ||
-        getInscriptionPaidAmount(i.id) > 0).toList();
+    final billableInscriptions = activeInscriptions
+        .where(
+          (i) =>
+              i.status == InscriptionStatus.acceptee ||
+              getInscriptionPaidAmount(i.id) > 0,
+        )
+        .toList();
+
+    final totalReceived = activePayments
+        .where((p) => p.status == PaymentStatus.effectue)
+        .fold<double>(0, (sum, p) => sum + p.montant);
 
     final totalDue = billableInscriptions.fold<double>(
       0,
       (sum, ins) => sum + getInscriptionTotalDue(ins.id),
-    );
-
-    final totalReceived = billableInscriptions.fold<double>(
-      0,
-      (sum, ins) => sum + getInscriptionPaidAmount(ins.id),
     );
 
     final totalBalance = billableInscriptions.fold<double>(
@@ -3253,8 +3281,11 @@ class LocalDataService {
       (sum, ins) => sum + getInscriptionDiscountTotal(ins.id),
     );
 
-    final recoveryRate = totalDue > 0
-        ? ((totalReceived / totalDue) * 100).clamp(0.0, 100.0)
+    final effectiveTotal = totalDue > 0
+        ? totalDue
+        : totalReceived + totalBalance;
+    final recoveryRate = effectiveTotal > 0
+        ? ((totalReceived / effectiveTotal) * 100).clamp(0.0, 100.0)
         : 0.0;
 
     return {
@@ -3264,11 +3295,19 @@ class LocalDataService {
       'totalDiscount': totalDiscount,
       'recoveryRate': recoveryRate,
       'totalTransactions': activePayments.length,
-      'effectueTransactions': activePayments.where((p) => p.status == PaymentStatus.effectue).length,
+      'effectueTransactions': activePayments
+          .where((p) => p.status == PaymentStatus.effectue)
+          .length,
       'activeInscriptionsCount': activeInscriptions.length,
-      'acceptedCount': activeInscriptions.where((i) => i.status == InscriptionStatus.acceptee).length,
-      'pendingCount': activeInscriptions.where((i) => i.status == InscriptionStatus.enAttente).length,
-      'debtorsCount': billableInscriptions.where((i) => getInscriptionBalance(i.id) > 0).length,
+      'acceptedCount': activeInscriptions
+          .where((i) => i.status == InscriptionStatus.acceptee)
+          .length,
+      'pendingCount': activeInscriptions
+          .where((i) => i.status == InscriptionStatus.enAttente)
+          .length,
+      'debtorsCount': billableInscriptions
+          .where((i) => getInscriptionBalance(i.id) > 0)
+          .length,
     };
   }
 
@@ -3279,7 +3318,9 @@ class LocalDataService {
     final deletedUserEmails = getDeletedDocs('user_emails');
 
     final formations = getFormations();
-    final trainers = getUsers().where((u) => u.role == UserRole.formateur).toList();
+    final trainers = getUsers()
+        .where((u) => u.role == UserRole.formateur)
+        .toList();
     final List<Map<String, dynamic>> result = [];
 
     for (final formation in formations) {
@@ -3315,12 +3356,16 @@ class LocalDataService {
       }
 
       if (coutFormateurs == 0.0 && formation.formateurIds.isNotEmpty) {
-        final totalHours = formation.dureeSemaines > 0 ? (formation.dureeSemaines * 4) : 20;
+        final totalHours = formation.dureeSemaines > 0
+            ? (formation.dureeSemaines * 4)
+            : 20;
         coutFormateurs = totalHours * 5000.0;
       }
 
       final margeNette = totalEncaisse - coutFormateurs;
-      final margePct = totalEncaisse > 0 ? ((margeNette / totalEncaisse) * 100).clamp(-100.0, 100.0) : (coutFormateurs > 0 ? -100.0 : 0.0);
+      final margePct = totalEncaisse > 0
+          ? ((margeNette / totalEncaisse) * 100).clamp(-100.0, 100.0)
+          : (coutFormateurs > 0 ? -100.0 : 0.0);
 
       result.add({
         'formationId': formation.id,
@@ -3335,7 +3380,11 @@ class LocalDataService {
       });
     }
 
-    result.sort((a, b) => (b['totalEncaisse'] as double).compareTo(a['totalEncaisse'] as double));
+    result.sort(
+      (a, b) => (b['totalEncaisse'] as double).compareTo(
+        a['totalEncaisse'] as double,
+      ),
+    );
     return result;
   }
 
@@ -3369,8 +3418,7 @@ class LocalDataService {
         statusStr == 'echoue' ||
         statusStr == 'échoué') {
       newStatus = PaymentStatus.echoue;
-    } else if (statusStr == 'en_attente' ||
-        statusStr == 'enAttente') {
+    } else if (statusStr == 'en_attente' || statusStr == 'enAttente') {
       newStatus = PaymentStatus.enAttente;
     }
 
@@ -3410,9 +3458,12 @@ class LocalDataService {
         throw StateError('Cette tranche a déjà été validée.');
       }
       final totalDue = getInscriptionTotalDue(updated.inscriptionId);
-      final alreadyPaidWithoutThis = getPaymentsForInscription(updated.inscriptionId)
-          .where((p) => p.id != updated.id && p.status == PaymentStatus.effectue)
-          .fold<double>(0, (s, p) => s + p.montant);
+      final alreadyPaidWithoutThis =
+          getPaymentsForInscription(updated.inscriptionId)
+              .where(
+                (p) => p.id != updated.id && p.status == PaymentStatus.effectue,
+              )
+              .fold<double>(0, (s, p) => s + p.montant);
       final proposedPaid = alreadyPaidWithoutThis + updated.montant;
       if (proposedPaid > totalDue + 0.01) {
         throw StateError('La validation dépasse le solde de l’inscription.');
@@ -3567,7 +3618,9 @@ class LocalDataService {
         )
         .timeout(const Duration(seconds: 12));
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw StateError('Mise à jour refusée par le serveur (${response.statusCode}).');
+      throw StateError(
+        'Mise à jour refusée par le serveur (${response.statusCode}).',
+      );
     }
   }
 
@@ -3610,32 +3663,33 @@ class LocalDataService {
     );
     assignments[assignmentIndex]['modules'] = modules;
     final updatedStudent = User(
-        id: student.id,
-        email: student.email,
-        nom: student.nom,
-        prenom: student.prenom,
-        phone: student.phone,
-        matricule: student.matricule,
-        role: student.role,
-        password: student.password,
-        photoUrl: student.photoUrl,
-        assignedFormations: assignments,
-        sexe: student.sexe,
-        estActif: student.estActif,
-        dateCreation: student.dateCreation,
-        dateModification: DateTime.now(),
-      );
-    await _sendTrainerStudentAction(
-      'progress',
-      userId,
-      {'formationId': formationId, 'moduleTitle': moduleTitle, 'delta': delta},
+      id: student.id,
+      email: student.email,
+      nom: student.nom,
+      prenom: student.prenom,
+      phone: student.phone,
+      matricule: student.matricule,
+      role: student.role,
+      password: student.password,
+      photoUrl: student.photoUrl,
+      assignedFormations: assignments,
+      sexe: student.sexe,
+      estActif: student.estActif,
+      dateCreation: student.dateCreation,
+      dateModification: DateTime.now(),
     );
+    await _sendTrainerStudentAction('progress', userId, {
+      'formationId': formationId,
+      'moduleTitle': moduleTitle,
+      'delta': delta,
+    });
     _replaceCachedUser(updatedStudent);
     logAction(
       userNom: 'Formateur',
       userRole: 'formateur',
       action: 'Avancement heures',
-      description: 'Progression de ${delta > 0 ? "+$delta" : "$delta"}h sur "$moduleTitle" pour ${student.prenom} ${student.nom}',
+      description:
+          'Progression de ${delta > 0 ? "+$delta" : "$delta"}h sur "$moduleTitle" pour ${student.prenom} ${student.nom}',
     );
   }
 
@@ -3669,31 +3723,32 @@ class LocalDataService {
     assignment['attendance'] = history;
     assignments[index] = assignment;
     final updatedStudent = User(
-        id: student.id,
-        email: student.email,
-        nom: student.nom,
-        prenom: student.prenom,
-        phone: student.phone,
-        matricule: student.matricule,
-        role: student.role,
-        password: student.password,
-        photoUrl: student.photoUrl,
-        assignedFormations: assignments,
-        estActif: student.estActif,
-        dateCreation: student.dateCreation,
-        dateModification: DateTime.now(),
-      );
-    await _sendTrainerStudentAction(
-      'attendance',
-      userId,
-      {'formationId': formationId, 'status': status, 'note': note?.trim() ?? ''},
+      id: student.id,
+      email: student.email,
+      nom: student.nom,
+      prenom: student.prenom,
+      phone: student.phone,
+      matricule: student.matricule,
+      role: student.role,
+      password: student.password,
+      photoUrl: student.photoUrl,
+      assignedFormations: assignments,
+      estActif: student.estActif,
+      dateCreation: student.dateCreation,
+      dateModification: DateTime.now(),
     );
+    await _sendTrainerStudentAction('attendance', userId, {
+      'formationId': formationId,
+      'status': status,
+      'note': note?.trim() ?? '',
+    });
     _replaceCachedUser(updatedStudent);
     logAction(
       userNom: 'Formateur',
       userRole: 'formateur',
       action: 'Émargement présence',
-      description: 'Présence "$status" enregistrée pour ${student.prenom} ${student.nom} ${note != null && note.isNotEmpty ? "($note)" : ""}',
+      description:
+          'Présence "$status" enregistrée pour ${student.prenom} ${student.nom} ${note != null && note.isNotEmpty ? "($note)" : ""}',
     );
   }
 
@@ -3752,8 +3807,11 @@ class LocalDataService {
     logAction(
       userNom: 'Administration',
       userRole: 'admin',
-      action: isCompleted ? 'Validation fin de formation' : 'Réouverture formation',
-      description: '${isCompleted ? "Formation déclarée terminée" : "Formation remise en cours"} pour ${student.prenom} ${student.nom} - $formTitle',
+      action: isCompleted
+          ? 'Validation fin de formation'
+          : 'Réouverture formation',
+      description:
+          '${isCompleted ? "Formation déclarée terminée" : "Formation remise en cours"} pour ${student.prenom} ${student.nom} - $formTitle',
     );
   }
 
@@ -3764,7 +3822,9 @@ class LocalDataService {
   }) {
     final student = getUserById(studentId);
     if (student == null) return false;
-    final item = student.assignedFormations.where((a) => a['formationId'] == formationId).firstOrNull;
+    final item = student.assignedFormations
+        .where((a) => a['formationId'] == formationId)
+        .firstOrNull;
     if (item != null && item['isCompleted'] == true) return true;
     final form = getFormationById(formationId);
     if (form != null && form.status == FormationStatus.terminee) return true;
@@ -3773,17 +3833,25 @@ class LocalDataService {
 
   /// Récupère la liste des étudiants inscrits à une formation donnée
   List<User> getStudentsForFormation(String formationId) {
-    return _users.where((u) =>
-      u.role == UserRole.apprenant &&
-      u.assignedFormations.any((a) => a['formationId'] == formationId),
-    ).toList();
+    return _users
+        .where(
+          (u) =>
+              u.role == UserRole.apprenant &&
+              u.assignedFormations.any((a) => a['formationId'] == formationId),
+        )
+        .toList();
   }
 
   /// Récupère le nom du groupe/cohorte pour un étudiant et une formation
-  String? getStudentCohort({required String studentId, required String formationId}) {
+  String? getStudentCohort({
+    required String studentId,
+    required String formationId,
+  }) {
     final student = getUserById(studentId);
     if (student == null) return null;
-    final item = student.assignedFormations.where((a) => a['formationId'] == formationId).firstOrNull;
+    final item = student.assignedFormations
+        .where((a) => a['formationId'] == formationId)
+        .firstOrNull;
     return item?['groupe']?.toString();
   }
 
@@ -3799,7 +3867,9 @@ class LocalDataService {
     final assignments = List<Map<String, dynamic>>.from(
       student.assignedFormations.map((a) => Map<String, dynamic>.from(a)),
     );
-    final index = assignments.indexWhere((a) => a['formationId'] == formationId);
+    final index = assignments.indexWhere(
+      (a) => a['formationId'] == formationId,
+    );
 
     if (index >= 0) {
       final assignment = Map<String, dynamic>.from(assignments[index]);
@@ -3841,7 +3911,8 @@ class LocalDataService {
       userNom: 'Administration',
       userRole: 'admin',
       action: 'Affectation Cohorte/Groupe',
-      description: 'Attribution de la cohorte « ${cohortName ?? "Non assigné"} » à ${student.prenom} ${student.nom} ($formTitle)',
+      description:
+          'Attribution de la cohorte « ${cohortName ?? "Non assigné"} » à ${student.prenom} ${student.nom} ($formTitle)',
     );
   }
 
@@ -3874,7 +3945,9 @@ class LocalDataService {
 
   Stream<List<Seance>> watchSeancesForFormateur(String formateurId) async* {
     yield getSeancesForFormateur(formateurId);
-    yield* _seancesController.stream.map((_) => getSeancesForFormateur(formateurId));
+    yield* _seancesController.stream.map(
+      (_) => getSeancesForFormateur(formateurId),
+    );
   }
 
   Future<void> addSeance(Seance seance) async {
@@ -3924,10 +3997,12 @@ class LocalDataService {
     _localStorage.removeItem('app_saved_audit_logs');
     if (_hasLocalApi) {
       try {
-        await http.delete(
-          _apiUri('audit_logs/clear'),
-          headers: const {'ngrok-skip-browser-warning': 'true'},
-        ).timeout(const Duration(seconds: 5));
+        await http
+            .delete(
+              _apiUri('audit_logs/clear'),
+              headers: const {'ngrok-skip-browser-warning': 'true'},
+            )
+            .timeout(const Duration(seconds: 5));
       } catch (_) {}
     }
   }

@@ -100,7 +100,6 @@ class _AdminInscriptionsState extends State<AdminInscriptions> with TickerProvid
   late AnimationController _fadeController;
   String filterStatus = 'en_attente';
   StreamSubscription<void>? _dataSub;
-  Timer? _refreshTimer;
 
   @override
   void initState() {
@@ -183,7 +182,7 @@ class _AdminInscriptionsState extends State<AdminInscriptions> with TickerProvid
                       setState(() {});
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text('🔄 Liste des inscriptions actualisée !'),
+                          content: Text('Liste des inscriptions actualisée.'),
                           backgroundColor: AppTheme.primary,
                           duration: Duration(seconds: 2),
                         ),
@@ -265,7 +264,7 @@ class _AdminInscriptionsState extends State<AdminInscriptions> with TickerProvid
                       await _db.refreshFromServer();
                       if (!mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('✅ Liste des inscriptions actualisée !'), backgroundColor: AppTheme.success),
+                        const SnackBar(content: Text('Liste des inscriptions actualisée.'), backgroundColor: AppTheme.success),
                       );
                     },
                     icon: const Icon(Icons.refresh, color: Colors.white),
@@ -315,7 +314,7 @@ class _AdminInscriptionsState extends State<AdminInscriptions> with TickerProvid
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('✅ Liste des inscriptions exportée en CSV avec succès !'),
+        content: Text('Liste des inscriptions exportée en CSV avec succès.'),
         backgroundColor: AppTheme.success,
       ),
     );
@@ -500,7 +499,7 @@ class _AdminInscriptionsState extends State<AdminInscriptions> with TickerProvid
       setState(() => filterStatus = 'en_attente');
       ScaffoldMessenger.of(localContext).showSnackBar(
         SnackBar(
-          content: const Text('✅ Dossier créé. Il sera transféré vers Étudiants après validation.'),
+          content: const Text('Dossier créé. Il sera transféré vers Étudiants après validation.'),
           backgroundColor: AppTheme.success,
         ),
       );
@@ -1010,7 +1009,7 @@ class _AdminInscriptionsState extends State<AdminInscriptions> with TickerProvid
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('✅ Inscription supprimée avec succès'),
+          content: Text('Inscription supprimée avec succès.'),
           backgroundColor: AppTheme.error,
         ),
       );
@@ -1157,7 +1156,7 @@ class _AdminInscriptionsState extends State<AdminInscriptions> with TickerProvid
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('⚠️ Cette inscription est déjà validée et enregistrée parmi les apprenants.'),
+              content: Text('Cette inscription est déjà validée et enregistrée parmi les apprenants.'),
               backgroundColor: AppTheme.warning,
             ),
           );
@@ -1176,7 +1175,7 @@ class _AdminInscriptionsState extends State<AdminInscriptions> with TickerProvid
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(newStatus == 'rejete' ? '🚫 Inscription marquée comme Rejetée' : '✅ Statut mis à jour avec succès'),
+              content: Text(newStatus == 'rejete' ? 'Inscription marquée comme rejetée.' : 'Statut mis à jour avec succès.'),
               backgroundColor: newStatus == 'rejete' ? AppTheme.error : AppTheme.success,
             ),
           );
@@ -1186,7 +1185,7 @@ class _AdminInscriptionsState extends State<AdminInscriptions> with TickerProvid
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('❌ Erreur: $e'),
+            content: Text('Erreur : $e'),
             backgroundColor: AppTheme.error,
           ),
         );
@@ -1490,7 +1489,7 @@ class _AdminInscriptionsState extends State<AdminInscriptions> with TickerProvid
                                 if (mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
-                                      content: Text('✅ Inscription validée ! Stagiaire: ${student.prenom} ${student.nom} (${student.matricule ?? 'Sans matricule'})'),
+                                      content: Text('Inscription validée. Stagiaire : ${student.prenom} ${student.nom} (${student.matricule ?? 'Sans matricule'})'),
                                       backgroundColor: AppTheme.success,
                                       duration: const Duration(seconds: 4),
                                     ),
@@ -1501,7 +1500,7 @@ class _AdminInscriptionsState extends State<AdminInscriptions> with TickerProvid
                                 if (!ctx.mounted) return;
                                 setBtnState(() => isValidating = false);
                                 ScaffoldMessenger.of(ctx).showSnackBar(
-                                  SnackBar(content: Text('❌ Validation impossible : $error'), backgroundColor: AppTheme.error),
+                                  SnackBar(content: Text('Validation impossible : $error'), backgroundColor: AppTheme.error),
                                 );
                               }
                             },
@@ -1561,4 +1560,3 @@ class _AdminInscriptionsState extends State<AdminInscriptions> with TickerProvid
     return formationData['prix']?.toString() ?? '0';
   }
 }
-

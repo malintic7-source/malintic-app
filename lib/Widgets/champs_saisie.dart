@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gestion_formations/config/theme.dart';
 
 Widget myTextField(String hintText, IconData icon, bool isPassword) {
   return TextField(
@@ -7,11 +8,19 @@ Widget myTextField(String hintText, IconData icon, bool isPassword) {
       prefixIcon: Icon(icon),
       hintText: hintText,
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(30.0),
-        borderSide: BorderSide.none,
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: AppTheme.divider),
       ),
       filled: true,
-      fillColor: Colors.white,
+      fillColor: AppTheme.surface,
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: AppTheme.divider),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: AppTheme.primary, width: 2),
+      ),
     ),
   );
 }

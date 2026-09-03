@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:animate_do/animate_do.dart';
 import 'package:gestion_formations/Models/user.dart';
 import 'package:gestion_formations/Models/formation.dart';
 import 'package:gestion_formations/Services/db_services.dart';
@@ -107,7 +106,7 @@ class _DiscoverFormationsPageState extends State<DiscoverFormationsPage> with Ti
             child: Container(
               decoration: BoxDecoration(
                 color: AppTheme.surface,
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(16),
                 boxShadow: AppTheme.cardShadow,
               ),
               padding: const EdgeInsets.all(20),
@@ -1017,7 +1016,7 @@ class _DiscoverFormationsPageState extends State<DiscoverFormationsPage> with Ti
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('✅ Inscription réussie!'),
+          content: Text('Inscription réussie.'),
           backgroundColor: Color(0xFF10B981),
           duration: Duration(seconds: 2),
         ),
@@ -1028,7 +1027,7 @@ class _DiscoverFormationsPageState extends State<DiscoverFormationsPage> with Ti
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('✅ Inscription réussie!'),
+          content: Text('Inscription réussie.'),
           backgroundColor: Color(0xFF10B981),
           duration: Duration(seconds: 2),
         ),
@@ -1042,7 +1041,7 @@ class _DiscoverFormationsPageState extends State<DiscoverFormationsPage> with Ti
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('❌ Erreur lors de l\'inscription: $e'),
+          content: Text('Erreur lors de l\'inscription : $e'),
           backgroundColor: Color(0xFFEF4444),
           duration: Duration(seconds: 3),
         ),
@@ -1096,7 +1095,7 @@ class _DiscoverFormationsPageState extends State<DiscoverFormationsPage> with Ti
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('📄 Brochure PDF téléchargée avec succès !'),
+          content: Text('Brochure PDF téléchargée avec succès.'),
           backgroundColor: AppTheme.success,
         ),
       );

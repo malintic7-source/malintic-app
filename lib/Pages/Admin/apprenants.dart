@@ -1,4 +1,3 @@
-import 'package:animate_do/animate_do.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
@@ -283,7 +282,7 @@ class _AdminApprenantsState extends State<AdminApprenants>
               buildFilterDd(
                 _selectedSexeFilter,
                 const [
-                  DropdownMenuItem(value: 'Tous', child: Text('👤 Sexe: Tous')),
+                  DropdownMenuItem(value: 'Tous', child: Text('Sexe: Tous')),
                   DropdownMenuItem(value: 'Homme', child: Text('♂ Homme')),
                   DropdownMenuItem(value: 'Femme', child: Text('♀ Femme')),
                 ],
@@ -294,9 +293,9 @@ class _AdminApprenantsState extends State<AdminApprenants>
               buildFilterDd(
                 _selectedStatutFilter,
                 const [
-                  DropdownMenuItem(value: 'Tous', child: Text('🔘 Statut: Tous')),
-                  DropdownMenuItem(value: 'Actif', child: Text('✅ Actif')),
-                  DropdownMenuItem(value: 'Inactif', child: Text('🚫 Bloqué')),
+                  DropdownMenuItem(value: 'Tous', child: Text('Statut: Tous')),
+                  DropdownMenuItem(value: 'Actif', child: Text('Actif')),
+                  DropdownMenuItem(value: 'Inactif', child: Text('Bloqué')),
                 ],
                 (val) { if (val != null) { setState(() => _selectedStatutFilter = val); _applyFilter(); } },
                 active: _selectedStatutFilter != 'Tous', col: AppTheme.success,
@@ -305,7 +304,7 @@ class _AdminApprenantsState extends State<AdminApprenants>
               buildFilterDd(
                 _selectedFormationFilter,
                 [
-                  const DropdownMenuItem(value: 'Toutes', child: Text('🎓 Formation: Toutes')),
+                  const DropdownMenuItem(value: 'Toutes', child: Text('Formation: Toutes')),
                   ...formations.map((f) => DropdownMenuItem(value: f.id, child: Text(f.titre, overflow: TextOverflow.ellipsis))),
                 ],
                 (val) { if (val != null) { setState(() => _selectedFormationFilter = val); _applyFilter(); } },
@@ -315,10 +314,10 @@ class _AdminApprenantsState extends State<AdminApprenants>
               buildFilterDd(
                 _selectedPaiementFilter,
                 const [
-                  DropdownMenuItem(value: 'Tous', child: Text('💳 Paiement: Tous')),
-                  DropdownMenuItem(value: 'Paiement Complet', child: Text('✅ Payé')),
-                  DropdownMenuItem(value: 'Reste à payer', child: Text('⚠️ Reste')),
-                  DropdownMenuItem(value: 'Non payé', child: Text('❌ Non payé')),
+                  DropdownMenuItem(value: 'Tous', child: Text('Paiement: Tous')),
+                  DropdownMenuItem(value: 'Paiement Complet', child: Text('Payé')),
+                  DropdownMenuItem(value: 'Reste à payer', child: Text('Reste')),
+                  DropdownMenuItem(value: 'Non payé', child: Text('Non payé')),
                 ],
                 (val) { if (val != null) { setState(() => _selectedPaiementFilter = val); _applyFilter(); } },
                 active: _selectedPaiementFilter != 'Tous', col: const Color(0xFFD97706),
@@ -327,7 +326,7 @@ class _AdminApprenantsState extends State<AdminApprenants>
               buildFilterDd(
                 _selectedPeriodeFilter,
                 const [
-                  DropdownMenuItem(value: 'Toutes', child: Text('📅 Période: Toutes')),
+                  DropdownMenuItem(value: 'Toutes', child: Text('Période: Toutes')),
                   DropdownMenuItem(value: 'Ce mois', child: Text('Ce mois-ci')),
                   DropdownMenuItem(value: '3 mois', child: Text('3 derniers mois')),
                   DropdownMenuItem(value: 'Cette année', child: Text('Cette année')),
@@ -339,9 +338,9 @@ class _AdminApprenantsState extends State<AdminApprenants>
               buildFilterDd(
                 _selectedCompletionFilter,
                 const [
-                  DropdownMenuItem(value: 'Tous', child: Text('🏁 Complétion: Tous')),
-                  DropdownMenuItem(value: 'Au moins une terminée', child: Text('✅ Terminée')),
-                  DropdownMenuItem(value: 'En cours', child: Text('🔄 En cours')),
+                  DropdownMenuItem(value: 'Tous', child: Text('Complétion: Tous')),
+                  DropdownMenuItem(value: 'Au moins une terminée', child: Text('Terminée')),
+                  DropdownMenuItem(value: 'En cours', child: Text('En cours')),
                 ],
                 (val) { if (val != null) { setState(() => _selectedCompletionFilter = val); _applyFilter(); } },
                 active: _selectedCompletionFilter != 'Tous', col: const Color(0xFF0D9488),
@@ -560,7 +559,7 @@ class _AdminApprenantsState extends State<AdminApprenants>
     if (apprenants.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('✅ Rapport CSV exporté avec succès (12 colonnes) !'),
+        content: Text('Rapport CSV exporté avec succès (12 colonnes).'),
         backgroundColor: AppTheme.success,
       ),
     );
@@ -607,7 +606,7 @@ class _AdminApprenantsState extends State<AdminApprenants>
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('✅ Rapport CSV exporté avec succès (12 colonnes) !'),
+        content: Text('Rapport CSV exporté avec succès (12 colonnes).'),
         backgroundColor: AppTheme.success,
       ),
     );
@@ -1212,7 +1211,7 @@ class _AdminApprenantsState extends State<AdminApprenants>
     final nom = (data['nom'] ?? '').toString().trim();
     final fullName = (prenom.isNotEmpty || nom.isNotEmpty)
         ? '$prenom $nom'
-        : 'Apprenant #${userId.substring(0, 6)}';
+        : 'Apprenant #${userId.length > 6 ? userId.substring(0, 6) : userId}';
     final email = (data['email'] ?? '').toString();
     final phone = (data['phone'] ?? data['telephone'] ?? '').toString();
     final matricule = (data['matricule'] ?? '').toString().trim();
@@ -1713,7 +1712,7 @@ class _AdminApprenantsState extends State<AdminApprenants>
       );
   }
 
-  Future<void> _confirmDeleteApprenant(
+  Future<bool> _confirmDeleteApprenant(
     BuildContext context,
     String id,
     String name,
@@ -1750,27 +1749,42 @@ class _AdminApprenantsState extends State<AdminApprenants>
     if (confirm == true) {
       final user = _db.getUserById(id);
       final email = user?.email.trim().toLowerCase() ?? '';
-      await _db.deleteUser(id);
-      await _db.deleteInscription(id);
-      if (email.isNotEmpty) {
-        _db.recordDeletedDoc('user_emails', email);
+
+      // Mise à jour immédiate de l'état local pour faire disparaître la carte instantanément
+      setState(() {
+        _allUsers.removeWhere((u) => u.id == id || (email.isNotEmpty && u.email.trim().toLowerCase() == email));
+        _filteredUsers.removeWhere((u) => u.id == id || (email.isNotEmpty && u.email.trim().toLowerCase() == email));
+      });
+
+      try {
+        await _db.deleteUser(id);
+        await _db.deleteInscription(id);
+        if (email.isNotEmpty) {
+          _db.recordDeletedDoc('user_emails', email);
+        }
+        final studentInscriptions = _db.getInscriptions().where((ins) {
+          final insEmail = ins.email?.trim().toLowerCase() ?? '';
+          return ins.etudiantId == id || ins.id == id || (email.isNotEmpty && insEmail == email);
+        }).toList();
+        for (final ins in studentInscriptions) {
+          await _db.deleteInscription(ins.id);
+        }
+      } catch (e) {
+        debugPrint('[Apprenants] Erreur suppression apprenant: $e');
       }
-      final studentInscriptions = _db.getInscriptions().where((ins) {
-        final insEmail = ins.email?.trim().toLowerCase() ?? '';
-        return ins.etudiantId == id || ins.id == id || (email.isNotEmpty && insEmail == email);
-      }).toList();
-      for (final ins in studentInscriptions) {
-        await _db.deleteInscription(ins.id);
-      }
+
       _applyFilter();
-      if (!mounted) return;
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Apprenant supprimé avec succès'),
-          backgroundColor: AppTheme.success,
-        ),
-      );
+      if (mounted) {
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text('Apprenant supprimé avec succès'),
+            backgroundColor: AppTheme.success,
+          ),
+        );
+      }
+      return true;
     }
+    return false;
   }
 
   Future<void> _toggleBlockUser(String userId, bool block) async {
@@ -3145,6 +3159,28 @@ class _AdminApprenantsState extends State<AdminApprenants>
                       },
                     ),
                   ],
+                  const SizedBox(height: 8),
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.delete_forever_rounded, size: 16, color: AppTheme.error),
+                    label: const Text('Supprimer l\'apprenant'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppTheme.error,
+                      side: const BorderSide(color: AppTheme.error),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    onPressed: () async {
+                      final fullName = '${data['prenom'] ?? ''} ${data['nom'] ?? ''}'.trim();
+                      final deleted = await _confirmDeleteApprenant(
+                        context,
+                        userId,
+                        fullName.isNotEmpty ? fullName : 'l\'apprenant',
+                      );
+                      if (deleted == true && context.mounted) {
+                        Navigator.pop(context);
+                      }
+                    },
+                  ),
                   const SizedBox(height: 4),
                   TextButton(
                     onPressed: () => Navigator.pop(context),

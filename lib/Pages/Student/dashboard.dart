@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:animate_do/animate_do.dart';
 import 'package:gestion_formations/Models/user.dart';
 import 'package:gestion_formations/Models/formation.dart';
 import 'package:gestion_formations/Models/inscription.dart';
@@ -23,7 +22,6 @@ class StudentDashboard extends StatefulWidget {
 class _StudentDashboardState extends State<StudentDashboard> with TickerProviderStateMixin {
   final LocalDataService _db = LocalDataService();
   late AnimationController _fadeController;
-  Timer? _refreshTimer;
   StreamSubscription<void>? _dataSub;
 
   @override
@@ -65,7 +63,7 @@ class _StudentDashboardState extends State<StudentDashboard> with TickerProvider
               child: Container(
                 decoration: BoxDecoration(
                   color: AppTheme.surface,
-                  borderRadius: BorderRadius.circular(24),
+                  borderRadius: BorderRadius.circular(16),
                   boxShadow: AppTheme.cardShadow,
                 ),
                 padding: const EdgeInsets.all(20),
@@ -123,7 +121,7 @@ class _StudentDashboardState extends State<StudentDashboard> with TickerProvider
       opacity: _fadeController,
       child: Container(
         decoration: BoxDecoration(
-          gradient: AppTheme.heroGradient,
+          color: AppTheme.primary,
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
@@ -145,7 +143,7 @@ class _StudentDashboardState extends State<StudentDashboard> with TickerProvider
                     crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       Text(
-                        'Bienvenue 👋, ',
+                        'Bienvenue, ',
                         style: GoogleFonts.poppins(
                           fontSize: 15,
                           color: Colors.white.withValues(alpha: 0.95),
@@ -679,7 +677,7 @@ class _StudentDashboardState extends State<StudentDashboard> with TickerProvider
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          '🎓 Vos Attestations Officielles Disponibles',
+                          'Vos attestations officielles disponibles',
                           style: GoogleFonts.poppins(
                             fontSize: 15,
                             fontWeight: FontWeight.w700,

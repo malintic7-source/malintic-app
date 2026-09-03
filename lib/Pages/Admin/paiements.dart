@@ -214,7 +214,7 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
                         setState(() {});
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text('🔄 Données des paiements actualisées !'),
+                            content: Text('Données des paiements actualisées.'),
                             backgroundColor: AppTheme.primary,
                             duration: Duration(seconds: 2),
                           ),
@@ -885,7 +885,7 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
 
         final tableRows = filteredPayments.map((p) {
           final student = _db.getUserById(p.etudiantId);
-          final studentName = student != null ? '${student.prenom} ${student.nom}' : 'Stagiaire #${p.etudiantId.substring(0, 6)}';
+          final studentName = student != null ? '${student.prenom} ${student.nom}' : 'Stagiaire #${p.etudiantId.length > 6 ? p.etudiantId.substring(0, 6) : p.etudiantId}';
           final statusColor = _getStatusColorFromPayment(p.status);
           final statusLabel = _getStatusLabelFromPayment(p.status);
 
@@ -981,12 +981,12 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
       await _db.updatePaymentStatus(payment.id, 'effectue');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('✅ Paiement validé.'), backgroundColor: AppTheme.success),
+        const SnackBar(content: Text('Paiement validé.'), backgroundColor: AppTheme.success),
       );
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('⚠️ $error'), backgroundColor: AppTheme.error),
+        SnackBar(content: Text('$error'), backgroundColor: AppTheme.error),
       );
     }
   }
@@ -1008,7 +1008,9 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
       return;
     }
 
-    final ref = payment.referenceTransaction?.isNotEmpty == true ? payment.referenceTransaction! : payment.id.substring(0, 8);
+    final ref = payment.referenceTransaction?.isNotEmpty == true
+        ? payment.referenceTransaction!
+        : (payment.id.length > 8 ? payment.id.substring(0, 8) : payment.id);
     final text = 'Bonjour ${student.nomComplet},\n\n'
         'Le Centre M@LI_NTIC accuse bonne réception de votre règlement de ${payment.montant.toStringAsFixed(0)} FCFA '
         '(Tranche ${payment.trancheNumero}/${payment.nombreTranches}, Réf: $ref).\n\n'
@@ -1186,8 +1188,8 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
                           icon: const Icon(Icons.local_offer_rounded, color: AppTheme.accent, size: 20),
                           label: Text(
                             _remise > 0
-                                ? '🏷️ Remise Appliquée: ${_remise.toStringAsFixed(0)} FCFA (Modifier)'
-                                : '🏷️ Accorder une Remise (Décision Manuelle)',
+                                ? 'Remise appliquée : ${_remise.toStringAsFixed(0)} FCFA (Modifier)'
+                                : 'Accorder une remise (décision manuelle)',
                             style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w700, color: AppTheme.accent),
                           ),
                           onPressed: () => _showApplyDiscountModal(
@@ -1483,7 +1485,7 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
     if (_selectedStudentId == null || _selectedFormationId == null) {
       if (!mounted) return false;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('⚠️ Veuillez sélectionner un stagiaire et une formation.'), backgroundColor: AppTheme.warning),
+        const SnackBar(content: Text('Veuillez sélectionner un stagiaire et une formation.'), backgroundColor: AppTheme.warning),
       );
       return false;
     }
@@ -1497,7 +1499,7 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
     if (parsedAmount <= 0) {
       if (!mounted) return false;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('⚠️ Le montant du versement doit être supérieur à 0 FCFA.'), backgroundColor: AppTheme.warning),
+        const SnackBar(content: Text('Le montant du versement doit être supérieur à 0 FCFA.'), backgroundColor: AppTheme.warning),
       );
       return false;
     }
@@ -1509,7 +1511,7 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
     if (inscription == null) {
       if (!mounted) return false;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('⚠️ Inscription introuvable pour ce stagiaire.'), backgroundColor: AppTheme.error),
+        const SnackBar(content: Text('Inscription introuvable pour ce stagiaire.'), backgroundColor: AppTheme.error),
       );
       return false;
     }
@@ -1517,7 +1519,7 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
     if (parsedInstallment < 1 || parsedTotalInstallments < 1 || parsedInstallment > parsedTotalInstallments) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('⚠️ Le numéro de tranche doit être compris entre 1 et le nombre total de tranches.'), backgroundColor: AppTheme.warning),
+          const SnackBar(content: Text('Le numéro de tranche doit être compris entre 1 et le nombre total de tranches.'), backgroundColor: AppTheme.warning),
         );
       }
       return false;
@@ -1532,7 +1534,7 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
     if (parsedAmount > remaining) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('⚠️ Le versement dépasse le solde restant (${remaining.toStringAsFixed(0)} FCFA).'), backgroundColor: AppTheme.warning),
+          SnackBar(content: Text('Le versement dépasse le solde restant (${remaining.toStringAsFixed(0)} FCFA).'), backgroundColor: AppTheme.warning),
         );
       }
       return false;
@@ -1562,7 +1564,7 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('⚠️ $error'), backgroundColor: AppTheme.error),
+          SnackBar(content: Text('$error'), backgroundColor: AppTheme.error),
         );
       }
       return false;
@@ -1577,7 +1579,7 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
 
     if (!mounted) return true;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('✅ Versement enregistré avec succès !'), backgroundColor: AppTheme.success),
+      const SnackBar(content: Text('Versement enregistré avec succès.'), backgroundColor: AppTheme.success),
     );
     return true;
   }

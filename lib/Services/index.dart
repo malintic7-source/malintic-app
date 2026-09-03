@@ -19,8 +19,6 @@ export 'tab_session_lifecycle.dart';
 // Data & Sync
 export 'db_services.dart';
 export 'polling_config.dart';
-export 'supabase_config.dart';
-export 'supabase_mapper.dart';
 
 // Storage
 export 'local_storage.dart';

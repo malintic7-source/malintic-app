@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:animate_do/animate_do.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:gestion_formations/Models/user.dart';
@@ -20,7 +19,6 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
   String selectedRole = 'Tous';
   late AnimationController _fadeController;
   StreamSubscription<void>? _dataSub;
-  Timer? _refreshTimer;
 
   @override
   void initState() {
@@ -111,10 +109,17 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
                   onTap: () => _showCreateUserDialog(context),
                   borderRadius: BorderRadius.circular(12),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 12,
+                    ),
                     child: Row(
                       children: [
-                        const Icon(Icons.add_rounded, color: Colors.white, size: 20),
+                        const Icon(
+                          Icons.add_rounded,
+                          color: Colors.white,
+                          size: 20,
+                        ),
                         const SizedBox(width: 8),
                         Text(
                           'Ajouter',
@@ -143,11 +148,18 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
                   onTap: () => _showCreateUserDialog(context),
                   borderRadius: BorderRadius.circular(10),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 8,
+                    ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.add_rounded, color: Colors.white, size: 18),
+                        const Icon(
+                          Icons.add_rounded,
+                          color: Colors.white,
+                          size: 18,
+                        ),
                         const SizedBox(width: 4),
                         Text(
                           'Ajouter',
@@ -200,7 +212,10 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide.none,
               ),
-              contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+              contentPadding: const EdgeInsets.symmetric(
+                vertical: 14,
+                horizontal: 16,
+              ),
             ),
             onChanged: (value) => setState(() {}),
           ),
@@ -301,7 +316,11 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
               padding: const EdgeInsets.symmetric(vertical: 40),
               child: Column(
                 children: [
-                  const Icon(Icons.person_off_rounded, size: 48, color: Colors.black12),
+                  const Icon(
+                    Icons.person_off_rounded,
+                    size: 48,
+                    color: Colors.black12,
+                  ),
                   const SizedBox(height: 16),
                   Text(
                     'Aucun utilisateur',
@@ -335,268 +354,339 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
     return Container(
       key: ValueKey(user.id),
       decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(14),
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: _getRoleGradient(user.role),
+        borderRadius: BorderRadius.circular(14),
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(colors: _getRoleGradient(user.role)),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: _getRoleGradient(
+                      user.role,
+                    )[0].withValues(alpha: 0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
                   ),
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: _getRoleGradient(user.role)[0].withValues(alpha: 0.3),
-                      blurRadius: 8,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: Icon(
-                  _getRoleIcon(user.role),
-                  color: Colors.white,
-                  size: 22,
-                ),
+                ],
               ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      user.nomComplet,
-                      style: GoogleFonts.poppins(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.black87,
-                      ),
+              child: Icon(
+                _getRoleIcon(user.role),
+                color: Colors.white,
+                size: 22,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    user.nomComplet,
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.black87,
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      user.email,
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        color: Colors.black54,
-                        fontWeight: FontWeight.w400,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    user.email,
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: Colors.black54,
+                      fontWeight: FontWeight.w400,
                     ),
-                    const SizedBox(height: 6),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 4,
-                      children: [
-                        InkWell(
-                          onTap: () => _showAssignRoleDialog(context, user),
-                          borderRadius: BorderRadius.circular(6),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: _getRoleGradient(user.role)[0].withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: _getRoleGradient(user.role)[0].withValues(alpha: 0.3)),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  _roleLabel(user.role),
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: _getRoleGradient(user.role)[0],
-                                  ),
-                                ),
-                                const SizedBox(width: 4),
-                                Icon(
-                                  Icons.swap_horiz_rounded,
-                                  size: 13,
-                                  color: _getRoleGradient(user.role)[0],
-                                ),
-                              ],
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    children: [
+                      InkWell(
+                        onTap: () => _showAssignRoleDialog(context, user),
+                        borderRadius: BorderRadius.circular(6),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _getRoleGradient(
+                              user.role,
+                            )[0].withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: _getRoleGradient(
+                                user.role,
+                              )[0].withValues(alpha: 0.3),
                             ),
                           ),
-                        ),
-                        InkWell(
-                          onTap: () {
-                            final localContext = context;
-                            AuthProvider()
-                                .setUserActive(user.id, !user.estActif)
-                                .then((_) {
-                              if (!localContext.mounted) return;
-                              ScaffoldMessenger.of(localContext).showSnackBar(
-                                SnackBar(
-                                  content: Text(user.estActif
-                                      ? 'Utilisateur désactivé'
-                                      : 'Utilisateur activé'),
-                                  backgroundColor: AppTheme.primary,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                _roleLabel(user.role),
+                                style: GoogleFonts.poppins(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: _getRoleGradient(user.role)[0],
                                 ),
-                              );
-                            });
-                          },
-                          borderRadius: BorderRadius.circular(6),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: user.estActif
-                                  ? const Color(0xFF10B981).withValues(alpha: 0.1)
-                                  : Colors.black.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  user.estActif
-                                      ? Icons.check_circle_rounded
-                                      : Icons.cancel_rounded,
-                                  size: 12,
+                              ),
+                              const SizedBox(width: 4),
+                              Icon(
+                                Icons.swap_horiz_rounded,
+                                size: 13,
+                                color: _getRoleGradient(user.role)[0],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      InkWell(
+                        onTap: () {
+                          final localContext = context;
+                          AuthProvider()
+                              .setUserActive(user.id, !user.estActif)
+                              .then((_) {
+                                if (!localContext.mounted) return;
+                                ScaffoldMessenger.of(localContext).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      user.estActif
+                                          ? 'Utilisateur désactivé'
+                                          : 'Utilisateur activé',
+                                    ),
+                                    backgroundColor: AppTheme.primary,
+                                  ),
+                                );
+                              });
+                        },
+                        borderRadius: BorderRadius.circular(6),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: user.estActif
+                                ? const Color(0xFF10B981).withValues(alpha: 0.1)
+                                : Colors.black.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                user.estActif
+                                    ? Icons.check_circle_rounded
+                                    : Icons.cancel_rounded,
+                                size: 12,
+                                color: user.estActif
+                                    ? const Color(0xFF10B981)
+                                    : Colors.black54,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                user.estActif ? 'Actif' : 'Inactif',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
                                   color: user.estActif
                                       ? const Color(0xFF10B981)
                                       : Colors.black54,
                                 ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  user.estActif ? 'Actif' : 'Inactif',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: user.estActif
-                                        ? const Color(0xFF10B981)
-                                        : Colors.black54,
-                                  ),
-                                ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
                         ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              PopupMenuButton<String>(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                color: Colors.white,
-                elevation: 6,
-                shadowColor: Colors.black.withValues(alpha: 0.15),
-                onSelected: (value) {
-                  if (value == 'assign_role') {
-                    _showAssignRoleDialog(context, user);
-                  } else if (value == 'modifier') {
-                    _showEditUserDialog(context, user);
-                  } else if (value == 'reset_password') {
-                    _resetUserPassword(context, user);
-                  } else if (value == 'toggle') {
-                    final localContext = context;
-                    AuthProvider()
-                        .setUserActive(user.id, !user.estActif)
-                        .then((_) {
-                      if (!localContext.mounted) return;
-                      ScaffoldMessenger.of(localContext).showSnackBar(
-                        SnackBar(
-                          content: Text(user.estActif
-                              ? 'Utilisateur désactivé'
-                              : 'Utilisateur activé'),
-                          backgroundColor: AppTheme.primary,
-                        ),
-                      );
-                    });
-                  } else if (value == 'delete') {
-                    _confirmDeleteUser(context, user);
-                  }
-                },
-                itemBuilder: (context) => [
-                  PopupMenuItem(
-                    value: 'assign_role',
-                    child: Row(
-                      children: [
-                        const Icon(Icons.manage_accounts_rounded, size: 18, color: AppTheme.primary),
-                        const SizedBox(width: 8),
-                        Text('Affecter / Changer Rôle', style: GoogleFonts.poppins(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
-                      ],
-                    ),
-                  ),
-                  PopupMenuItem(
-                    value: 'modifier',
-                    child: Row(
-                      children: [
-                        const Icon(Icons.edit_rounded, size: 18, color: Color(0xFF0D9488)),
-                        const SizedBox(width: 8),
-                        Text('Modifier', style: GoogleFonts.poppins(fontSize: 12.5, fontWeight: FontWeight.w500, color: AppTheme.textPrimary)),
-                      ],
-                    ),
-                  ),
-                  PopupMenuItem(
-                    value: 'toggle',
-                    child: Row(
-                      children: [
-                        Icon(
-                          user.estActif
-                              ? Icons.block_rounded
-                              : Icons.check_circle_rounded,
-                          size: 18,
-                          color: user.estActif ? const Color(0xFFD97706) : AppTheme.success,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(user.estActif ? 'Désactiver' : 'Activer', style: GoogleFonts.poppins(fontSize: 12.5, fontWeight: FontWeight.w500, color: AppTheme.textPrimary)),
-                      ],
-                    ),
-                  ),
-                  PopupMenuItem(
-                    value: 'reset_password',
-                    child: Row(
-                      children: [
-                        const Icon(Icons.key_rounded, size: 18, color: AppTheme.primary),
-                        const SizedBox(width: 8),
-                        Text('Modifier mot de passe', style: GoogleFonts.poppins(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuDivider(),
-                  PopupMenuItem(
-                    value: 'delete',
-                    child: Row(
-                      children: [
-                        const Icon(Icons.delete_forever_rounded, color: Color(0xFFEF4444), size: 18),
-                        const SizedBox(width: 8),
-                        Text('Supprimer', style: GoogleFonts.poppins(fontSize: 12.5, color: const Color(0xFFEF4444), fontWeight: FontWeight.w700)),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ],
-                child: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(
-                    Icons.more_vert_rounded,
-                    color: Colors.black54,
-                    size: 20,
+              ),
+            ),
+            const SizedBox(width: 8),
+            PopupMenuButton<String>(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+              color: Colors.white,
+              elevation: 6,
+              shadowColor: Colors.black.withValues(alpha: 0.15),
+              onSelected: (value) {
+                if (value == 'assign_role') {
+                  _showAssignRoleDialog(context, user);
+                } else if (value == 'modifier') {
+                  _showEditUserDialog(context, user);
+                } else if (value == 'reset_password') {
+                  _resetUserPassword(context, user);
+                } else if (value == 'toggle') {
+                  final localContext = context;
+                  AuthProvider().setUserActive(user.id, !user.estActif).then((
+                    _,
+                  ) {
+                    if (!localContext.mounted) return;
+                    ScaffoldMessenger.of(localContext).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          user.estActif
+                              ? 'Utilisateur désactivé'
+                              : 'Utilisateur activé',
+                        ),
+                        backgroundColor: AppTheme.primary,
+                      ),
+                    );
+                  });
+                } else if (value == 'delete') {
+                  _confirmDeleteUser(context, user);
+                }
+              },
+              itemBuilder: (context) => [
+                PopupMenuItem(
+                  value: 'assign_role',
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.manage_accounts_rounded,
+                        size: 18,
+                        color: AppTheme.primary,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Affecter / Changer Rôle',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.textPrimary,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
+                PopupMenuItem(
+                  value: 'modifier',
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.edit_rounded,
+                        size: 18,
+                        color: Color(0xFF0D9488),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Modifier',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w500,
+                          color: AppTheme.textPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'toggle',
+                  child: Row(
+                    children: [
+                      Icon(
+                        user.estActif
+                            ? Icons.block_rounded
+                            : Icons.check_circle_rounded,
+                        size: 18,
+                        color: user.estActif
+                            ? const Color(0xFFD97706)
+                            : AppTheme.success,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        user.estActif ? 'Désactiver' : 'Activer',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w500,
+                          color: AppTheme.textPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'reset_password',
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.key_rounded,
+                        size: 18,
+                        color: AppTheme.primary,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Modifier mot de passe',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.textPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const PopupMenuDivider(),
+                PopupMenuItem(
+                  value: 'delete',
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.delete_forever_rounded,
+                        color: Color(0xFFEF4444),
+                        size: 18,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Supprimer',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12.5,
+                          color: const Color(0xFFEF4444),
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.more_vert_rounded,
+                  color: Colors.black54,
+                  size: 20,
+                ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
-      );
+      ),
+    );
   }
 
   List<User> _filterUsers(List<User> users) {
@@ -607,28 +697,40 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
       final email = user.email.trim().toLowerCase();
       if (deletedUserIds.contains(user.id)) return false;
       if (email.isNotEmpty && deletedUserEmails.contains(email)) return false;
-      final matchesSearch = query.isEmpty ||
+      final matchesSearch =
+          query.isEmpty ||
           user.nom.toLowerCase().contains(query) ||
           user.prenom.toLowerCase().contains(query) ||
           user.email.toLowerCase().contains(query) ||
           user.phone.toLowerCase().contains(query) ||
           (user.matricule ?? '').toLowerCase().contains(query);
       final roleStr = user.role.toString().split('.').last.toLowerCase();
-      final matchesRole = selectedRole == 'Tous' || roleStr == selectedRole.toLowerCase() || (selectedRole.toLowerCase() == 'apprenant' && roleStr == 'etudiant');
+      final matchesRole =
+          selectedRole == 'Tous' ||
+          roleStr == selectedRole.toLowerCase() ||
+          (selectedRole.toLowerCase() == 'apprenant' && roleStr == 'etudiant');
       return matchesSearch && matchesRole;
     }).toList();
   }
 
   String _roleLabel(UserRole role) {
     switch (role) {
-      case UserRole.admin: return 'Administrateur';
-      case UserRole.dg: return 'Directeur Général (DG)';
-      case UserRole.daf: return 'DAF';
-      case UserRole.comptable: return 'Comptable';
-      case UserRole.assistant: return 'Assistant(e)';
-      case UserRole.it: return 'Responsable IT';
-      case UserRole.formateur: return 'Formateur';
-      case UserRole.apprenant: return 'Stagiaire / Apprenant';
+      case UserRole.admin:
+        return 'Administrateur';
+      case UserRole.dg:
+        return 'Directeur Général (DG)';
+      case UserRole.daf:
+        return 'DAF';
+      case UserRole.comptable:
+        return 'Comptable';
+      case UserRole.assistant:
+        return 'Assistant(e)';
+      case UserRole.it:
+        return 'Responsable IT';
+      case UserRole.formateur:
+        return 'Formateur';
+      case UserRole.apprenant:
+        return 'Stagiaire / Apprenant';
     }
   }
 
@@ -723,10 +825,12 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
                     prefixIcon: Icon(Icons.security_rounded),
                   ),
                   items: UserRole.values
-                      .map((role) => DropdownMenuItem(
-                            value: role,
-                            child: Text(_roleLabel(role)),
-                          ))
+                      .map(
+                        (role) => DropdownMenuItem(
+                          value: role,
+                          child: Text(_roleLabel(role)),
+                        ),
+                      )
                       .toList(),
                   onChanged: (value) {
                     if (value != null) {
@@ -738,42 +842,70 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
                   const SizedBox(height: 16),
                   Text(
                     'Affectations formations et modules',
-                    style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w700),
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     'Cochez les modules dispensés. Une formation est attribuée dès qu’un module est sélectionné.',
-                    style: GoogleFonts.poppins(fontSize: 11, color: Colors.black54),
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      color: Colors.black54,
+                    ),
                   ),
                   const SizedBox(height: 8),
-                  ...formations.map((formation) => Container(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade50,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: AppTheme.primary.withValues(alpha: 0.18)),
+                  ...formations.map(
+                    (formation) => Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: AppTheme.primary.withValues(alpha: 0.18),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            formation.titre,
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          ...formation.modules.map(
+                            (module) => CheckboxListTile(
+                              dense: true,
+                              contentPadding: EdgeInsets.zero,
+                              value: selectedModulesByFormation[formation.id]!
+                                  .contains(module),
+                              title: Text(
+                                module,
+                                style: GoogleFonts.poppins(fontSize: 12),
+                              ),
+                              onChanged: (checked) => setDialogState(() {
+                                if (checked == true) {
+                                  selectedModulesByFormation[formation.id]!.add(
+                                    module,
+                                  );
+                                } else {
+                                  selectedModulesByFormation[formation.id]!
+                                      .remove(module);
+                                }
+                              }),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(formation.titre, style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w700)),
-                        ...formation.modules.map((module) => CheckboxListTile(
-                          dense: true,
-                          contentPadding: EdgeInsets.zero,
-                          value: selectedModulesByFormation[formation.id]!.contains(module),
-                          title: Text(module, style: GoogleFonts.poppins(fontSize: 12)),
-                          onChanged: (checked) => setDialogState(() {
-                            if (checked == true) {
-                              selectedModulesByFormation[formation.id]!.add(module);
-                            } else {
-                              selectedModulesByFormation[formation.id]!.remove(module);
-                            }
-                          }),
-                        )),
-                      ],
-                    ),
-                  )),
+                  ),
                 ],
                 const SizedBox(height: 16),
                 Container(
@@ -814,28 +946,47 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
                           final localContext = context;
                           final prenom = prenomController.text.trim();
                           final nom = nomController.text.trim();
-                          final email = emailController.text.trim().toLowerCase();
+                          final email = emailController.text
+                              .trim()
+                              .toLowerCase();
                           final phone = phoneController.text.trim();
 
                           if (prenom.isEmpty || nom.isEmpty || email.isEmpty) {
                             ScaffoldMessenger.of(localContext).showSnackBar(
-                              const SnackBar(content: Text('Veuillez remplir tous les champs obligatoires (prénom, nom, email).')),
+                              const SnackBar(
+                                content: Text(
+                                  'Veuillez remplir tous les champs obligatoires (prénom, nom, email).',
+                                ),
+                              ),
                             );
                             return;
                           }
 
-                          final emailRegExp = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+');
+                          final emailRegExp = RegExp(
+                            r'^[^@\s]+@[^@\s]+\.[^@\s]+',
+                          );
                           if (!emailRegExp.hasMatch(email)) {
                             ScaffoldMessenger.of(localContext).showSnackBar(
-                              const SnackBar(content: Text('Veuillez fournir une adresse email valide.')),
+                              const SnackBar(
+                                content: Text(
+                                  'Veuillez fournir une adresse email valide.',
+                                ),
+                              ),
                             );
                             return;
                           }
 
-                          final existingUser = LocalDataService().getUsers().where((u) => u.email.toLowerCase() == email).firstOrNull;
+                          final existingUser = LocalDataService()
+                              .getUsers()
+                              .where((u) => u.email.toLowerCase() == email)
+                              .firstOrNull;
                           if (existingUser != null) {
                             ScaffoldMessenger.of(localContext).showSnackBar(
-                              const SnackBar(content: Text('Un compte avec cette adresse email existe déjà.')),
+                              const SnackBar(
+                                content: Text(
+                                  'Un compte avec cette adresse email existe déjà.',
+                                ),
+                              ),
                             );
                             return;
                           }
@@ -851,18 +1002,25 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
                             );
 
                             if (selectedUserRole == UserRole.formateur) {
-                              final hasManualAssignments = selectedModulesByFormation.values
-                                  .any((modules) => modules.isNotEmpty);
+                              final hasManualAssignments =
+                                  selectedModulesByFormation.values.any(
+                                    (modules) => modules.isNotEmpty,
+                                  );
                               if (hasManualAssignments) {
-                                final formateur = LocalDataService().getUsers().firstWhere(
-                                  (user) => user.email.toLowerCase() == email,
-                                );
-                                await LocalDataService().replaceFormateurAssignments(
-                                  formateur.id,
-                                  selectedModulesByFormation.map(
-                                    (id, modules) => MapEntry(id, modules.toList()),
-                                  ),
-                                );
+                                final formateur = LocalDataService()
+                                    .getUsers()
+                                    .firstWhere(
+                                      (user) =>
+                                          user.email.toLowerCase() == email,
+                                    );
+                                await LocalDataService()
+                                    .replaceFormateurAssignments(
+                                      formateur.id,
+                                      selectedModulesByFormation.map(
+                                        (id, modules) =>
+                                            MapEntry(id, modules.toList()),
+                                      ),
+                                    );
                               }
                             }
 
@@ -889,7 +1047,10 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
                         },
                   borderRadius: BorderRadius.circular(8),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 10,
+                    ),
                     child: Text(
                       isSubmitting ? 'Création...' : 'Créer',
                       style: GoogleFonts.poppins(
@@ -959,10 +1120,12 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
                     prefixIcon: Icon(Icons.security_rounded),
                   ),
                   items: UserRole.values
-                      .map((role) => DropdownMenuItem(
-                            value: role,
-                            child: Text(_roleLabel(role)),
-                          ))
+                      .map(
+                        (role) => DropdownMenuItem(
+                          value: role,
+                          child: Text(_roleLabel(role)),
+                        ),
+                      )
                       .toList(),
                   onChanged: (value) {
                     if (value != null) {
@@ -997,7 +1160,11 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
 
                           if (prenom.isEmpty || nom.isEmpty) {
                             ScaffoldMessenger.of(localContext).showSnackBar(
-                              const SnackBar(content: Text('Veuillez remplir le prénom et le nom.')),
+                              const SnackBar(
+                                content: Text(
+                                  'Veuillez remplir le prénom et le nom.',
+                                ),
+                              ),
                             );
                             return;
                           }
@@ -1023,7 +1190,9 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
                             if (mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
-                                  content: Text('Utilisateur modifié avec succès'),
+                                  content: Text(
+                                    'Utilisateur modifié avec succès',
+                                  ),
                                   backgroundColor: AppTheme.success,
                                 ),
                               );
@@ -1041,7 +1210,10 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
                         },
                   borderRadius: BorderRadius.circular(8),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 10,
+                    ),
                     child: Text(
                       isSubmitting ? 'Modification...' : 'Modifier',
                       style: GoogleFonts.poppins(
@@ -1074,7 +1246,9 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           title: Row(
             children: [
               Container(
@@ -1083,7 +1257,11 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
                   color: AppTheme.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.lock_reset_rounded, color: AppTheme.primary, size: 24),
+                child: const Icon(
+                  Icons.lock_reset_rounded,
+                  color: AppTheme.primary,
+                  size: 24,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -1092,11 +1270,18 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
                   children: [
                     Text(
                       'Modifier le mot de passe',
-                      style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16),
+                      style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 16,
+                      ),
                     ),
                     Text(
                       user.nomComplet,
-                      style: GoogleFonts.poppins(color: AppTheme.textSecondary, fontSize: 12, fontWeight: FontWeight.w500),
+                      style: GoogleFonts.poppins(
+                        color: AppTheme.textSecondary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ],
                 ),
@@ -1119,12 +1304,19 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.info_outline_rounded, size: 18, color: Color(0xFF475569)),
+                        const Icon(
+                          Icons.info_outline_rounded,
+                          size: 18,
+                          color: Color(0xFF475569),
+                        ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             'En tant qu\'administrateur, vous pouvez définir un mot de passe personnalisé ou réinitialiser à la valeur par défaut.',
-                            style: GoogleFonts.poppins(fontSize: 11, color: const Color(0xFF475569)),
+                            style: GoogleFonts.poppins(
+                              fontSize: 11,
+                              color: const Color(0xFF475569),
+                            ),
                           ),
                         ),
                       ],
@@ -1133,7 +1325,11 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
                   const SizedBox(height: 16),
                   Text(
                     'Nouveau mot de passe',
-                    style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.textPrimary,
+                    ),
                   ),
                   const SizedBox(height: 6),
                   TextField(
@@ -1144,16 +1340,23 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
                       prefixIcon: const Icon(Icons.key_rounded, size: 20),
                       suffixIcon: IconButton(
                         icon: Icon(
-                          obscurePassword ? Icons.visibility_rounded : Icons.visibility_off_rounded,
+                          obscurePassword
+                              ? Icons.visibility_rounded
+                              : Icons.visibility_off_rounded,
                           size: 20,
                         ),
                         onPressed: () {
-                          setDialogState(() => obscurePassword = !obscurePassword);
+                          setDialogState(
+                            () => obscurePassword = !obscurePassword,
+                          );
                         },
                       ),
                       filled: true,
                       fillColor: Colors.grey.shade50,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 12,
+                      ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
                         borderSide: BorderSide(color: Colors.grey.shade300),
@@ -1164,7 +1367,10 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(color: AppTheme.primary, width: 2),
+                        borderSide: const BorderSide(
+                          color: AppTheme.primary,
+                          width: 2,
+                        ),
                       ),
                     ),
                   ),
@@ -1179,8 +1385,12 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
                         style: OutlinedButton.styleFrom(
                           visualDensity: VisualDensity.compact,
                           foregroundColor: AppTheme.primary,
-                          side: BorderSide(color: AppTheme.primary.withValues(alpha: 0.4)),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          side: BorderSide(
+                            color: AppTheme.primary.withValues(alpha: 0.4),
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                         ),
                         onPressed: () {
                           setDialogState(() {
@@ -1193,7 +1403,9 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
                   const SizedBox(height: 14),
                   InkWell(
                     onTap: () {
-                      setDialogState(() => mustChangeOnNextLogin = !mustChangeOnNextLogin);
+                      setDialogState(
+                        () => mustChangeOnNextLogin = !mustChangeOnNextLogin,
+                      );
                     },
                     borderRadius: BorderRadius.circular(8),
                     child: Padding(
@@ -1203,10 +1415,14 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
                           Checkbox(
                             value: mustChangeOnNextLogin,
                             onChanged: (val) {
-                              setDialogState(() => mustChangeOnNextLogin = val ?? true);
+                              setDialogState(
+                                () => mustChangeOnNextLogin = val ?? true,
+                              );
                             },
                             activeColor: AppTheme.primary,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(4),
+                            ),
                           ),
                           Expanded(
                             child: Column(
@@ -1214,11 +1430,17 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
                               children: [
                                 Text(
                                   'Forcer le changement à la 1ère connexion',
-                                  style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600),
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                                 Text(
                                   'L\'utilisateur devra choisir un nouveau mot de passe dès qu\'il se connectera.',
-                                  style: GoogleFonts.poppins(fontSize: 10, color: AppTheme.textSecondary),
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 10,
+                                    color: AppTheme.textSecondary,
+                                  ),
                                 ),
                               ],
                             ),
@@ -1233,7 +1455,9 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
           ),
           actions: [
             TextButton(
-              onPressed: isSubmitting ? null : () => Navigator.pop(dialogContext),
+              onPressed: isSubmitting
+                  ? null
+                  : () => Navigator.pop(dialogContext),
               child: const Text('Annuler'),
             ),
             ElevatedButton.icon(
@@ -1241,14 +1465,23 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
                   ? const SizedBox(
                       width: 16,
                       height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
                     )
                   : const Icon(Icons.check_rounded, size: 18),
-              label: Text(isSubmitting ? 'Enregistrement...' : 'Appliquer le mot de passe'),
+              label: Text(
+                isSubmitting
+                    ? 'Enregistrement...'
+                    : 'Appliquer le mot de passe',
+              ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.primary,
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
               onPressed: isSubmitting
                   ? null
@@ -1257,7 +1490,9 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
                       if (newPass.length < 6) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text('Le mot de passe doit contenir au moins 6 caractères.'),
+                            content: Text(
+                              'Le mot de passe doit contenir au moins 6 caractères.',
+                            ),
                             backgroundColor: AppTheme.error,
                           ),
                         );
@@ -1277,7 +1512,9 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
 
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text('Mot de passe de ${user.nomComplet} mis à jour avec succès.'),
+                            content: Text(
+                              'Mot de passe de ${user.nomComplet} mis à jour avec succès.',
+                            ),
                             backgroundColor: AppTheme.success,
                             duration: const Duration(seconds: 4),
                           ),
@@ -1287,7 +1524,9 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
                         setDialogState(() => isSubmitting = false);
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text('Erreur: ${e.toString().replaceAll('Exception: ', '')}'),
+                            content: Text(
+                              'Erreur: ${e.toString().replaceAll('Exception: ', '')}',
+                            ),
                             backgroundColor: AppTheme.error,
                           ),
                         );
@@ -1302,9 +1541,13 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
 
   void _confirmDeleteUser(BuildContext context, User user) {
     final currentUserId = AuthProvider().currentUser?.id;
-    final currentUserEmail = AuthProvider().currentUser?.email.trim().toLowerCase();
+    final currentUserEmail = AuthProvider().currentUser?.email
+        .trim()
+        .toLowerCase();
 
-    if (user.id == currentUserId || (currentUserEmail != null && user.email.trim().toLowerCase() == currentUserEmail)) {
+    if (user.id == currentUserId ||
+        (currentUserEmail != null &&
+            user.email.trim().toLowerCase() == currentUserEmail)) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -1330,13 +1573,21 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
                 color: const Color(0xFFEF4444).withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.delete_forever_rounded, color: Color(0xFFEF4444), size: 24),
+              child: const Icon(
+                Icons.delete_forever_rounded,
+                color: Color(0xFFEF4444),
+                size: 24,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
                 'Supprimer l\'utilisateur',
-                style: GoogleFonts.poppins(fontWeight: FontWeight.w800, fontSize: 16, color: const Color(0xFFEF4444)),
+                style: GoogleFonts.poppins(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 16,
+                  color: const Color(0xFFEF4444),
+                ),
               ),
             ),
           ],
@@ -1347,7 +1598,10 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
           children: [
             Text(
               'Êtes-vous sûr de vouloir supprimer définitivement le compte de :',
-              style: GoogleFonts.poppins(fontSize: 13, color: AppTheme.textPrimary),
+              style: GoogleFonts.poppins(
+                fontSize: 13,
+                color: AppTheme.textPrimary,
+              ),
             ),
             const SizedBox(height: 10),
             Container(
@@ -1363,50 +1617,85 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
                 children: [
                   Text(
                     user.nomComplet,
-                    style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 13.5, color: Colors.black87),
+                    style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13.5,
+                      color: Colors.black87,
+                    ),
                   ),
                   Text(
                     '${user.email} • ${_roleLabel(user.role)}',
-                    style: GoogleFonts.poppins(fontSize: 12, color: Colors.black54),
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: Colors.black54,
+                    ),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 12),
             Text(
-              '⚠️ Cette action est irréversible. Les inscriptions liées seront archivées dans le journal d\'audit.',
-              style: GoogleFonts.poppins(fontSize: 11.5, color: const Color(0xFFD97706), fontWeight: FontWeight.w500),
+              'Cette action est irréversible. Les inscriptions liées seront archivées dans le journal d\'audit.',
+              style: GoogleFonts.poppins(
+                fontSize: 11.5,
+                color: const Color(0xFFD97706),
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('Annuler', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: AppTheme.textSecondary)),
+            child: Text(
+              'Annuler',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w600,
+                color: AppTheme.textSecondary,
+              ),
+            ),
           ),
           ElevatedButton.icon(
-            icon: const Icon(Icons.delete_rounded, size: 16, color: Colors.white),
-            label: Text('Supprimer', style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 12.5, color: Colors.white)),
+            icon: const Icon(
+              Icons.delete_rounded,
+              size: 16,
+              color: Colors.white,
+            ),
+            label: Text(
+              'Supprimer',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w700,
+                fontSize: 12.5,
+                color: Colors.white,
+              ),
+            ),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFEF4444),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             ),
             onPressed: () async {
-              final localContext = context;
+              final messenger = ScaffoldMessenger.of(context);
               final email = user.email.trim().toLowerCase();
               if (email.isNotEmpty) {
                 LocalDataService().recordDeletedDoc('user_emails', email);
               }
-              await AuthProvider().deleteUser(user.id);
-              if (!localContext.mounted) return;
               Navigator.pop(ctx);
+              try {
+                await AuthProvider().deleteUser(user.id);
+              } catch (e) {
+                debugPrint('[Users] Erreur suppression utilisateur: $e');
+              }
               if (mounted) {
                 setState(() {});
-                ScaffoldMessenger.of(localContext).showSnackBar(
+                messenger.showSnackBar(
                   SnackBar(
-                    content: Text('Le compte de ${user.nomComplet} a été supprimé avec succès.'),
-                    backgroundColor: AppTheme.error,
+                    content: Text(
+                      'Le compte de ${user.nomComplet} a été supprimé avec succès.',
+                    ),
+                    backgroundColor: AppTheme.success,
                     behavior: SnackBarBehavior.floating,
                   ),
                 );
@@ -1424,49 +1713,57 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
     final rolesInfo = <UserRole, Map<String, dynamic>>{
       UserRole.admin: {
         'label': 'Administrateur Principal',
-        'desc': 'Accès total à tous les modules, gestion des utilisateurs, logs système et configurations.',
+        'desc':
+            'Accès total à tous les modules, gestion des utilisateurs, logs système et configurations.',
         'icon': Icons.admin_panel_settings_rounded,
         'color': const Color(0xFF4F46E5),
       },
       UserRole.dg: {
         'label': 'Directeur Général (DG)',
-        'desc': 'Supervision globale, validation finale des attestations, rapports stratégiques et financiers.',
+        'desc':
+            'Supervision globale, validation finale des attestations, rapports stratégiques et financiers.',
         'icon': Icons.account_balance_rounded,
         'color': const Color(0xFF0284C7),
       },
       UserRole.daf: {
         'label': 'Directeur Admin & Financier (DAF)',
-        'desc': 'Gestion de la comptabilité, encaissements, validation des soldes et des attestations.',
+        'desc':
+            'Gestion de la comptabilité, encaissements, validation des soldes et des attestations.',
         'icon': Icons.account_balance_wallet_rounded,
         'color': const Color(0xFF0D9488),
       },
       UserRole.comptable: {
         'label': 'Comptable',
-        'desc': 'Gestion de la caisse, encaissements, reçus de paiement et suivi des dettes apprenants.',
+        'desc':
+            'Gestion de la caisse, encaissements, reçus de paiement et suivi des dettes apprenants.',
         'icon': Icons.point_of_sale_rounded,
         'color': const Color(0xFF059669),
       },
       UserRole.assistant: {
         'label': 'Assistant(e) / Secrétariat',
-        'desc': 'Accueil, inscriptions, gestion des fiches apprenants et suivi des plannings.',
+        'desc':
+            'Accueil, inscriptions, gestion des fiches apprenants et suivi des plannings.',
         'icon': Icons.support_agent_rounded,
         'color': const Color(0xFFD97706),
       },
       UserRole.it: {
         'label': 'Responsable Informatique (IT)',
-        'desc': 'Maintenance système, journal d\'audit (logs), sécurité et gestion technique des comptes.',
+        'desc':
+            'Maintenance système, journal d\'audit (logs), sécurité et gestion technique des comptes.',
         'icon': Icons.terminal_rounded,
         'color': const Color(0xFF7C3AED),
       },
       UserRole.formateur: {
         'label': 'Formateur',
-        'desc': 'Espace formateur : consultation de ses modules assignés, planning et liste de ses apprenants.',
+        'desc':
+            'Espace formateur : consultation de ses modules assignés, planning et liste de ses apprenants.',
         'icon': Icons.school_rounded,
         'color': const Color(0xFF2563EB),
       },
       UserRole.apprenant: {
         'label': 'Stagiaire / Apprenant',
-        'desc': 'Espace apprenant : cours, progression, paiements, emploi du temps et attestations.',
+        'desc':
+            'Espace apprenant : cours, progression, paiements, emploi du temps et attestations.',
         'icon': Icons.person_rounded,
         'color': const Color(0xFF6B7280),
       },
@@ -1476,7 +1773,9 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           title: Row(
             children: [
               Container(
@@ -1485,15 +1784,31 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
                   color: AppTheme.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(Icons.manage_accounts_rounded, color: AppTheme.primary, size: 22),
+                child: const Icon(
+                  Icons.manage_accounts_rounded,
+                  color: AppTheme.primary,
+                  size: 22,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Affecter un rôle système', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700)),
-                    Text(user.nomComplet, style: GoogleFonts.poppins(fontSize: 12, color: Colors.black54)),
+                    Text(
+                      'Affecter un rôle système',
+                      style: GoogleFonts.poppins(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    Text(
+                      user.nomComplet,
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        color: Colors.black54,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -1508,7 +1823,10 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
                 children: [
                   Text(
                     'Sélectionnez le nouveau rôle et niveau d\'accès pour cet utilisateur :',
-                    style: GoogleFonts.poppins(fontSize: 12, color: Colors.black87),
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: Colors.black87,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   ...UserRole.values.map((role) {
@@ -1519,7 +1837,9 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
                     return Container(
                       margin: const EdgeInsets.only(bottom: 8),
                       decoration: BoxDecoration(
-                        color: isSelected ? color.withValues(alpha: 0.08) : Colors.grey.shade50,
+                        color: isSelected
+                            ? color.withValues(alpha: 0.08)
+                            : Colors.grey.shade50,
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
                           color: isSelected ? color : Colors.grey.shade200,
@@ -1540,7 +1860,8 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
                                 activeColor: color,
                                 // ignore: deprecated_member_use
                                 onChanged: (val) {
-                                  if (val != null) setDialogState(() => selectedRole = val);
+                                  if (val != null)
+                                    setDialogState(() => selectedRole = val);
                                 },
                               ),
                               Container(
@@ -1549,7 +1870,11 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
                                   color: color.withValues(alpha: 0.15),
                                   shape: BoxShape.circle,
                                 ),
-                                child: Icon(info['icon'] as IconData? ?? Icons.person, color: color, size: 18),
+                                child: Icon(
+                                  info['icon'] as IconData? ?? Icons.person,
+                                  color: color,
+                                  size: 18,
+                                ),
                               ),
                               const SizedBox(width: 12),
                               Expanded(
@@ -1561,7 +1886,9 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
                                       style: GoogleFonts.poppins(
                                         fontSize: 13,
                                         fontWeight: FontWeight.w700,
-                                        color: isSelected ? color : Colors.black87,
+                                        color: isSelected
+                                            ? color
+                                            : Colors.black87,
                                       ),
                                     ),
                                     Text(
@@ -1596,7 +1923,9 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.primary,
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
               onPressed: () async {
                 final updatedUser = User(
@@ -1623,14 +1952,17 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
                   userNom: adminUser?.nomComplet ?? 'Administration',
                   userRole: adminUser?.role.name ?? 'admin',
                   action: 'Modification de rôle',
-                  description: 'Rôle de ${user.nomComplet} modifié : ${_roleLabel(user.role)} -> ${_roleLabel(selectedRole)}',
+                  description:
+                      'Rôle de ${user.nomComplet} modifié : ${_roleLabel(user.role)} -> ${_roleLabel(selectedRole)}',
                 );
 
                 if (!context.mounted) return;
                 Navigator.pop(dialogContext);
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('Rôle de ${user.nomComplet} mis à jour : ${_roleLabel(selectedRole)}'),
+                    content: Text(
+                      'Rôle de ${user.nomComplet} mis à jour : ${_roleLabel(selectedRole)}',
+                    ),
                     backgroundColor: AppTheme.success,
                   ),
                 );

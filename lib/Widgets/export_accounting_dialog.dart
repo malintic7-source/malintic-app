@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:gestion_formations/Models/payment.dart';
 import 'package:gestion_formations/Models/formation.dart';
-import 'package:gestion_formations/Models/inscription.dart';
-import 'package:gestion_formations/Models/user.dart';
-import 'package:gestion_formations/Models/seance.dart';
 import 'package:gestion_formations/Services/db_services.dart';
 import 'package:gestion_formations/Services/accounting_export_service.dart';
 import 'package:gestion_formations/Services/pdf_helper.dart';
@@ -100,7 +96,7 @@ class _ExportAccountingDialogState extends State<ExportAccountingDialog> {
           Navigator.pop(context);
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('✅ Export Excel / CSV généré avec succès !'),
+              content: Text('Export Excel / CSV généré avec succès.'),
               backgroundColor: AppTheme.success,
             ),
           );
@@ -132,7 +128,7 @@ class _ExportAccountingDialogState extends State<ExportAccountingDialog> {
           Navigator.pop(context);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(isPrint ? '✅ Document envoyé à l\'impression !' : '✅ Rapport financier PDF téléchargé !'),
+              content: Text(isPrint ? 'Document envoyé à l\'impression.' : 'Rapport financier PDF téléchargé.'),
               backgroundColor: AppTheme.success,
             ),
           );
@@ -173,7 +169,7 @@ class _ExportAccountingDialogState extends State<ExportAccountingDialog> {
           Navigator.pop(context);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(isPrint ? '✅ Feuille d\'émargement envoyée à l\'impression !' : '✅ Feuille d\'émargement PDF téléchargée !'),
+              content: Text(isPrint ? 'Feuille d\'émargement envoyée à l\'impression.' : 'Feuille d\'émargement PDF téléchargée.'),
               backgroundColor: AppTheme.success,
             ),
           );
@@ -447,10 +443,13 @@ class _ExportAccountingDialogState extends State<ExportAccountingDialog> {
                 ],
               ),
             ),
+            // ignore: deprecated_member_use
             Radio<int>(
               value: typeIndex,
+              // ignore: deprecated_member_use
               groupValue: _exportType,
               activeColor: AppTheme.primary,
+              // ignore: deprecated_member_use
               onChanged: (val) => setState(() => _exportType = val ?? 0),
             ),
           ],

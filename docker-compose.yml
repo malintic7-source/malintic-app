@@ -1,6 +1,58 @@
-name: malintic
+name: malintic_app
 
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: malintic_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-malintic}
+      POSTGRES_USER: ${POSTGRES_USER:-malintic}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-malintic123!}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - malintic_postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-malintic} -d ${POSTGRES_DB:-malintic}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - backend_net
+      - admin_net
+  postgres_backup:
+    image: postgres:16-alpine
+    container_name: malintic_postgres_backup
+    restart: unless-stopped
+    environment:
+      PGHOST: postgres
+      PGPORT: 5432
+      PGDATABASE: ${POSTGRES_DB:-malintic}
+      PGUSER: ${POSTGRES_USER:-malintic}
+      PGPASSWORD: ${POSTGRES_PASSWORD:-malintic123!}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
+    volumes:
+      - malintic_postgres_backups:/backups
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command:
+      - /bin/sh
+      - -c
+      - |
+        set -eu
+        while true; do
+          timestamp=$$(date -u +%Y%m%dT%H%M%SZ)
+          pg_dump --format=custom --file="/backups/malintic_$${timestamp}.dump"
+          find /backups -type f -name 'malintic_*.dump' -mtime +"$${BACKUP_RETENTION_DAYS}" -delete
+          sleep 86400
+        done
+    networks:
+      - backend_net
+
   app:
     image: malintic-app:latest
     build:
@@ -14,8 +66,8 @@ services:
     init: true
     stop_grace_period: 15s
     environment:
-      - NGINX_HOST=localhost
-      - NGINX_PORT=80
+      NGINX_HOST: localhost
+      NGINX_PORT: 80
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/ || exit 1"]
       interval: 15s
@@ -26,7 +78,7 @@ services:
       api:
         condition: service_healthy
     networks:
-      - malintic_network
+      - frontend_net
 
   api:
     image: malintic-api:latest
@@ -39,15 +91,17 @@ services:
     env_file:
       - .env
     environment:
-      - NODE_ENV=production
-      - PORT=5001
-      - DATA_DIR=/data
-      - HOST_LAN_IP=${HOST_LAN_IP:-${LAN_IP:-}}
-      - LAN_IP=${LAN_IP:-${HOST_LAN_IP:-}}
+      NODE_ENV: production
+      PORT: 5001
+      DATA_DIR: /data
+      DATABASE_URL: postgresql://${POSTGRES_USER:-malintic}:${POSTGRES_PASSWORD:-malintic123!}@postgres:5432/${POSTGRES_DB:-malintic}
     volumes:
-      - malintic_data:/data
+      - malintic_api_data:/data
     expose:
       - "5001"
+    depends_on:
+      postgres:
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:5001/api/health || exit 1"]
       interval: 15s
@@ -55,7 +109,8 @@ services:
       retries: 3
       start_period: 5s
     networks:
-      - malintic_network
+      - frontend_net
+      - backend_net
 
   ngrok:
     image: ngrok/ngrok:latest
@@ -66,57 +121,105 @@ services:
       app:
         condition: service_healthy
     ports:
-      - "4040:4040"
+      - "127.0.0.1:4040:4040"
     environment:
       NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN:-}
-    command: http malintic_app:80
+      NGROK_DOMAIN: ${NGROK_DOMAIN:-}
+    command: http malintic_app:80 --domain=${NGROK_DOMAIN:-}
     networks:
-      - malintic_network
+      - frontend_net
 
-  supervisor:
-    image: malintic-supervisor:latest
-    build:
-      context: ./supervisor
-      dockerfile: Dockerfile
-    container_name: malintic_supervisor
+  pgadmin:
+    image: dpage/pgadmin4:8
+    container_name: malintic_pgadmin
+    profiles: ["admin"]
     restart: unless-stopped
-    init: true
-    ports:
-      - "5002:5002"
     environment:
-      - NODE_ENV=production
-      - PORT=5002
-      - API_URL=http://malintic_api:5001
-      - APP_URL=http://malintic_app:80
-      - DATA_DIR=/data
-      - NGROK_API_URL=http://malintic_ngrok:4040
+      PGADMIN_DEFAULT_EMAIL: mamadou@mntic.ml
+      PGADMIN_DEFAULT_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-change_me_pgadmin_password}
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+      PGADMIN_CONFIG_SESSION_EXPIRATION_TIME: 3600
+      PGADMIN_CONFIG_ENHANCED_COOKIE_PROTECTION: "True"
+    ports:
+      - "127.0.0.1:5050:80"
     volumes:
-      - malintic_data:/data
+      - malintic_pgadmin_data:/var/lib/pgadmin
+      - ./docker/pgadmin/servers.json:/pgadmin4/servers.json:ro
     depends_on:
-      api:
+      postgres:
         condition: service_healthy
     networks:
-      - malintic_network
+      - admin_net
 
-  # cloudflared:
-  #   image: cloudflare/cloudflared:latest
-  #   container_name: malintic_tunnel
-  #   restart: always
-  #   init: true
-  #   depends_on:
-  #     app:
-  #       condition: service_healthy
-  #   environment:
-  #     TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN}
-  #   command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
-  #   networks:
-  #     - malintic_network
+  prometheus:
+    image: prom/prometheus:v2.53.5
+    container_name: malintic_prometheus
+    profiles: ["monitoring"]
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:9090:9090"
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - ./docker/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./docker/monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - malintic_prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=15d"
+    networks:
+      - monitoring_net
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    container_name: malintic_grafana
+    profiles: ["monitoring"]
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: mamadou@mntic.ml
+      GF_SECURITY_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-change_me_grafana_password}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_SECURITY_ALLOW_EMBEDDING: "false"
+      GF_SECURITY_DISABLE_GRAVATAR: "true"
+      GF_SESSION_EXPIRY: 1h
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - malintic_grafana_data:/var/lib/grafana
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./docker/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - prometheus
+    networks:
+      - monitoring_net
 
 volumes:
-  malintic_data:
-    name: malintic_data
-    driver: local
+  malintic_api_data:
+    name: malintic_api_data
+  malintic_postgres_data:
+    name: malintic_postgres_data
+  malintic_postgres_backups:
+    name: malintic_postgres_backups
+  malintic_pgadmin_data:
+    name: malintic_pgadmin_data
+  malintic_prometheus_data:
+    name: malintic_prometheus_data
+  malintic_grafana_data:
+    name: malintic_grafana_data
 
 networks:
-  malintic_network:
+  frontend_net:
+    name: malintic_frontend_net
+    driver: bridge
+  backend_net:
+    name: malintic_backend_net
+    internal: true
+    driver: bridge
+  admin_net:
+    name: malintic_admin_net
+    driver: bridge
+  monitoring_net:
+    name: malintic_monitoring_net
     driver: bridge

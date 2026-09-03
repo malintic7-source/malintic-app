@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:animate_do/animate_do.dart';
 import 'dart:async';
 import 'package:gestion_formations/Models/user.dart';
 import 'package:gestion_formations/Services/db_services.dart';
@@ -84,7 +83,7 @@ class _FormateurApprenantsState extends State<FormateurApprenants> with TickerPr
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Feuille d\'émargement générée avec succès !'),
+            content: Text('Feuille d\'émargement générée avec succès.'),
             backgroundColor: AppTheme.success,
           ),
         );
@@ -123,7 +122,7 @@ class _FormateurApprenantsState extends State<FormateurApprenants> with TickerPr
           child: Container(
             decoration: BoxDecoration(
               color: AppTheme.surface,
-              borderRadius: BorderRadius.circular(24),
+              borderRadius: BorderRadius.circular(16),
               boxShadow: AppTheme.cardShadow,
             ),
             padding: const EdgeInsets.all(20),

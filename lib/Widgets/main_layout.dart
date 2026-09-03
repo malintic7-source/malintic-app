@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:gestion_formations/Models/user.dart';
+import 'package:gestion_formations/Models/inscription.dart';
 import 'package:gestion_formations/Pages/Login/welcome_page.dart';
 import 'package:gestion_formations/Pages/Screens/notifications.dart';
 import 'package:gestion_formations/Services/auth_provider.dart';
+import 'package:gestion_formations/Services/db_services.dart';
 import 'package:gestion_formations/Services/notifications_services.dart';
 import 'package:gestion_formations/Widgets/first_login_password_dialog.dart';
 import 'package:gestion_formations/config/theme.dart';
@@ -440,154 +442,273 @@ class _MainLayoutState extends State<MainLayout> with TickerProviderStateMixin {
   }
 
   Widget _buildDrawer(BuildContext context) {
+    final db = LocalDataService();
+    final notifService = NotificationsService();
+
     return Drawer(
       backgroundColor: AppTheme.surface,
       child: Column(
         children: [
+          // 1. Header Officiel M@LI-NTIC avec Logo et Profil Harmonieux
           Container(
-            constraints: const BoxConstraints(minHeight: 228),
             width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(16, 32, 16, 14),
             decoration: BoxDecoration(
               gradient: AppTheme.heroGradient,
               boxShadow: AppTheme.cardShadow,
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.7),
-                      width: 2,
-                    ),
-                    borderRadius: BorderRadius.circular(28),
-                  ),
-                  child: CircleAvatar(
-                    radius: 30,
-                    backgroundColor: Colors.white,
-                    child: Text(
-                      widget.user?.nomComplet.isNotEmpty == true
-                          ? widget.user!.nomComplet[0].toUpperCase()
-                          : 'U',
-                      style: GoogleFonts.poppins(
-                        fontSize: 28,
-                        fontWeight: FontWeight.w800,
-                        color: AppTheme.primary,
+                // Ligne Supérieure : Logo M@LI-NTIC + Badge Rôle
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.15),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Image.asset(
+                        'images/logo.png',
+                        height: 34,
+                        fit: BoxFit.contain,
                       ),
                     ),
-                  ),
-                ),
-                const SizedBox(height: 14),
-                Text(
-                  widget.user?.nomComplet ?? 'Utilisateur',
-                  style: GoogleFonts.poppins(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 17,
-                  ),
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 6),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.18),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    widget.user?.role
-                            .toString()
-                            .split('.')
-                            .last
-                            .toUpperCase() ??
-                        'ROLE',
-                    style: GoogleFonts.poppins(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.22),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.35),
+                          width: 1,
+                        ),
+                      ),
+                      child: Text(
+                        widget.user?.role.toString().split('.').last.toUpperCase() ?? 'ROLE',
+                        style: GoogleFonts.poppins(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.6,
+                        ),
+                      ),
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  height: 1,
+                  color: Colors.white.withValues(alpha: 0.18),
+                ),
+                const SizedBox(height: 12),
+
+                // Ligne Utilisateur : Avatar + Nom + Email
+                Row(
+                  children: [
+                    Stack(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.9),
+                              width: 2,
+                            ),
+                          ),
+                          child: CircleAvatar(
+                            radius: 20,
+                            backgroundColor: Colors.white,
+                            child: Text(
+                              widget.user?.nomComplet.isNotEmpty == true
+                                  ? widget.user!.nomComplet[0].toUpperCase()
+                                  : 'U',
+                              style: GoogleFonts.poppins(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w800,
+                                color: AppTheme.primary,
+                              ),
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: Container(
+                            width: 10,
+                            height: 10,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF10B981),
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 2),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            widget.user?.nomComplet ?? 'Utilisateur',
+                            style: GoogleFonts.poppins(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 14.5,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          if (widget.user?.email.isNotEmpty == true) ...[
+                            const SizedBox(height: 1),
+                            Text(
+                              widget.user!.email,
+                              style: GoogleFonts.poppins(
+                                color: Colors.white.withValues(alpha: 0.85),
+                                fontSize: 11,
+                                fontWeight: FontWeight.w400,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 8),
+
+          // 2. Liste des Éléments de Navigation (Rendu Direct et Fiable)
           Expanded(
             child: ListView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
               itemCount: widget.navigationItems.length,
               itemBuilder: (context, index) {
                 final item = widget.navigationItems[index];
                 final isSelected = _selectedIndex == index;
 
+                Widget? trailingWidget;
+                if (item.label.toLowerCase().contains('inscription')) {
+                  trailingWidget = StreamBuilder<List<Inscription>>(
+                    stream: db.watchInscriptions(),
+                    initialData: db.getInscriptions(),
+                    builder: (context, snapshot) {
+                      final count = (snapshot.data ?? db.getInscriptions())
+                          .where((i) => i.status == InscriptionStatus.enAttente)
+                          .length;
+                      if (count == 0) return const SizedBox.shrink();
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE53935),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          '$count',
+                          style: GoogleFonts.poppins(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                } else if (item.label.toLowerCase().contains('notification')) {
+                  trailingWidget = StreamBuilder<int>(
+                    stream: notifService.watchUnreadCountForUser(
+                      userId: widget.user?.id ?? '',
+                      userEmail: widget.user?.email ?? '',
+                      userRole: widget.user?.role.name ?? '',
+                    ),
+                    initialData: 0,
+                    builder: (context, snapshot) {
+                      final count = snapshot.data ?? 0;
+                      if (count == 0) return const SizedBox.shrink();
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primary,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          '$count',
+                          style: GoogleFonts.poppins(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                }
+
                 return Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 4,
-                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 2),
                   child: Ink(
-                    decoration: isSelected
-                        ? BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                AppTheme.primary.withValues(alpha: 0.12),
-                                AppTheme.indigoAccent.withValues(alpha: 0.08),
-                              ],
-                            ),
-                            borderRadius: BorderRadius.circular(12),
-                          )
-                        : null,
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? AppTheme.primary.withValues(alpha: 0.10)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(10),
+                      border: isSelected
+                          ? const Border(
+                              left: BorderSide(color: AppTheme.primary, width: 3.5),
+                            )
+                          : null,
+                    ),
                     child: Material(
                       color: Colors.transparent,
                       child: ListTile(
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(10),
                         ),
                         dense: true,
                         contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 2,
-                        ),
-                        tileColor: isSelected
-                            ? AppTheme.surface.withValues(alpha: 0.08)
-                            : null,
-                        selectedTileColor: AppTheme.primary.withValues(
-                          alpha: 0.1,
+                          horizontal: 12,
+                          vertical: 0,
                         ),
                         leading: Icon(
                           item.icon,
                           color: isSelected
                               ? AppTheme.primary
-                              : AppTheme.textSecondary,
-                          size: 22,
+                              : const Color(0xFF64748B),
+                          size: 20,
                         ),
                         title: Text(
                           item.label,
                           style: GoogleFonts.poppins(
-                            fontWeight: isSelected
-                                ? FontWeight.w700
-                                : FontWeight.w500,
+                            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                             color: isSelected
                                 ? AppTheme.primary
-                                : AppTheme.textPrimary,
-                            fontSize: 14,
+                                : const Color(0xFF1E293B),
+                            fontSize: 13,
                           ),
                         ),
+                        trailing: trailingWidget,
                         selected: isSelected,
                         onTap: () {
-                          setState(() => _selectedIndex = index);
+                          Navigator.of(context).pop();
                           widget.onNavigationChanged?.call(index);
-                          Navigator.pop(context);
                         },
                       ),
                     ),
@@ -596,43 +717,61 @@ class _MainLayoutState extends State<MainLayout> with TickerProviderStateMixin {
               },
             ),
           ),
+
+          // 3. Pied du Drawer avec Déconnexion
           Padding(
-            padding: const EdgeInsets.all(12),
-            child: Material(
-              color: AppTheme.error.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(12),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(12),
-                onTap: () async {
-                  final nav = Navigator.of(context);
-                  await AuthProvider().logout();
-                  if (!mounted) return;
-                  nav.pushAndRemoveUntil(
-                    MaterialPageRoute(
-                      builder: (context) => const WelcomePage(),
+            padding: const EdgeInsets.fromLTRB(12, 6, 12, 12),
+            child: Column(
+              children: [
+                Material(
+                  color: AppTheme.error.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(10),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(10),
+                    onTap: () async {
+                      final nav = Navigator.of(context);
+                      await AuthProvider().logout();
+                      if (!mounted) return;
+                      nav.pushAndRemoveUntil(
+                        MaterialPageRoute(
+                          builder: (context) => const WelcomePage(),
+                        ),
+                        (route) => false,
+                      );
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.logout_rounded,
+                            color: AppTheme.error,
+                            size: 19,
+                          ),
+                          const SizedBox(width: 10),
+                          Text(
+                            'Déconnexion',
+                            style: GoogleFonts.poppins(
+                              color: AppTheme.error,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13,
+                            ),
+                          ),
+                          const Spacer(),
+                          Text(
+                            'v2.5 Pro',
+                            style: GoogleFonts.poppins(
+                              color: const Color(0xFF94A3B8),
+                              fontSize: 10,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    (route) => false,
-                  );
-                },
-                child: ListTile(
-                  leading: const Icon(
-                    Icons.logout_rounded,
-                    color: AppTheme.error,
-                    size: 22,
-                  ),
-                  title: Text(
-                    'Déconnexion',
-                    style: GoogleFonts.poppins(
-                      color: AppTheme.error,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 14,
-                    ),
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-              ),
+              ],
             ),
           ),
         ],

@@ -95,7 +95,10 @@ class _StudentScheduleState extends State<StudentSchedule>
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF1D447A),
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
@@ -143,7 +146,10 @@ class _StudentScheduleState extends State<StudentSchedule>
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF1D447A),
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
@@ -437,7 +443,8 @@ class _StudentScheduleState extends State<StudentSchedule>
           .whereType<String>()
           .toSet();
       for (var h in f.horaires) {
-        if (h.module?.isNotEmpty == true && !selectedModules.contains(h.module)) {
+        if (h.module?.isNotEmpty == true &&
+            !selectedModules.contains(h.module)) {
           continue;
         }
         if (!scheduleByDay.containsKey(h.jour)) {
@@ -504,7 +511,11 @@ class _StudentScheduleState extends State<StudentSchedule>
     final prenom = widget.user.prenom.trim();
     final nom = widget.user.nom.trim();
     final nomComplet = '$prenom $nom'.trim();
-    final matricule = widget.user.matricule ?? widget.user.id.substring(0, 6);
+    final matricule =
+        widget.user.matricule ??
+        (widget.user.id.length > 6
+            ? widget.user.id.substring(0, 6)
+            : widget.user.id);
     final qrData =
         'MALINTIC-ETUDIANT|ID:${widget.user.id}|NOM:$nomComplet|MATRICULE:$matricule';
 
@@ -722,7 +733,7 @@ class _StudentScheduleState extends State<StudentSchedule>
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text(
-                    '✅ Présence enregistrée avec succès pour cette séance !',
+                    'Présence enregistrée avec succès pour cette séance.',
                   ),
                   backgroundColor: AppTheme.success,
                 ),

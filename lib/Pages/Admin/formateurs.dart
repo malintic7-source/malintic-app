@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:animate_do/animate_do.dart';
 import 'package:flutter/material.dart';
 import 'package:gestion_formations/Models/formation.dart';
 import 'package:gestion_formations/Models/user.dart';
@@ -22,7 +21,6 @@ class _AdminFormateursState extends State<AdminFormateurs> with TickerProviderSt
   final searchController = TextEditingController();
   late AnimationController _fadeController;
   StreamSubscription<void>? _dataSub;
-  Timer? _refreshTimer;
 
   @override
   void initState() {
@@ -2490,7 +2488,7 @@ class _AdminFormateursState extends State<AdminFormateurs> with TickerProviderSt
                           if (mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content: Text('📄 Bulletin d\'honoraires PDF généré avec succès !'),
+                                content: Text('Bulletin d’honoraires PDF généré avec succès.'),
                                 backgroundColor: AppTheme.success,
                               ),
                             );

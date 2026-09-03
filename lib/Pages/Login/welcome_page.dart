@@ -310,7 +310,7 @@ class _PoleCardState extends State<_PoleCard> {
             child: Container(
             decoration: BoxDecoration(
               color: dialogBg,
-              borderRadius: BorderRadius.circular(24),
+              borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: isDark ? 0.4 : 0.15),

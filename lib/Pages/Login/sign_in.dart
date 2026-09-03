@@ -56,7 +56,10 @@ class _SignInPageState extends State<SignInPage> {
               );
             }
           },
-          icon: const Icon(Icons.arrow_back_rounded, color: AppTheme.textPrimary),
+          icon: const Icon(
+            Icons.arrow_back_rounded,
+            color: AppTheme.textPrimary,
+          ),
           tooltip: 'Retour',
         ),
         actions: [
@@ -100,7 +103,10 @@ class _SignInPageState extends State<SignInPage> {
             ),
             Center(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 24,
+                ),
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 1100),
                   child: isMobile
@@ -181,9 +187,7 @@ class _SignInPageState extends State<SignInPage> {
           ),
         ),
         const SizedBox(width: 64),
-        Expanded(
-          child: _buildForm(isMobile: false),
-        ),
+        Expanded(child: _buildForm(isMobile: false)),
       ],
     );
   }
@@ -214,10 +218,7 @@ class _SignInPageState extends State<SignInPage> {
       child: Center(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
-          child: Image.asset(
-            'images/logo.png',
-            fit: BoxFit.contain,
-          ),
+          child: Image.asset('images/logo.png', fit: BoxFit.contain),
         ),
       ),
     );
@@ -228,7 +229,7 @@ class _SignInPageState extends State<SignInPage> {
       width: double.infinity,
       constraints: const BoxConstraints(maxWidth: 440),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(16),
         color: Colors.white,
         border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
         boxShadow: AppTheme.cardShadow,
@@ -272,7 +273,9 @@ class _SignInPageState extends State<SignInPage> {
                 onPressed: () {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text('Veuillez contacter votre administrateur pour réinitialiser votre mot de passe.'),
+                      content: Text(
+                        'Veuillez contacter votre administrateur pour réinitialiser votre mot de passe.',
+                      ),
                       backgroundColor: AppTheme.info,
                     ),
                   );
@@ -314,10 +317,7 @@ class _SignInPageState extends State<SignInPage> {
       decoration: const InputDecoration(
         labelText: 'Nom d\'utilisateur ou Email',
         hintText: 'admin@malintic.ml',
-        prefixIcon: Icon(
-          Icons.person_outline_rounded,
-          size: 20,
-        ),
+        prefixIcon: Icon(Icons.person_outline_rounded, size: 20),
       ),
       keyboardType: TextInputType.emailAddress,
     );
@@ -334,7 +334,11 @@ class _SignInPageState extends State<SignInPage> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.verified_user_outlined, size: 15, color: AppTheme.primary),
+          const Icon(
+            Icons.verified_user_outlined,
+            size: 15,
+            color: AppTheme.primary,
+          ),
           const SizedBox(width: 6),
           Text(
             'ESPACE SÉCURISÉ',
@@ -364,10 +368,7 @@ class _SignInPageState extends State<SignInPage> {
       decoration: InputDecoration(
         labelText: 'Mot de passe',
         hintText: '••••••••',
-        prefixIcon: const Icon(
-          Icons.lock_outline_rounded,
-          size: 20,
-        ),
+        prefixIcon: const Icon(Icons.lock_outline_rounded, size: 20),
         suffixIcon: IconButton(
           icon: Icon(
             _obscurePassword
@@ -376,8 +377,7 @@ class _SignInPageState extends State<SignInPage> {
             color: AppTheme.textMuted,
             size: 20,
           ),
-          onPressed: () =>
-              setState(() => _obscurePassword = !_obscurePassword),
+          onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
         ),
       ),
       obscureText: _obscurePassword,
@@ -388,7 +388,7 @@ class _SignInPageState extends State<SignInPage> {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(14),
-        gradient: AppTheme.heroGradient,
+        color: AppTheme.primary,
         boxShadow: AppTheme.heroShadow,
       ),
       child: Material(
@@ -453,9 +453,7 @@ class _SignInPageState extends State<SignInPage> {
       if (user != null) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(
-            builder: (context) => HomeScreen(user: user),
-          ),
+          MaterialPageRoute(builder: (context) => HomeScreen(user: user)),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(

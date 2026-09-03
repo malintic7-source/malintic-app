@@ -9,10 +9,6 @@ import 'package:gestion_formations/Models/inscription.dart';
 import 'package:gestion_formations/Models/payment.dart';
 import 'package:gestion_formations/Models/formation.dart';
 import 'package:gestion_formations/Services/db_services.dart';
-import 'package:gestion_formations/Services/invoice_service.dart';
-import 'package:gestion_formations/Services/pdf_service.dart';
-import 'package:gestion_formations/Services/payment_report_service.dart';
-import 'package:gestion_formations/Services/pdf_helper.dart';
 import 'package:gestion_formations/Widgets/chart_widgets.dart';
 import 'package:gestion_formations/Widgets/share_formation_dialog.dart';
 import 'package:gestion_formations/Widgets/export_accounting_dialog.dart';
@@ -119,7 +115,7 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
                     children: [
                       Expanded(
                         child: Text(
-                          'Bienvenue, $displayName 👋',
+                          'Bienvenue, $displayName',
                           style: GoogleFonts.poppins(
                             fontSize: 15,
                             color: Colors.white,
@@ -209,7 +205,7 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
               ),
               icon: const Icon(Icons.share_rounded, size: 18),
               label: Text(
-                '🔗 Lien Public Formation',
+                'Lien public formation',
                 style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w700),
               ),
               onPressed: _showShareFormationModal,
@@ -251,7 +247,7 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
             : '${totalUnpaid.toStringAsFixed(0)} FCFA';
 
         final cols = isMobile ? 2 : (isTablet ? 3 : 4);
-        final ratio = isMobile ? 1.15 : (isTablet ? 1.4 : 1.7);
+        final ratio = isMobile ? 1.25 : (isTablet ? 1.45 : 1.75);
 
         return GridView.count(
           crossAxisCount: cols,
@@ -381,11 +377,13 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
                 overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 2),
-              Text(
-                value,
-                style: GoogleFonts.poppins(fontSize: compact ? 15 : 20, fontWeight: FontWeight.w800, color: AppTheme.textPrimary),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  value,
+                  style: GoogleFonts.poppins(fontSize: compact ? 16 : 20, fontWeight: FontWeight.w800, color: AppTheme.textPrimary),
+                ),
               ),
               Text(
                 subtitle,
@@ -1125,7 +1123,7 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '📈 Nouvelles Inscriptions par Mois',
+                    'Nouvelles inscriptions par mois',
                     style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w800, color: AppTheme.textPrimary),
                   ),
                   Text(
@@ -1395,7 +1393,7 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '📜 Flux des Activités Récentes & Audit',
+          'Flux des activités récentes et audit',
           style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w800, color: AppTheme.textPrimary),
         ),
         const SizedBox(height: 4),
@@ -1765,8 +1763,8 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
                           icon: const Icon(Icons.local_offer_rounded, color: AppTheme.accent, size: 20),
                           label: Text(
                             remise > 0
-                                ? '🏷️ Remise Appliquée: ${remise.toStringAsFixed(0)} FCFA (Modifier)'
-                                : '🏷️ Accorder une Remise (Décision Manuelle)',
+                                ? 'Remise appliquée : ${remise.toStringAsFixed(0)} FCFA (Modifier)'
+                                : 'Accorder une remise (décision manuelle)',
                             style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w700, color: AppTheme.accent),
                           ),
                           onPressed: () {
@@ -1911,7 +1909,7 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
                     await _db.addPayment(payment);
                   } catch (e) {
                     if (ctx.mounted) {
-                      ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('⚠️ $e'), backgroundColor: AppTheme.error));
+                      ScaffoldMessenger.of(ctx).showSnackBar(                      SnackBar(content: Text('$e'), backgroundColor: AppTheme.error));
                     }
                     return;
                   }
@@ -1927,7 +1925,7 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
                     setState(() {});
                     Navigator.pop(ctx);
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('✅ Versement enregistré avec succès !'), backgroundColor: AppTheme.success),
+                      const SnackBar(content: Text('Versement enregistré avec succès.'), backgroundColor: AppTheme.success),
                     );
                   }
                 },
@@ -1958,7 +1956,7 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
               children: [
                 const Icon(Icons.person_add_alt_1_rounded, color: AppTheme.primary),
                 const SizedBox(width: 8),
-                Text('👥 Nouveau Stagiaire / Étudiant', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w800, color: AppTheme.primary)),
+                Text(                'Nouveau stagiaire / étudiant', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w800, color: AppTheme.primary)),
               ],
             ),
             content: SizedBox(
@@ -2069,7 +2067,7 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
                     setState(() {});
                     Navigator.pop(ctx);
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('✅ Stagiaire $prenom $nom ($email) créé avec succès !'), backgroundColor: AppTheme.success),
+                      SnackBar(content: Text('Stagiaire $prenom $nom ($email) créé avec succès.'), backgroundColor: AppTheme.success),
                     );
                   }
                 },
@@ -2261,57 +2259,6 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
           );
         },
       ),
-    );
-  }
-
-  Future<void> _exportFinancialSummaryPdf() async {
-    final payments = _db.getPayments();
-    final effectues = payments.where((p) => p.status == PaymentStatus.effectue).toList();
-
-    final List<Map<String, dynamic>> reportData = effectues.map((p) {
-      final student = _db.getUserById(p.etudiantId);
-      final inscription = _db.getInscriptions().where((i) => i.id == p.etudiantId || (student != null && (i.telephone == student.phone || (i.prenom == student.prenom && i.nom == student.nom)))).firstOrNull;
-      final formation = _db.getFormationById(p.formationId) ?? (inscription != null ? _db.getFormationById(inscription.formationId) : null);
-
-      final studentName = student?.nomComplet ??
-          (inscription != null ? '${inscription.prenom ?? ""} ${inscription.nom ?? ""}'.trim() : 'Apprenant');
-
-      final userMatricule = student?.matricule ?? _db.getUsers().where((u) => u.phone == inscription?.telephone || (inscription != null && u.nom == inscription.nom && u.prenom == inscription.prenom)).firstOrNull?.matricule;
-      final matricule = userMatricule?.isNotEmpty == true
-          ? userMatricule!
-          : 'MAT-${p.etudiantId.length > 6 ? p.etudiantId.substring(0, 6) : p.etudiantId}';
-
-      final phone = student?.phone ?? inscription?.telephone ?? '';
-
-      return {
-        'id': p.id,
-        'reference': p.referenceTransaction ?? p.id,
-        'date': '${p.dateCreation.day.toString().padLeft(2, '0')}/${p.dateCreation.month.toString().padLeft(2, '0')}/${p.dateCreation.year}',
-        'studentName': studentName,
-        'stagiaire': studentName,
-        'matricule': matricule,
-        'phone': phone,
-        'formation': formation?.titre ?? 'Formation Professionnelle',
-        'montant': p.montant,
-        'remise': p.remise,
-        'status': 'Effectué',
-        'methode': p.methode.name.toUpperCase(),
-      };
-    }).toList();
-
-    final totalAmount = effectues.fold<double>(0, (sum, p) => sum + p.montant);
-    final statusCounts = {'Effectué': effectues.length};
-
-    final bytes = await PaymentReportService.generatePaymentReportPDF(
-      payments: reportData,
-      statusCounts: statusCounts,
-      totalAmount: totalAmount,
-    );
-
-    await PdfHelper.downloadPDF(bytes, fileName: 'Rapport_Financier_M@LINTIC_${DateTime.now().millisecondsSinceEpoch}');
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('✅ Rapport financier PDF généré et téléchargé avec succès !'), backgroundColor: AppTheme.success),
     );
   }
 

@@ -1197,9 +1197,6 @@
     </div>
 
     <script type="module">
-        const SUPABASE_REST_URL = 'https://mzixlwnrsqoxolzafmjb.supabase.co/rest/v1';
-        const SUPABASE_ANON_KEY = 'sb_publishable_X9Srmcc9dIppUO8Hl0EDAw_C-giTCqt';
-
         async function submitInscriptionToBackend(inscriptionData) {
             const inscId = inscriptionData.id || `insc_web_${Date.now()}`;
             inscriptionData.id = inscId;
@@ -1233,7 +1230,13 @@
                 console.warn('API locale indisponible :', e);
             }
 
-            // 2. Envoi direct vers Supabase Cloud (garantit l'arrivée même si Ngrok ou le serveur local est inaccessible)
+            if (transmitted) {
+                saveLocalInscription(inscriptionData);
+                return { success: true, transmitted: true };
+            }
+
+            /*
+             * Cloud writes are disabled; the local API is the sole persistence path.
             try {
                 const supaRow = {
                     id: inscId,
@@ -1275,9 +1278,10 @@
             } catch (e) {
                 console.warn('Supabase indisponible :', e);
             }
+            */
 
             saveLocalInscription(inscriptionData);
-            return { success: true, transmitted: transmitted };
+            return { success: transmitted, transmitted: transmitted };
         }
 
         function extractFormationIdFromLocation() {
@@ -1475,7 +1479,7 @@
                 console.warn('Lecture catalogue formations indisponible :', e);
             }
 
-            // Fallback Supabase Cloud direct
+            /*
             try {
                 const supaResp = await fetchWithTimeout(`${SUPABASE_REST_URL}/formations?select=*`, {
                     headers: {
@@ -1498,6 +1502,7 @@
             } catch (e) {
                 console.warn('Lecture Supabase indisponible :', e);
             }
+            */
 
             if (id) {
                 const foundFallback = fallbackFormations.find(f => f.id === id || f.id.toLowerCase().includes(id.toLowerCase()) || id.toLowerCase().includes(f.id.toLowerCase()));
@@ -2075,10 +2080,13 @@
                         localTestMode: localTestMode
                     };
 
-                    if (localTestMode) {
-                        saveLocalInscription(inscriptionData);
+                    if (!localTestMode) {
+                        const result = await submitInscriptionToBackend(inscriptionData);
+                        if (!result.success) {
+                            throw new Error('L’inscription n’a pas été confirmée par le serveur local.');
+                        }
                     } else {
-                        await submitInscriptionToBackend(inscriptionData);
+                        saveLocalInscription(inscriptionData);
                     }
 
                     document.getElementById('enrollmentModal').classList.remove('active');

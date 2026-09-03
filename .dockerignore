@@ -35,7 +35,6 @@ CHANGELOG.md
 
 # Database Migrations & Backups (Handled externally)
 supabase/
-supabase_setup.sql
 backup/
 tmp_*
 .codex-history/
@@ -52,8 +51,6 @@ ngrok.env
 .git/
 .gitignore
 .dockerignore
-.vercelignore
-.renderignore
 .DS_Store
 .idea/
 .vscode/
@@ -77,4 +74,3 @@ ios/
 build/*
 !build/web
 dist/
-

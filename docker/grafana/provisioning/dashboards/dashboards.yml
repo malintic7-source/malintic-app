@@ -1,0 +1,11 @@
+apiVersion: 1
+
+providers:
+  - name: M@LINTIC
+    orgId: 1
+    folder: M@LINTIC
+    type: file
+    disableDeletion: false
+    editable: true
+    options:
+      path: /var/lib/grafana/dashboards

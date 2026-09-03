@@ -24,24 +24,19 @@ class AuthProvider {
 
     final sessionUserId = _localStorage.getSessionItem('currentUserId');
     final sessionUserJson = _localStorage.getSessionItem('currentUserJson');
+    final sessionAuthToken = _localStorage.getSessionItem('auth_token');
 
     // 1. Si aucun utilisateur n'est en sessionStorage pour cet onglet :
     // L'onglet ou le navigateur vient d'être ouvert/réouvert suite à une fermeture.
-    // Déconnexion automatique : on ne restaure aucune session et on purge les cookies résiduels.
     if (sessionUserJson == null || sessionUserJson.isEmpty) {
       _currentUser = null;
       _db.setServerSessionActive(false);
       TabSessionLifecycle.deactivate();
       _authController.add(null);
-      try {
-        await http
-            .post(Uri.base.resolve('/api/auth/logout'))
-            .timeout(const Duration(seconds: 1));
-      } catch (_) {}
       return null;
     }
 
-    // 2. L'onglet actuel possède une session active (ex: rafraîchissement F5 dans le même onglet)
+    // 2. L'onglet actuel possède une session active (ex: rafraîchissement F5 / Ctrl+R dans le même onglet)
     try {
       final map = jsonDecode(sessionUserJson) as Map<String, dynamic>;
       final user = User.fromMap(
@@ -53,33 +48,48 @@ class AuthProvider {
       _authController.add(user);
     } catch (_) {}
 
-    // 3. Validation asynchrone auprès du serveur
+    // 3. Validation asynchrone auprès du serveur avec token de session
     try {
+      final headers = <String, String>{
+        'ngrok-skip-browser-warning': 'true',
+      };
+      if (sessionAuthToken != null && sessionAuthToken.isNotEmpty) {
+        headers['Authorization'] = 'Bearer $sessionAuthToken';
+        headers['x-session-token'] = sessionAuthToken;
+      }
       final response = await http
           .get(
             Uri.base.resolve('/api/auth/session'),
-            headers: const {'ngrok-skip-browser-warning': 'true'},
+            headers: headers,
           )
-          .timeout(const Duration(seconds: 3));
+          .timeout(const Duration(seconds: 4));
       if (response.statusCode == 200) {
         final map = jsonDecode(response.body) as Map<String, dynamic>;
         final user = User.fromMap(map, map['id']?.toString() ?? '');
         _currentUser = user;
         _db.setServerSessionActive(true);
+        _localStorage.setSessionItem('currentUserJson', jsonEncode(user.toMap()));
         TabSessionLifecycle.activate();
         _authController.add(user);
         return user;
       } else if (response.statusCode == 401 || response.statusCode == 403) {
-        // Session invalidée côté serveur
-        _currentUser = null;
-        _db.setServerSessionActive(false);
-        _localStorage.removeSessionItem('currentUserId');
-        _localStorage.removeSessionItem('currentUserJson');
-        TabSessionLifecycle.deactivate();
-        _authController.add(null);
-        return null;
+        try {
+          final errBody = jsonDecode(response.body);
+          if (errBody is Map && (errBody['error'] ?? '').toString().contains('désactivé')) {
+            _currentUser = null;
+            _db.setServerSessionActive(false);
+            _localStorage.removeSessionItem('currentUserId');
+            _localStorage.removeSessionItem('currentUserJson');
+            _localStorage.removeSessionItem('auth_token');
+            TabSessionLifecycle.deactivate();
+            _authController.add(null);
+            return null;
+          }
+        } catch (_) {}
       }
-    } catch (_) {}
+    } catch (_) {
+      // Backend inaccessible ou hors-ligne : la session sessionStorage est préservée intacte
+    }
 
     return _currentUser;
   }
@@ -270,6 +280,10 @@ class AuthProvider {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         final serverUser = User.fromMap(data, data['id']?.toString() ?? '');
+        final token = data['token']?.toString() ?? data['sessionToken']?.toString();
+        if (token != null && token.isNotEmpty) {
+          _localStorage.setSessionItem('auth_token', token);
+        }
         _currentUser = serverUser;
         _localStorage.setItem(_rememberedIdentifierKey, rawInput);
         TabSessionLifecycle.activate();
@@ -317,10 +331,17 @@ class AuthProvider {
       );
     }
     try {
-      await http.post(Uri.base.resolve('/api/auth/logout'));
+      final token = _localStorage.getSessionItem('auth_token');
+      final headers = <String, String>{};
+      if (token != null && token.isNotEmpty) {
+        headers['Authorization'] = 'Bearer $token';
+        headers['x-session-token'] = token;
+      }
+      await http.post(Uri.base.resolve('/api/auth/logout'), headers: headers);
     } catch (_) {
       // The local state must still be cleared if the network is unavailable.
     }
+    _localStorage.removeSessionItem('auth_token');
     
     // Cache invalidation : purger tous les caches locaux
     TabSessionLifecycle.deactivate();

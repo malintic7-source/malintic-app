@@ -216,7 +216,7 @@ class _AdminAttestationsCartesState extends State<AdminAttestationsCartes> with 
               'nom': ins.nom ?? 'Apprenant',
               'email': ins.email ?? '',
               'phone': ins.telephone ?? '',
-              'matricule': 'MAT-${ins.id.substring(ins.id.length - 4)}',
+              'matricule': ins.id.length >= 4 ? 'MAT-${ins.id.substring(ins.id.length - 4)}' : 'MAT-${ins.id.padLeft(4, '0')}',
               'formationTitre': formation?.titre ?? 'Formation M@LI-NTIC',
               'inscription': ins,
               'formation': formation,
@@ -486,7 +486,7 @@ class _AdminAttestationsCartesState extends State<AdminAttestationsCartes> with 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('✅ Attestation officielle de ${st['prenom']} ${st['nom']} générée avec succès !'),
+            content: Text('Attestation officielle de ${st['prenom']} ${st['nom']} générée avec succès.'),
             backgroundColor: AppTheme.success,
           ),
         );
@@ -529,7 +529,7 @@ class _AdminAttestationsCartesState extends State<AdminAttestationsCartes> with 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('🪪 Carte d\'étudiant de $prenom $nom téléchargée avec succès !'),
+            content: Text('Carte d’étudiant de $prenom $nom téléchargée avec succès.'),
             backgroundColor: AppTheme.success,
           ),
         );

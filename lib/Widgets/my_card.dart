@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gestion_formations/config/theme.dart';
 
 Widget myCard(
   String title,
@@ -14,9 +15,10 @@ Widget myCard(
   void Function()? onPressed,
 ) {
   return InkWell(
-    splashColor: Colors.deepPurple.withValues(alpha: 0.5),
-    hoverColor: Colors.deepPurple.withValues(alpha: 0.1),
+    splashColor: AppTheme.primary.withValues(alpha: 0.12),
+    hoverColor: AppTheme.primary.withValues(alpha: 0.04),
     radius: 12,
+    borderRadius: BorderRadius.circular(10),
     onTap: onPressed,
     child: Container(
       width: cardWidth,
@@ -24,20 +26,13 @@ Widget myCard(
       decoration: BoxDecoration(
         color: cardColor,
         borderRadius: BorderRadius.circular(10),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.blue.withValues(alpha: 0.5),
-            spreadRadius: 2,
-            blurRadius: 5,
-            offset: Offset(0, 3), // changes position of shadow
-          ),
-        ],
+        boxShadow: AppTheme.cardShadow,
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(icon, size: iconSize, color: iconColor),
-          SizedBox(height: 10),
+          const SizedBox(height: 10),
           Text(
             title,
             style: TextStyle(
@@ -46,8 +41,12 @@ Widget myCard(
               color: titleColor,
             ),
           ),
-          Text(subtitle, style: TextStyle(fontSize: 14, color: subTitleColor)),
-          SizedBox(height: 5),
+          Text(
+            subtitle,
+            style: TextStyle(fontSize: 14, color: subTitleColor),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 5),
         ],
       ),
     ),

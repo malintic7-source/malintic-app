@@ -359,7 +359,7 @@ class _AdminAuditLogsState extends State<AdminAuditLogs> with TickerProviderStat
                           return DropdownMenuItem<String>(
                             value: name,
                             child: Text(
-                              name == 'Tous' ? '👤 Tous les utilisateurs' : '👤 $name',
+                              name == 'Tous' ? 'Tous les utilisateurs' : name,
                               style: GoogleFonts.poppins(
                                 fontSize: 12,
                                 fontWeight: name == _selectedUserNom ? FontWeight.w700 : FontWeight.w500,
@@ -751,7 +751,7 @@ class _AdminAuditLogsState extends State<AdminAuditLogs> with TickerProviderStat
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('🗑️ Journal d\'audit vidé avec succès !'),
+          content: Text('Journal d’audit vidé avec succès.'),
           backgroundColor: AppTheme.success,
         ),
       );

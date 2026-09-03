@@ -1,0 +1,15 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "M@LINTIC PostgreSQL",
+      "Group": "M@LINTIC",
+      "Host": "postgres",
+      "Port": 5432,
+      "MaintenanceDB": "malintic",
+      "Username": "malintic",
+      "SSLMode": "prefer",
+      "ConnectNow": true,
+      "Shared": true
+    }
+  }
+}

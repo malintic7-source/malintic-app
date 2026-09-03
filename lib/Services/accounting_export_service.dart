@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:typed_data';
 import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -162,10 +161,8 @@ class AccountingExportService {
 
     double totalEncaisse = 0;
     double totalEnAttente = 0;
-    double totalEchoue = 0;
     int countValide = 0;
     int countAttente = 0;
-    int countEchoue = 0;
     final Map<String, double> parMode = {};
 
     for (final p in filteredPayments) {
@@ -177,9 +174,6 @@ class AccountingExportService {
       } else if (p.status == PaymentStatus.enAttente) {
         totalEnAttente += p.montant;
         countAttente++;
-      } else {
-        totalEchoue += p.montant;
-        countEchoue++;
       }
     }
 

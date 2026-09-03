@@ -40,9 +40,9 @@ void main() {
         lastChecked: now,
       );
 
-      final supabase = NodeHealth(
-        name: 'Supabase Cloud (PG)',
-        type: 'supabase',
+      final postgres = NodeHealth(
+        name: 'PostgreSQL local',
+        type: 'postgres',
         isOnline: true,
         latencyMs: 145,
         details: 'Connecté',
@@ -69,7 +69,7 @@ void main() {
 
       final report = PcaPraReport(
         dockerNode: docker,
-        supabaseNode: supabase,
+        postgresNode: postgres,
         vercelNode: vercel,
         ngrokNode: ngrok,
         totalLocalDocuments: 150,
@@ -79,7 +79,7 @@ void main() {
       );
 
       expect(report.dockerNode.isOnline, isTrue);
-      expect(report.supabaseNode.isOnline, isTrue);
+      expect(report.postgresNode.isOnline, isTrue);
       expect(report.vercelNode.isOnline, isTrue);
       expect(report.ngrokNode.isOnline, isTrue);
       expect(report.totalLocalDocuments, 150);

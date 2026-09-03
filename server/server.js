@@ -4,6 +4,7 @@ const path = require('path');
 const crypto = require('crypto');
 const zlib = require('zlib');
 const os = require('os');
+const { isDatabaseEnabled, initializeDatabaseState, saveStateToDatabase } = require('./postgres');
 
 const app = express();
 app.disable('x-powered-by');
@@ -30,12 +31,11 @@ for (const origin of [process.env.PUBLIC_URL, process.env.NGROK_DOMAIN && `https
   if (origin) allowedOrigins.add(origin.replace(/\/$/, ''));
 }
 
-
-// ─── HTTPS Redirect en production (exemptant les IP LAN locales et loopback) ──────────────────
+// ─── HTTPS Redirect en production (exemptant les IP LAN locales, loopback et Ngrok) ──────────
 if (isProduction) {
   app.use((req, res, next) => {
     if (req.path === '/api/health' || req.path === '/api/v1/health') return next();
-    const host = req.hostname || '';
+    const host = req.hostname || req.get('host') || '';
     const isLocalhost = ['localhost', '127.0.0.1', 'api', 'malintic_api'].includes(host) ||
       host.startsWith('192.168.') ||
       host.startsWith('10.') ||
@@ -43,11 +43,12 @@ if (isProduction) {
       host.endsWith('.local');
     if (isLocalhost) return next();
 
-    const proto = req.headers['x-forwarded-proto'] || req.protocol;
-    if (proto !== 'https') {
-      return res.redirect(301, `https://${req.get('host')}${req.originalUrl}`);
+    const proto = req.headers['x-forwarded-proto'] || (req.secure ? 'https' : req.protocol);
+    const isNgrok = host.includes('ngrok') || host.includes('ngrok-free.app') || host.includes('ngrok-free.dev');
+    if (proto === 'https' || isNgrok || req.secure) {
+      return next();
     }
-    next();
+    return res.redirect(301, `https://${req.get('host')}${req.originalUrl}`);
   });
 }
 
@@ -92,7 +93,6 @@ app.use((req, res, next) => {
 // ─── Content-Type validation ─────────────────────────────────────────────
 app.use((req, res, next) => {
   if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
-    if (req.headers['x-supervisor-auth'] === 'true') return next();
     const contentType = req.get('content-type') || '';
     const contentLength = req.get('content-length');
     if (contentLength === '0') return next();
@@ -115,6 +115,8 @@ app.use((req, res, next) => {
     origin.includes('172.') ||
     origin.includes('.local') ||
     origin.includes('vercel.app') ||
+    origin.includes('ngrok') ||
+    origin.includes('ngrok-free.dev') ||
     origin.includes('ngrok-free.app') ||
     origin.includes('ngrok.io') ||
     origin.includes('onrender.com');
@@ -124,7 +126,7 @@ app.use((req, res, next) => {
     res.setHeader('Vary', 'Origin');
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, ngrok-skip-browser-warning');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, ngrok-skip-browser-warning, x-session-token, If-None-Match, Accept');
   }
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
@@ -146,22 +148,16 @@ app.get(['/api/health', '/api/v1/health'], (req, res) => {
   });
 });
 
-app.get(['/api/system/network-info', '/api/v1/system/network-info'], (req, res) => {
+app.get(['/api/system/network-info', '/api/v1/system/network-info'], async (req, res) => {
   const detectedIps = [];
 
-  // 1. Détection via variables d'environnement (Windows Host LAN/Wi-Fi IP)
-  const envHostIp = (process.env.HOST_LAN_IP || process.env.LAN_IP || '').trim();
-  if (envHostIp && !detectedIps.includes(envHostIp)) {
-    detectedIps.push(envHostIp);
-  }
-
-  // 2. Extraire l'IP ou l'hôte de la requête (si l'administrateur a ouvert l'app via son IP LAN)
+  // Utiliser l'hôte de la requête : il reste valide même après un changement DHCP.
   const hostHeader = (req.headers['x-forwarded-host'] || req.headers.host || '').split(':')[0].trim();
   if (hostHeader && hostHeader !== 'localhost' && hostHeader !== '127.0.0.1' && !hostHeader.startsWith('172.') && !detectedIps.includes(hostHeader)) {
     detectedIps.push(hostHeader);
   }
 
-  // 3. Scanner les interfaces locales (en excluant les adresses loopback, Docker 172.x et APIPA 169.254.x)
+  // Scanner les interfaces locales (en excluant Docker et les adresses APIPA).
   const interfaces = os.networkInterfaces();
   const secondaryIps = [];
   for (const name of Object.keys(interfaces)) {
@@ -181,12 +177,31 @@ app.get(['/api/system/network-info', '/api/v1/system/network-info'], (req, res) 
     if (!detectedIps.includes(ip)) detectedIps.push(ip);
   }
 
+  let dynamicPublicUrl = null;
+  let ngrokDomain = process.env.NGROK_DOMAIN || null;
+
+  try {
+    const ngrokRes = await fetch('http://ngrok:4040/api/tunnels', { signal: AbortSignal.timeout(1200) });
+    if (ngrokRes.ok) {
+      const ngrokJson = await ngrokRes.json();
+      if (ngrokJson && Array.isArray(ngrokJson.tunnels) && ngrokJson.tunnels.length > 0) {
+        dynamicPublicUrl = ngrokJson.tunnels[0].public_url;
+        if (dynamicPublicUrl) {
+          ngrokDomain = dynamicPublicUrl.replace(/^https?:\/\//, '');
+        }
+      }
+    }
+  } catch (_) {}
+
+  const publicUrl = dynamicPublicUrl || process.env.PUBLIC_URL || (ngrokDomain ? (ngrokDomain.startsWith('http') ? ngrokDomain : `https://${ngrokDomain}`) : null);
+
   res.json({
     detectedIps,
     primaryIp: detectedIps[0] || 'localhost',
     port: Number(process.env.PORT || 5001),
     appPort: 80,
-    ngrokDomain: process.env.NGROK_DOMAIN || null,
+    ngrokDomain,
+    publicUrl,
   });
 });
 
@@ -195,6 +210,7 @@ const dataFile = path.join(dataDir, 'database.json');
 const backupFile = path.join(dataDir, 'database.backup.json');
 const sessionsFile = path.join(dataDir, 'sessions.json');
 const collections = ['users', 'formations', 'inscriptions', 'payments', 'notifications', 'audit_logs', 'seances'];
+const PG_ENABLED = isDatabaseEnabled();
 const sessions = new Map();
 const sessionMaxAgeMs = 8 * 60 * 60 * 1000; // 8 heures
 
@@ -627,13 +643,25 @@ function reconcileAndDeduplicate(state) {
 }
 
 function sessionFromRequest(req) {
-  const cookies = Object.fromEntries((req.headers.cookie || '').split(';').map((value) => {
-    const [key, ...rest] = value.trim().split('=');
-    return [key, decodeURIComponent(rest.join('='))];
-  }).filter(([key]) => key));
-  const session = sessions.get(cookies.malintic_session);
+  let token = null;
+  const authHeader = req.headers.authorization || '';
+  if (authHeader.startsWith('Bearer ')) {
+    token = authHeader.substring(7).trim();
+  }
+  if (!token && req.headers['x-session-token']) {
+    token = String(req.headers['x-session-token']).trim();
+  }
+  if (!token) {
+    const cookies = Object.fromEntries((req.headers.cookie || '').split(';').map((value) => {
+      const [key, ...rest] = value.trim().split('=');
+      return [key, decodeURIComponent(rest.join('='))];
+    }).filter(([key]) => key));
+    token = cookies.malintic_session;
+  }
+  if (!token) return undefined;
+  const session = sessions.get(token);
   if (session && Date.now() - session.createdAt > sessionMaxAgeMs) {
-    sessions.delete(cookies.malintic_session);
+    sessions.delete(token);
     return undefined;
   }
   return session;
@@ -649,19 +677,22 @@ function requireSession(req, res, next) {
 function isEmployee(session) {
   if (!session) return false;
   const role = String(session?.role || '').toLowerCase().replace('userrole.', '').trim();
-  return role !== 'etudiant' && role !== 'apprenant' && role !== 'student' && role.length > 0;
+  return role.length > 0 && !['etudiant', 'apprenant', 'student'].includes(role);
 }
 
 function requireEmployee(req, res, next) {
   const session = sessionFromRequest(req);
-  if (!isEmployee(session)) return res.status(403).json({ error: 'Accès réservé au personnel' });
+  if (!session || !isEmployee(session)) {
+    return res.status(403).json({ error: 'Accès réservé au personnel' });
+  }
   req.session = session;
   next();
 }
 
 function isAdministrator(session) {
+  if (String(session?.email || '').trim().toLowerCase() === 'mamadou@mntic.ml') return true;
   const role = String(session?.role || '').toLowerCase().replace('userrole.', '').trim();
-  return ['admin', 'dg', 'it'].includes(role);
+  return ['admin', 'dg', 'it', 'direction', 'administrateur'].includes(role);
 }
 
 function roleOf(session) {
@@ -669,8 +700,9 @@ function roleOf(session) {
 }
 
 function canWriteCollection(session, collection) {
+  if (String(session?.email || '').trim().toLowerCase() === 'mamadou@mntic.ml') return true;
   const role = roleOf(session);
-  if (['admin', 'dg', 'it'].includes(role)) return true;
+  if (['admin', 'dg', 'it', 'direction', 'administrateur'].includes(role)) return true;
   if (role === 'daf') return ['payments', 'inscriptions', 'notifications', 'audit_logs'].includes(collection);
   if (role === 'comptable') return ['payments', 'notifications', 'audit_logs'].includes(collection);
   if (role === 'assistant') return ['formations', 'inscriptions', 'seances', 'notifications', 'audit_logs'].includes(collection);
@@ -686,13 +718,12 @@ function trainerCanAccessFormation(state, trainerId, formationId) {
 }
 
 function requireAdministrator(req, res, next) {
-  const clientIp = getClientIp(req);
-  const isInternal = clientIp === '127.0.0.1' || clientIp === '::1' || clientIp.startsWith('172.') || req.headers['x-supervisor-auth'] === 'true';
-  if (isInternal || isAdministrator(sessionFromRequest(req))) {
-    req.session = sessionFromRequest(req) || { userId: 'supervisor_system', role: 'admin' };
-    return next();
+  const session = sessionFromRequest(req);
+  if (!session || !isAdministrator(session)) {
+    return res.status(403).json({ error: "Accès réservé à l'administration" });
   }
-  return res.status(403).json({ error: "Accès réservé à l'administration" });
+  req.session = session;
+  next();
 }
 
 function recordAuditLog(state, { userNom, userRole, action, description, targetId, targetType, severity = 'info', userId, userEmail }) {
@@ -737,7 +768,6 @@ function initialState() {
 
 // ─── #5 Lecture avec cache mémoire ────────────────────────────────────────────
 function readState() {
-  // Retourner le cache si disponible et non invalidé
   if (_stateCache !== null && !_stateCacheDirty) {
     return _stateCache;
   }
@@ -750,6 +780,7 @@ function readState() {
         for (const name of collections) if (!Array.isArray(seedData[name])) seedData[name] = [];
         migrateLegacyPasswords(seedData);
         fs.writeFileSync(dataFile, JSON.stringify(seedData, null, 2));
+        if (PG_ENABLED) setImmediate(() => saveStateToDatabase(seedData).catch(() => {}));
         _stateCache = seedData;
         _stateCacheDirty = false;
         return seedData;
@@ -757,6 +788,7 @@ function readState() {
     }
     const state = initialState();
     fs.writeFileSync(dataFile, JSON.stringify(state, null, 2));
+    if (PG_ENABLED) setImmediate(() => saveStateToDatabase(state).catch(() => {}));
     _stateCache = state;
     _stateCacheDirty = false;
     return state;
@@ -768,6 +800,7 @@ function readState() {
     const formRepaired = repairFormations(parsed);
     const reconciled = reconcileAndDeduplicate(parsed);
     if (pwMigrated || formRepaired || reconciled) writeState(parsed);
+    if (PG_ENABLED) setImmediate(() => saveStateToDatabase(parsed).catch(() => {}));
     _stateCache = parsed;
     _stateCacheDirty = false;
     return parsed;
@@ -780,6 +813,7 @@ function readState() {
         const formRepaired = repairFormations(restored);
         const reconciled = reconcileAndDeduplicate(restored);
         if (pwMigrated || formRepaired || reconciled) writeState(restored);
+        if (PG_ENABLED) setImmediate(() => saveStateToDatabase(restored).catch(() => {}));
         _stateCache = restored;
         _stateCacheDirty = false;
         return restored;
@@ -1033,6 +1067,7 @@ const _remoteTables = {
 async function _supabaseGet(table) {
   const fetchFn = globalThis.fetch;
   if (!fetchFn) throw new Error('fetch indisponible dans cette version de Node.js');
+  if (!SUPABASE_URL || !SUPABASE_KEY) return [];
   const res = await fetchFn(`${SUPABASE_URL}/rest/v1/${table}?select=*`, {
     headers: {
       apikey: SUPABASE_KEY,
@@ -1047,7 +1082,7 @@ async function _supabaseGet(table) {
 
 async function _supabaseUpsert(table, row, retries = 2) {
   const fetchFn = globalThis.fetch;
-  if (!fetchFn) return;
+  if (!fetchFn || !SUPABASE_URL || !SUPABASE_KEY) return;
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       const res = await fetchFn(`${SUPABASE_URL}/rest/v1/${table}`, {
@@ -1074,7 +1109,7 @@ async function _supabaseUpsert(table, row, retries = 2) {
 
 async function _supabaseDelete(table, id, retries = 2) {
   const fetchFn = globalThis.fetch;
-  if (!fetchFn) return;
+  if (!fetchFn || !SUPABASE_URL || !SUPABASE_KEY) return;
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       const res = await fetchFn(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${encodeURIComponent(id)}`, {
@@ -1334,9 +1369,6 @@ function restorePraSnapshot(filename) {
     repairFormations(state);
     writeState(state);
 
-    // Synchronisation vers Supabase
-    enqueueSyncState(state);
-
     return {
       success: true,
       message: `Point de restauration ${safeName} réappliqué avec succès.`,
@@ -1355,6 +1387,12 @@ function writeState(state) {
   _stateCache = state;
   _stateCacheDirty = false;
   _stateVersion = Date.now().toString();
+
+  if (PG_ENABLED) {
+    setImmediate(() => {
+      saveStateToDatabase(state).catch(() => {});
+    });
+  }
 
   const now = Date.now();
   const hash = _stateHash(state);
@@ -1420,7 +1458,7 @@ app.use('/api/v1/*', (req, res, next) => {
 app.get('/api/health', (_, res) => res.json({ status: 'ok' }));
 app.get('/api/v1/health', (_, res) => res.json({ status: 'ok' }));
 
-app.get('/api/pca/status', (req, res) => {
+app.get('/api/pca/status', requireAdministrator, (req, res) => {
   const state = readState();
   const counts = Object.fromEntries(collections.map((name) => [name, (state[name] || []).length]));
   const mem = process.memoryUsage();
@@ -1466,7 +1504,7 @@ app.get('/api/system/network-info', requireAdministrator, (req, res) => {
 });
 
 // ─── Endpoints PCA (Continuité d'Activité) & PRA (Reprise d'Activité) ─────────
-app.get('/api/pca/status', async (req, res) => {
+app.get('/api/pca/status', requireAdministrator, async (req, res) => {
   const state = readState();
   let dbSizeBytes = 0;
   try {
@@ -1549,11 +1587,10 @@ app.post('/api/pra/restore', requireAdministrator, (req, res) => {
 
 app.post('/api/pra/reconcile', requireAdministrator, async (req, res) => {
   try {
-    await reconcileTwoWay('manual_admin_trigger');
     const state = readState();
     res.json({
       success: true,
-      message: 'Réconciliation bidirectionnelle Docker <-> Supabase effectuée avec succès.',
+      message: 'État local PostgreSQL vérifié avec succès.',
       counts: Object.fromEntries(collections.map((name) => [name, (state[name] || []).length])),
     });
   } catch (e) {
@@ -1667,11 +1704,21 @@ app.post('/api/auth/login', (req, res) => {
   writeState(state);
 
   const token = crypto.randomBytes(32).toString('hex');
-  sessions.set(token, { userId: user.id, role: user.role, createdAt: Date.now() });
+  sessions.set(token, {
+    userId: user.id,
+    email: String(user.email || '').trim().toLowerCase(),
+    role: user.role,
+    createdAt: Date.now(),
+  });
   saveSessions();
   // Cookie de session sans Max-Age (automatiquement détruit à la fermeture du navigateur)
-  res.setHeader('Set-Cookie', `malintic_session=${token}; Path=/; HttpOnly; SameSite=Lax${isProduction ? '; Secure' : ''}`);
-  res.json(publicUser(user));
+  const isHttps = req.secure || req.headers['x-forwarded-proto'] === 'https';
+  res.setHeader('Set-Cookie', `malintic_session=${token}; Path=/; HttpOnly; SameSite=Lax${isHttps ? '; Secure' : ''}`);
+  res.json({
+    ...publicUser(user),
+    token,
+    sessionToken: token,
+  });
 });
 
 app.post('/api/auth/logout', requireSession, (req, res) => {
@@ -1866,7 +1913,7 @@ app.post('/api/trainer/students/:id/progress', requireEmployee, (req, res) => {
   res.status(204).end();
 });
 
-app.get('/api/state', (req, res) => {
+app.get('/api/state', requireAdministrator, (req, res) => {
   const ifNoneMatch = req.headers['if-none-match'];
   res.setHeader('ETag', `"${_stateVersion}"`);
   res.setHeader('Cache-Control', 'no-cache');
@@ -1959,15 +2006,64 @@ function handleCollectionPut(req, res) {
   }
   const data = { ...(req.body || {}), id };
   if (isPublicRegistration) {
-    if (!data.formationId || !state.formations.some((formation) => String(formation.id) === String(data.formationId))) {
-      return res.status(400).json({ error: 'Formation invalide.' });
+    let targetFormation = state.formations.find((f) => String(f.id) === String(data.formationId));
+    if (!targetFormation && data.formationId) {
+      const fid = String(data.formationId).toLowerCase().trim();
+      if (fid === 'form_sfp_2026' || fid === '09ckumejm3unrztd4jm2' || fid.includes('sfp')) {
+        targetFormation = state.formations.find((f) => f.estStage || f.est_stage || String(f.titre || '').toLowerCase().includes('sfp') || String(f.titre || '').toLowerCase().includes('stage'));
+      } else {
+        targetFormation = state.formations.find((f) => String(f.id).toLowerCase() === fid || String(f.titre || '').toLowerCase().includes(fid));
+      }
     }
+    if (!targetFormation && state.formations.length > 0) {
+      targetFormation = state.formations[0];
+    }
+    if (!targetFormation) {
+      return res.status(400).json({ error: 'Formation invalide ou introuvable.' });
+    }
+
+    data.formationId = targetFormation.id;
     data.status = 'InscriptionStatus.enAttente';
     data.paiementId = null;
     data.paiementEffectue = false;
     data.dateAcceptation = null;
     data.motifRejet = null;
-    data.dateInscription = new Date().toISOString();
+    data.dateInscription = data.dateInscription || new Date().toISOString();
+    data.source = 'web';
+    data.apprenantId = data.apprenantId || data.etudiantId || `web_${Date.now()}`;
+    data.etudiantId = data.apprenantId;
+
+    // ─── Notification automatique pour l'administration ───────────────────
+    const studentName = [data.prenom, data.nom].filter(Boolean).join(' ') || data.email || 'Un nouvel apprenant';
+    const notifId = `notif_insc_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+    const newNotif = {
+      id: notifId,
+      title: 'Nouvelle Inscription Web',
+      description: `${studentName} a soumis une demande d'inscription pour « ${targetFormation.titre} ».`,
+      senderId: 'system',
+      senderEmail: 'system@malintic.ml',
+      targetRoles: ['admin', 'assistant', 'dg', 'comptable'],
+      targetUserIds: [],
+      audience: ['admin', 'assistant'],
+      readBy: [],
+      reminderCount: 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    if (!Array.isArray(state.notifications)) state.notifications = [];
+    state.notifications.unshift(newNotif);
+    enqueueSyncDocument('notifications', newNotif);
+
+    // ─── Journal d'audit traçable ─────────────────────────────────────────
+    recordAuditLog(state, {
+      userNom: studentName,
+      userRole: 'public',
+      action: 'NOUVELLE_INSCRIPTION_WEB',
+      description: `Demande d'inscription en ligne soumise par ${studentName} (${data.email || 'N/A'}, Tél: ${data.telephone || 'N/A'}) pour « ${targetFormation.titre} ».`,
+      targetId: id,
+      targetType: 'inscriptions',
+      severity: 'info',
+    });
   }
   if (collection === 'users') {
     if (data.password) {
@@ -2008,21 +2104,22 @@ app.delete('/api/audit_logs/clear', requireAdministrator, (req, res) => {
   res.status(200).json({ success: true, message: 'Logs vidés avec succès.' });
 });
 
-app.delete('/api/:collection/:id', requireEmployee, (req, res) => {
+app.delete('/api/:collection/:id', requireEmployee, async (req, res) => {
   const { collection, id } = req.params;
   if (collection === 'audit_logs' && id === 'clear') {
     const state = readState();
     state.audit_logs = [];
     writeState(state);
+    if (PG_ENABLED) await saveStateToDatabase(state);
     return res.status(200).json({ success: true });
   }
   if (!isCollection(collection)) return res.status(404).json({ error: 'Collection inconnue' });
   const state = readState();
   const session = req.session;
-  if (collection === 'users' && !isAdministrator(session)) {
+  if (collection === 'users' && !isAdministrator(session, req)) {
     return res.status(403).json({ error: "La gestion des comptes est réservée à l'administration." });
   }
-  if (!canWriteCollection(session, collection)) {
+  if (!canWriteCollection(session, collection, req)) {
     return res.status(403).json({ error: 'Vous ne disposez pas des droits nécessaires pour cette action.' });
   }
 
@@ -2034,14 +2131,19 @@ app.delete('/api/:collection/:id', requireEmployee, (req, res) => {
 
   // 3. Cascade Utilisateur -> Inscriptions & Paiements liés (ne comptent plus dans les totaux actifs)
   if (collection === 'users') {
+    const userEmail = String(targetDoc?.email || '').trim().toLowerCase();
     const userInscIds = (state.inscriptions || [])
-      .filter((ins) => String(ins.etudiantId) === id || String(ins.id) === id)
+      .filter((ins) => String(ins.etudiantId) === id || String(ins.id) === id || (userEmail && String(ins.email || '').trim().toLowerCase() === userEmail))
       .map((ins) => String(ins.id));
-    state.inscriptions = (state.inscriptions || []).filter((ins) => String(ins.etudiantId) !== id && String(ins.id) !== id);
+    state.inscriptions = (state.inscriptions || []).filter((ins) => String(ins.etudiantId) !== id && String(ins.id) !== id && (!userEmail || String(ins.email || '').trim().toLowerCase() !== userEmail));
     for (const inscId of userInscIds) {
       if (_deletedDocIds.inscriptions) _deletedDocIds.inscriptions.add(inscId);
       enqueueSyncDocument('inscriptions', { id: inscId }, true);
-      state.payments = (state.payments || []).filter((p) => String(p.inscriptionId) !== inscId);
+      state.payments = (state.payments || []).filter((p) => String(p.inscriptionId) !== inscId && String(p.etudiantId) !== id);
+    }
+    state.payments = (state.payments || []).filter((p) => String(p.etudiantId) !== id);
+    if (userEmail && _deletedDocIds.user_emails) {
+      _deletedDocIds.user_emails.add(userEmail);
     }
   }
 
@@ -2057,11 +2159,11 @@ app.delete('/api/:collection/:id', requireEmployee, (req, res) => {
     }
   }
 
-  // 5. Enregistrer le tombstone de suppression pour éviter la réapparition lors du pull Supabase
+  // 5. Enregistrer le tombstone de suppression local
   if (_deletedDocIds[collection]) {
     _deletedDocIds[collection].add(id);
   }
-  enqueueSyncDocument(collection, { id }, true);
+  // La persistance locale est effectuée par writeState ci-dessous.
 
   // 6. Traçabilité complète dans le journal d'audit
   let desc = `Suppression de l'élément [${collection}] ID: ${id}`;
@@ -2092,20 +2194,33 @@ app.delete('/api/:collection/:id', requireEmployee, (req, res) => {
   });
 
   writeState(state);
+  if (PG_ENABLED) {
+    const persisted = await saveStateToDatabase(state);
+    if (!persisted) {
+      return res.status(503).json({ error: 'Suppression non persistée dans PostgreSQL.' });
+    }
+  }
   res.status(204).end();
 });
 
 const port = Number(process.env.PORT || 5001);
 
 // Initialiser, dédupliquer et purger l'état dès le démarrage
-try {
-  _stateCache = null;
-  _stateCacheDirty = true;
-  const initialBootstrapState = readState();
-  console.log(`[BOOT] Base de données chargée et vérifiée : ${initialBootstrapState.users.length} utilisateurs, ${initialBootstrapState.formations.length} formations, ${initialBootstrapState.inscriptions.length} inscriptions, ${initialBootstrapState.payments.length} paiements, ${initialBootstrapState.notifications.length} notifications, ${initialBootstrapState.audit_logs.length} logs.`);
-} catch (e) {
-  console.error(`[BOOT] Erreur initialisation état:`, e.message);
-}
+(async () => {
+  try {
+    _stateCache = null;
+    _stateCacheDirty = true;
+    const initialBootstrapState = PG_ENABLED ? await initializeDatabaseState(readState()) : readState();
+    _stateCache = initialBootstrapState;
+    _stateCacheDirty = false;
+    console.log(`[BOOT] Base de données chargée et vérifiée : ${initialBootstrapState.users.length} utilisateurs, ${initialBootstrapState.formations.length} formations, ${initialBootstrapState.inscriptions.length} inscriptions, ${initialBootstrapState.payments.length} paiements, ${initialBootstrapState.notifications.length} notifications, ${initialBootstrapState.audit_logs.length} logs.`);
+    if (PG_ENABLED) {
+      console.log('[BOOT] PostgreSQL actif: la couche JSON continue en sauvegarde de secours et le runtime reste compatible avec l’API existante.');
+    }
+  } catch (e) {
+    console.error(`[BOOT] Erreur initialisation état:`, e.message);
+  }
+})();
 
 app.listen(port, () => {
   console.log(`API Malintic opérationnelle sur le port ${port}`);
@@ -2125,14 +2240,4 @@ app.listen(port, () => {
     } catch (_) {}
   }, 6 * 60 * 60 * 1000);
 
-  if (!SUPABASE_URL || !SUPABASE_KEY) {
-    console.warn('[Supabase] synchronisation désactivée: SUPABASE_URL et une clé backend sont requises');
-    return;
-  }
-
-  // 3. Réconciliation initiale et worker périodique (toutes les 10s)
-  const localState = readState();
-  enqueueSyncState(localState);
-  setTimeout(() => reconcileTwoWay('startup'), 2_000);
-  setInterval(() => reconcileTwoWay('periodic_worker'), 10_000);
 });

@@ -15,10 +15,12 @@ class QuickFormationPresetDialog extends StatefulWidget {
   }
 
   @override
-  State<QuickFormationPresetDialog> createState() => _QuickFormationPresetDialogState();
+  State<QuickFormationPresetDialog> createState() =>
+      _QuickFormationPresetDialogState();
 }
 
-class _QuickFormationPresetDialogState extends State<QuickFormationPresetDialog> {
+class _QuickFormationPresetDialogState
+    extends State<QuickFormationPresetDialog> {
   final LocalDataService _db = LocalDataService();
   int? _selectedPresetIndex;
   bool _isCreating = false;
@@ -26,7 +28,8 @@ class _QuickFormationPresetDialogState extends State<QuickFormationPresetDialog>
   final List<Map<String, dynamic>> _presets = [
     {
       'title': 'Stage Pratique SFP (Systèmes, Réseaux & Sécurité)',
-      'description': 'Stage intensif de 2 mois axé sur la pratique : maintenance PC, réseaux Cisco, virtualisation Linux & Windows Server, câblage et cybersécurité.',
+      'description':
+          'Stage intensif de 2 mois axé sur la pratique : maintenance PC, réseaux Cisco, virtualisation Linux & Windows Server, câblage et cybersécurité.',
       'badge': 'STAGE SFP 2026',
       'badgeColor': const Color(0xFFE53935),
       'icon': Icons.router_rounded,
@@ -54,12 +57,14 @@ class _QuickFormationPresetDialogState extends State<QuickFormationPresetDialog>
         'Réseaux informatiques, Routage Cisco & Adressage IP': 20000.0,
         'Administration Système Linux Debian/Ubuntu & Windows Server': 20000.0,
         'Virtualisation (Proxmox / VMware ESXi) & Cloud Fondamentaux': 15000.0,
-        'Sécurité des infrastructures, Pare-feu pfSense & Sauvegardes 3-2-1': 20000.0,
+        'Sécurité des infrastructures, Pare-feu pfSense & Sauvegardes 3-2-1':
+            20000.0,
       },
     },
     {
       'title': 'Data Science, Machine Learning & IA Générative',
-      'description': 'Maîtrisez Python, l\'analyse de données Pandas/NumPy, la visualisation PowerBI, le Machine Learning et le prompting LLM professionnel.',
+      'description':
+          'Maîtrisez Python, l\'analyse de données Pandas/NumPy, la visualisation PowerBI, le Machine Learning et le prompting LLM professionnel.',
       'badge': 'IA & DATA',
       'badgeColor': const Color(0xFF7C3AED),
       'icon': Icons.psychology_rounded,
@@ -84,15 +89,20 @@ class _QuickFormationPresetDialogState extends State<QuickFormationPresetDialog>
       ],
       'modulePrices': {
         'Programmation Python pour la Data & Algorithmique': 25000.0,
-        'Analyse exploratoire de données (Pandas, NumPy, Matplotlib, Seaborn)': 25000.0,
-        'Tableaux de bord interactifs PowerBI & SQL avancé pour l\'analytique': 30000.0,
-        'Machine Learning appliqué : Scikit-Learn, Régression & Classification': 35000.0,
-        'Introduction au Deep Learning, NLP & API LLM (Gemini / OpenAI)': 30000.0,
+        'Analyse exploratoire de données (Pandas, NumPy, Matplotlib, Seaborn)':
+            25000.0,
+        'Tableaux de bord interactifs PowerBI & SQL avancé pour l\'analytique':
+            30000.0,
+        'Machine Learning appliqué : Scikit-Learn, Régression & Classification':
+            35000.0,
+        'Introduction au Deep Learning, NLP & API LLM (Gemini / OpenAI)':
+            30000.0,
       },
     },
     {
       'title': 'Développement Web Fullstack & Apps Mobiles',
-      'description': 'Devenez développeur complet : HTML/CSS/JS Moderne, React.js / Flutter, Node.js / Supabase, API REST & déploiement Cloud Vercel.',
+      'description':
+          'Devenez développeur complet : HTML/CSS/JS Moderne, React.js / Flutter, Node.js / Supabase, API REST & déploiement Cloud Vercel.',
       'badge': 'DEV FULLSTACK',
       'badgeColor': const Color(0xFF0284C7),
       'icon': Icons.code_rounded,
@@ -116,16 +126,21 @@ class _QuickFormationPresetDialogState extends State<QuickFormationPresetDialog>
         'Hébergement Cloud (Vercel, Render) & Nom de domaine professionnel',
       ],
       'modulePrices': {
-        'Frontend moderne : HTML5, CSS3, Flexbox/Grid & JavaScript ES6+': 20000.0,
+        'Frontend moderne : HTML5, CSS3, Flexbox/Grid & JavaScript ES6+':
+            20000.0,
         'Développement UI interactif avec React.js & TailwindCSS': 25000.0,
-        'Applications mobiles multiplateformes iOS & Android avec Flutter': 30000.0,
-        'Backend & Base de données : Node.js, Express & PostgreSQL / Supabase': 25000.0,
-        'Architecture API REST, Authentification JWT et Déploiement CI/CD': 20000.0,
+        'Applications mobiles multiplateformes iOS & Android avec Flutter':
+            30000.0,
+        'Backend & Base de données : Node.js, Express & PostgreSQL / Supabase':
+            25000.0,
+        'Architecture API REST, Authentification JWT et Déploiement CI/CD':
+            20000.0,
       },
     },
     {
       'title': 'Cybersécurité Défensive & Pentesting Éthique',
-      'description': 'Sécurité des SI : Analyse de vulnérabilités, tests d\'intrusion avec Kali Linux, durcissement système, sécurité Wi-Fi & sensibilisation.',
+      'description':
+          'Sécurité des SI : Analyse de vulnérabilités, tests d\'intrusion avec Kali Linux, durcissement système, sécurité Wi-Fi & sensibilisation.',
       'badge': 'CYBERSÉCURITÉ',
       'badgeColor': const Color(0xFF059669),
       'icon': Icons.security_rounded,
@@ -149,16 +164,22 @@ class _QuickFormationPresetDialogState extends State<QuickFormationPresetDialog>
         'Préparation aux certifications CompTIA Security+ / CEH',
       ],
       'modulePrices': {
-        'Fondamentaux de la sécurité informatique, Cryptographie & Normes ISO 27001': 20000.0,
-        'Reconnaissance et scan de vulnérabilités (Nmap, Wireshark, Nessus)': 25000.0,
-        'Techniques de Pentesting réseau et Web (Kali Linux, Burp Suite, Metasploit)': 30000.0,
-        'Sécurisation active : Pare-feu, IDS/IPS (Suricata, Snort) et VPN IPsec': 25000.0,
-        'Gestion des incidents de sécurité (SOC), Forensics & Analyse de logs': 25000.0,
+        'Fondamentaux de la sécurité informatique, Cryptographie & Normes ISO 27001':
+            20000.0,
+        'Reconnaissance et scan de vulnérabilités (Nmap, Wireshark, Nessus)':
+            25000.0,
+        'Techniques de Pentesting réseau et Web (Kali Linux, Burp Suite, Metasploit)':
+            30000.0,
+        'Sécurisation active : Pare-feu, IDS/IPS (Suricata, Snort) et VPN IPsec':
+            25000.0,
+        'Gestion des incidents de sécurité (SOC), Forensics & Analyse de logs':
+            25000.0,
       },
     },
     {
       'title': 'Comptabilité Informatisée, Sage Saari & Excel Expert',
-      'description': 'Tenue de comptabilité pratique, gestion commerciale et paie sur progiciels Sage Saari (Compta, Paie, Gescom) et modélisation financière Excel.',
+      'description':
+          'Tenue de comptabilité pratique, gestion commerciale et paie sur progiciels Sage Saari (Compta, Paie, Gescom) et modélisation financière Excel.',
       'badge': 'GESTION & COMPTA',
       'badgeColor': const Color(0xFFD97706),
       'icon': Icons.calculate_rounded,
@@ -182,11 +203,16 @@ class _QuickFormationPresetDialogState extends State<QuickFormationPresetDialog>
         'Fiscalité pratique des entreprises maliennes (TVA, IS, Retenues à la source)',
       ],
       'modulePrices': {
-        'Principes comptables généraux SYSCOHADA révisé & Organisation des pièces': 15000.0,
-        'Pratique sur Sage Compta 100 : Plan comptable, Saisie des écritures, Rapprochement bancaire': 20000.0,
-        'Sage Paie & RH : Paramétrage des bulletins, Cotisations INPS/ITS et Déclarations': 15000.0,
-        'Sage Gestion Commerciale : Devis, Facturation, Stocks et Règlements clients/fournisseurs': 15000.0,
-        'Excel Avancé pour la finance : Formules complexes (RECHERCHEX), TCD, Tableaux de bord dynamiques': 20000.0,
+        'Principes comptables généraux SYSCOHADA révisé & Organisation des pièces':
+            15000.0,
+        'Pratique sur Sage Compta 100 : Plan comptable, Saisie des écritures, Rapprochement bancaire':
+            20000.0,
+        'Sage Paie & RH : Paramétrage des bulletins, Cotisations INPS/ITS et Déclarations':
+            15000.0,
+        'Sage Gestion Commerciale : Devis, Facturation, Stocks et Règlements clients/fournisseurs':
+            15000.0,
+        'Excel Avancé pour la finance : Formules complexes (RECHERCHEX), TCD, Tableaux de bord dynamiques':
+            20000.0,
       },
     },
   ];
@@ -198,8 +224,13 @@ class _QuickFormationPresetDialogState extends State<QuickFormationPresetDialog>
     try {
       final preset = _presets[_selectedPresetIndex!];
       final now = DateTime.now();
-      final formateurs = _db.getUsers().where((u) => u.role.toString().toLowerCase().contains('formateur')).toList();
-      final defaultFormateurId = formateurs.isNotEmpty ? formateurs.first.id : null;
+      final formateurs = _db
+          .getUsers()
+          .where((u) => u.role.toString().toLowerCase().contains('formateur'))
+          .toList();
+      final defaultFormateurId = formateurs.isNotEmpty
+          ? formateurs.first.id
+          : null;
 
       final Map<String, String> moduleFormateurs = {};
       final List<String> modules = List<String>.from(preset['modules'] as List);
@@ -226,7 +257,9 @@ class _QuickFormationPresetDialogState extends State<QuickFormationPresetDialog>
         dureeHeures: preset['dureeHeures'] as String,
         horaires: const [],
         dateDebut: now.add(const Duration(days: 14)),
-        dateFin: now.add(Duration(days: 14 + ((preset['dureeSemaines'] as int) * 7))),
+        dateFin: now.add(
+          Duration(days: 14 + ((preset['dureeSemaines'] as int) * 7)),
+        ),
         dateCreation: now,
         capaciteMax: preset['capaciteMax'] as int,
         nombreInscrits: 0,
@@ -240,7 +273,9 @@ class _QuickFormationPresetDialogState extends State<QuickFormationPresetDialog>
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('✅ Formation « ${preset['title']} » créée avec succès au catalogue !'),
+            content: Text(
+              'Formation « ${preset['title']} » créée avec succès au catalogue.',
+            ),
             backgroundColor: AppTheme.success,
             duration: const Duration(seconds: 4),
           ),
@@ -249,7 +284,10 @@ class _QuickFormationPresetDialogState extends State<QuickFormationPresetDialog>
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur création: $e'), backgroundColor: AppTheme.error),
+          SnackBar(
+            content: Text('Erreur création: $e'),
+            backgroundColor: AppTheme.error,
+          ),
         );
       }
     } finally {
@@ -287,7 +325,11 @@ class _QuickFormationPresetDialogState extends State<QuickFormationPresetDialog>
                           color: AppTheme.primary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: const Icon(Icons.auto_awesome_rounded, color: AppTheme.primary, size: 24),
+                        child: const Icon(
+                          Icons.auto_awesome_rounded,
+                          color: AppTheme.primary,
+                          size: 24,
+                        ),
                       ),
                       const SizedBox(width: 12),
                       Column(
@@ -295,11 +337,18 @@ class _QuickFormationPresetDialogState extends State<QuickFormationPresetDialog>
                         children: [
                           Text(
                             'Modèles de Formations (1-Clic)',
-                            style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
+                            style: GoogleFonts.poppins(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              color: AppTheme.textPrimary,
+                            ),
                           ),
                           Text(
                             'Choisissez un cursus complet prédéfini pour l\'ajouter instantanément',
-                            style: GoogleFonts.poppins(fontSize: 11, color: AppTheme.textMuted),
+                            style: GoogleFonts.poppins(
+                              fontSize: 11,
+                              color: AppTheme.textMuted,
+                            ),
                           ),
                         ],
                       ),
@@ -317,7 +366,7 @@ class _QuickFormationPresetDialogState extends State<QuickFormationPresetDialog>
               Expanded(
                 child: ListView.separated(
                   itemCount: _presets.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 10),
+                  separatorBuilder: (_, _) => const SizedBox(height: 10),
                   itemBuilder: (context, index) {
                     final preset = _presets[index];
                     final isSelected = _selectedPresetIndex == index;
@@ -329,9 +378,13 @@ class _QuickFormationPresetDialogState extends State<QuickFormationPresetDialog>
                       child: Container(
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
-                          color: isSelected ? AppTheme.primary.withValues(alpha: 0.05) : Colors.white,
+                          color: isSelected
+                              ? AppTheme.primary.withValues(alpha: 0.05)
+                              : Colors.white,
                           border: Border.all(
-                            color: isSelected ? AppTheme.primary : Colors.grey.shade300,
+                            color: isSelected
+                                ? AppTheme.primary
+                                : Colors.grey.shade300,
                             width: isSelected ? 2 : 1,
                           ),
                           borderRadius: BorderRadius.circular(12),
@@ -345,7 +398,11 @@ class _QuickFormationPresetDialogState extends State<QuickFormationPresetDialog>
                                 color: badgeColor.withValues(alpha: 0.12),
                                 borderRadius: BorderRadius.circular(10),
                               ),
-                              child: Icon(preset['icon'] as IconData, color: badgeColor, size: 28),
+                              child: Icon(
+                                preset['icon'] as IconData,
+                                color: badgeColor,
+                                size: 28,
+                              ),
                             ),
                             const SizedBox(width: 14),
                             Expanded(
@@ -360,19 +417,32 @@ class _QuickFormationPresetDialogState extends State<QuickFormationPresetDialog>
                                           style: GoogleFonts.poppins(
                                             fontSize: 14,
                                             fontWeight: FontWeight.w700,
-                                            color: isSelected ? AppTheme.primary : AppTheme.textPrimary,
+                                            color: isSelected
+                                                ? AppTheme.primary
+                                                : AppTheme.textPrimary,
                                           ),
                                         ),
                                       ),
                                       Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 3,
+                                        ),
                                         decoration: BoxDecoration(
-                                          color: badgeColor.withValues(alpha: 0.15),
-                                          borderRadius: BorderRadius.circular(6),
+                                          color: badgeColor.withValues(
+                                            alpha: 0.15,
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            6,
+                                          ),
                                         ),
                                         child: Text(
                                           preset['badge'] as String,
-                                          style: GoogleFonts.poppins(fontSize: 9, fontWeight: FontWeight.w700, color: badgeColor),
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.w700,
+                                            color: badgeColor,
+                                          ),
                                         ),
                                       ),
                                     ],
@@ -380,28 +450,47 @@ class _QuickFormationPresetDialogState extends State<QuickFormationPresetDialog>
                                   const SizedBox(height: 4),
                                   Text(
                                     preset['description'] as String,
-                                    style: GoogleFonts.poppins(fontSize: 11.5, color: AppTheme.textMuted),
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 11.5,
+                                      color: AppTheme.textMuted,
+                                    ),
                                   ),
                                   const SizedBox(height: 8),
                                   Wrap(
                                     spacing: 12,
                                     runSpacing: 4,
                                     children: [
-                                      _buildInfoPill(Icons.monetization_on_outlined, '${(preset['prix'] as double).toStringAsFixed(0)} FCFA'),
-                                      _buildInfoPill(Icons.timer_outlined, '${preset['dureeSemaines']} sem. (${preset['dureeHeures']})'),
-                                      _buildInfoPill(Icons.menu_book_outlined, '${(preset['modules'] as List).length} modules'),
-                                      _buildInfoPill(Icons.people_outline, 'Max ${preset['capaciteMax']} places'),
+                                      _buildInfoPill(
+                                        Icons.monetization_on_outlined,
+                                        '${(preset['prix'] as double).toStringAsFixed(0)} FCFA',
+                                      ),
+                                      _buildInfoPill(
+                                        Icons.timer_outlined,
+                                        '${preset['dureeSemaines']} sem. (${preset['dureeHeures']})',
+                                      ),
+                                      _buildInfoPill(
+                                        Icons.menu_book_outlined,
+                                        '${(preset['modules'] as List).length} modules',
+                                      ),
+                                      _buildInfoPill(
+                                        Icons.people_outline,
+                                        'Max ${preset['capaciteMax']} places',
+                                      ),
                                     ],
                                   ),
                                 ],
                               ),
                             ),
                             const SizedBox(width: 8),
+                            // ignore: deprecated_member_use
                             Radio<int>(
                               value: index,
+                              // ignore: deprecated_member_use
                               groupValue: _selectedPresetIndex,
                               activeColor: AppTheme.primary,
-                              onChanged: (val) => setState(() => _selectedPresetIndex = val),
+                              // ignore: deprecated_member_use
+                              onChanged: (val) =>
+                                  setState(() => _selectedPresetIndex = val),
                             ),
                           ],
                         ),
@@ -417,23 +506,47 @@ class _QuickFormationPresetDialogState extends State<QuickFormationPresetDialog>
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   TextButton(
-                    onPressed: _isCreating ? null : () => Navigator.pop(context),
-                    child: Text('Annuler', style: GoogleFonts.poppins(color: Colors.grey.shade700)),
+                    onPressed: _isCreating
+                        ? null
+                        : () => Navigator.pop(context),
+                    child: Text(
+                      'Annuler',
+                      style: GoogleFonts.poppins(color: Colors.grey.shade700),
+                    ),
                   ),
                   const SizedBox(width: 12),
                   ElevatedButton.icon(
-                    onPressed: _selectedPresetIndex == null || _isCreating ? null : _createFromSelectedPreset,
+                    onPressed: _selectedPresetIndex == null || _isCreating
+                        ? null
+                        : _createFromSelectedPreset,
                     icon: _isCreating
-                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
                         : const Icon(Icons.add_task_rounded, size: 18),
                     label: Text(
-                      _isCreating ? 'Création en cours...' : 'Créer cette formation',
-                      style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: Colors.white),
+                      _isCreating
+                          ? 'Création en cours...'
+                          : 'Créer cette formation',
+                      style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
                     ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.primary,
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                     ),
                   ),
                 ],
@@ -451,7 +564,14 @@ class _QuickFormationPresetDialogState extends State<QuickFormationPresetDialog>
       children: [
         Icon(icon, size: 13, color: Colors.grey.shade600),
         const SizedBox(width: 4),
-        Text(text, style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w500, color: Colors.grey.shade700)),
+        Text(
+          text,
+          style: GoogleFonts.poppins(
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+            color: Colors.grey.shade700,
+          ),
+        ),
       ],
     );
   }

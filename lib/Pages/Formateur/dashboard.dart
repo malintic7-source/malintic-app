@@ -56,7 +56,7 @@ class _FormateurDashboardState extends State<FormateurDashboard> with TickerProv
                   child: Container(
                     decoration: BoxDecoration(
                       color: AppTheme.surface,
-                      borderRadius: BorderRadius.circular(24),
+                      borderRadius: BorderRadius.circular(16),
                       boxShadow: AppTheme.cardShadow,
                     ),
                     padding: const EdgeInsets.all(20),
@@ -89,7 +89,7 @@ class _FormateurDashboardState extends State<FormateurDashboard> with TickerProv
       opacity: _fadeController,
       child: Container(
         decoration: BoxDecoration(
-          gradient: AppTheme.heroGradient,
+          color: AppTheme.primary,
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
@@ -183,7 +183,7 @@ class _FormateurDashboardState extends State<FormateurDashboard> with TickerProv
   Widget _buildStatCard(String title, String value, IconData icon, Color color) {
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(14),
         color: Colors.white,
         boxShadow: AppTheme.cardShadow,
       ),

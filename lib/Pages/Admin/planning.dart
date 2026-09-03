@@ -23,7 +23,6 @@ class _AdminPlanningState extends State<AdminPlanning>
   final LocalDataService _db = LocalDataService();
   late AnimationController _fadeController;
   StreamSubscription<void>? _dataSub;
-  Timer? _refreshTimer;
 
   bool _isCalendarView = true;
   String _selectedDay = 'Tous';
@@ -2739,7 +2738,7 @@ class _AdminPlanningState extends State<AdminPlanning>
                                     const SizedBox(width: 8),
                                     Expanded(
                                       child: Text(
-                                        '👨‍🏫 ${trainerUser.nomComplet}',
+                                        trainerUser.nomComplet,
                                         style: GoogleFonts.poppins(
                                           fontSize: 11,
                                           color: Colors.teal,
@@ -3234,7 +3233,7 @@ class _AdminPlanningState extends State<AdminPlanning>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('📄 Feuille d\'émargement PDF générée avec succès !'),
+            content: Text('Feuille d’émargement PDF générée avec succès.'),
             backgroundColor: AppTheme.success,
           ),
         );

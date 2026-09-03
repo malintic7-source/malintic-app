@@ -5,6 +5,7 @@ import 'package:gestion_formations/Models/user.dart';
 import 'package:gestion_formations/Services/auth_provider.dart';
 import 'package:gestion_formations/Services/notifications_services.dart';
 import 'package:gestion_formations/config/theme.dart';
+
 // invoice and pdf helper imports removed (unused)
 
 class NotificationsPage extends StatefulWidget {
@@ -16,7 +17,8 @@ class NotificationsPage extends StatefulWidget {
   State<NotificationsPage> createState() => _NotificationsPageState();
 }
 
-class _NotificationsPageState extends State<NotificationsPage> with TickerProviderStateMixin {
+class _NotificationsPageState extends State<NotificationsPage>
+    with TickerProviderStateMixin {
   final NotificationsService _notificationsService = NotificationsService();
   late AnimationController _fadeController;
   bool _onlyUnread = false;
@@ -24,7 +26,10 @@ class _NotificationsPageState extends State<NotificationsPage> with TickerProvid
   @override
   void initState() {
     super.initState();
-    _fadeController = AnimationController(duration: const Duration(milliseconds: 600), vsync: this)..forward();
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    )..forward();
   }
 
   @override
@@ -74,13 +79,21 @@ class _NotificationsPageState extends State<NotificationsPage> with TickerProvid
                             const SizedBox(height: 10),
                             ElevatedButton.icon(
                               onPressed: _showBroadcastDialog,
-                              icon: const Icon(Icons.campaign_rounded, size: 16),
+                              icon: const Icon(
+                                Icons.campaign_rounded,
+                                size: 16,
+                              ),
                               label: const Text('Diffuser un message'),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppTheme.primary,
                                 foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 10,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
                               ),
                             ),
                           ],
@@ -116,13 +129,21 @@ class _NotificationsPageState extends State<NotificationsPage> with TickerProvid
                           if (_canBroadcast)
                             ElevatedButton.icon(
                               onPressed: _showBroadcastDialog,
-                              icon: const Icon(Icons.campaign_rounded, size: 18),
+                              icon: const Icon(
+                                Icons.campaign_rounded,
+                                size: 18,
+                              ),
                               label: const Text('Diffuser'),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppTheme.primary,
                                 foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 10,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
                               ),
                             ),
                         ],
@@ -141,7 +162,9 @@ class _NotificationsPageState extends State<NotificationsPage> with TickerProvid
                   selectedColor: AppTheme.primary.withValues(alpha: 0.15),
                   labelStyle: GoogleFonts.poppins(
                     fontSize: 12,
-                    fontWeight: !_onlyUnread ? FontWeight.w700 : FontWeight.w500,
+                    fontWeight: !_onlyUnread
+                        ? FontWeight.w700
+                        : FontWeight.w500,
                     color: !_onlyUnread ? AppTheme.primary : Colors.black87,
                   ),
                 ),
@@ -171,17 +194,27 @@ class _NotificationsPageState extends State<NotificationsPage> with TickerProvid
                     if (mounted) {
                       messenger.showSnackBar(
                         const SnackBar(
-                          content: Text('Toutes les notifications ont été marquées comme lues.'),
+                          content: Text(
+                            'Toutes les notifications ont été marquées comme lues.',
+                          ),
                           backgroundColor: AppTheme.success,
                         ),
                       );
                       setState(() {});
                     }
                   },
-                  icon: const Icon(Icons.done_all_rounded, size: 16, color: AppTheme.primary),
+                  icon: const Icon(
+                    Icons.done_all_rounded,
+                    size: 16,
+                    color: AppTheme.primary,
+                  ),
                   label: Text(
                     'Tout marquer comme lu',
-                    style: GoogleFonts.poppins(fontSize: 12, color: AppTheme.primary, fontWeight: FontWeight.w600),
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: AppTheme.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ],
@@ -206,11 +239,13 @@ class _NotificationsPageState extends State<NotificationsPage> with TickerProvid
       child: ConstrainedBox(
         constraints: BoxConstraints(maxWidth: maxWidth),
         child: SingleChildScrollView(
-          padding: padding ?? const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+          padding:
+              padding ??
+              const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
           child: Container(
             decoration: BoxDecoration(
               color: AppTheme.surface,
-              borderRadius: BorderRadius.circular(24),
+              borderRadius: BorderRadius.circular(16),
               boxShadow: AppTheme.cardShadow,
             ),
             padding: const EdgeInsets.all(20),
@@ -232,7 +267,12 @@ class _NotificationsPageState extends State<NotificationsPage> with TickerProvid
       stream: notificationsStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator()));
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.all(32),
+              child: CircularProgressIndicator(),
+            ),
+          );
         }
 
         if (snapshot.hasError) {
@@ -241,7 +281,9 @@ class _NotificationsPageState extends State<NotificationsPage> with TickerProvid
 
         var notifications = snapshot.data ?? [];
         if (_onlyUnread) {
-          notifications = notifications.where((n) => !n.readBy.contains(widget.user.id)).toList();
+          notifications = notifications
+              .where((n) => !n.readBy.contains(widget.user.id))
+              .toList();
         }
 
         if (notifications.isEmpty) {
@@ -254,10 +296,16 @@ class _NotificationsPageState extends State<NotificationsPage> with TickerProvid
             child: Center(
               child: Column(
                 children: [
-                  const Icon(Icons.notifications_off_outlined, size: 56, color: AppTheme.textSecondary),
+                  const Icon(
+                    Icons.notifications_off_outlined,
+                    size: 56,
+                    color: AppTheme.textSecondary,
+                  ),
                   const SizedBox(height: 14),
                   Text(
-                    _onlyUnread ? 'Aucune notification non lue' : 'Aucune notification',
+                    _onlyUnread
+                        ? 'Aucune notification non lue'
+                        : 'Aucune notification',
                     style: GoogleFonts.poppins(
                       fontSize: 15,
                       color: AppTheme.textSecondary,
@@ -277,7 +325,10 @@ class _NotificationsPageState extends State<NotificationsPage> with TickerProvid
           itemBuilder: (context, index) {
             return Padding(
               padding: const EdgeInsets.only(bottom: 12),
-              child: _buildStudentNotificationCard(context, notifications[index]),
+              child: _buildStudentNotificationCard(
+                context,
+                notifications[index],
+              ),
             );
           },
         );
@@ -285,7 +336,10 @@ class _NotificationsPageState extends State<NotificationsPage> with TickerProvid
     );
   }
 
-  Widget _buildStudentNotificationCard(BuildContext context, AppNotification notification) {
+  Widget _buildStudentNotificationCard(
+    BuildContext context,
+    AppNotification notification,
+  ) {
     final isRead = notification.readBy.contains(widget.user.id);
 
     return Material(
@@ -297,7 +351,9 @@ class _NotificationsPageState extends State<NotificationsPage> with TickerProvid
           decoration: BoxDecoration(
             color: Colors.white,
             border: Border.all(
-              color: isRead ? Colors.transparent : AppTheme.primary.withValues(alpha: 0.2),
+              color: isRead
+                  ? Colors.transparent
+                  : AppTheme.primary.withValues(alpha: 0.2),
               width: 1.5,
             ),
             borderRadius: BorderRadius.circular(16),
@@ -311,7 +367,8 @@ class _NotificationsPageState extends State<NotificationsPage> with TickerProvid
           ),
           child: Column(
             children: [
-              if (notification.imageUrl != null && notification.imageUrl!.isNotEmpty)
+              if (notification.imageUrl != null &&
+                  notification.imageUrl!.isNotEmpty)
                 Stack(
                   children: [
                     Container(
@@ -328,7 +385,11 @@ class _NotificationsPageState extends State<NotificationsPage> with TickerProvid
                         notification.imageUrl!,
                         fit: BoxFit.cover,
                         errorBuilder: (_, _, _) => Center(
-                          child: Icon(Icons.notifications, color: Colors.white, size: 48),
+                          child: Icon(
+                            Icons.notifications,
+                            color: Colors.white,
+                            size: 48,
+                          ),
                         ),
                       ),
                     ),
@@ -380,7 +441,8 @@ class _NotificationsPageState extends State<NotificationsPage> with TickerProvid
                     ),
                     SizedBox(height: 12),
                     // Bouton Télécharger facture si applicable
-                    if (notification.title.contains('Paiement') || notification.title.contains('Inscription'))
+                    if (notification.title.contains('Paiement') ||
+                        notification.title.contains('Inscription'))
                       GestureDetector(
                         onTap: () => _downloadInvoice(notification),
                         child: Container(
@@ -404,7 +466,11 @@ class _NotificationsPageState extends State<NotificationsPage> with TickerProvid
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.download_rounded, color: Colors.white, size: 16),
+                              Icon(
+                                Icons.download_rounded,
+                                color: Colors.white,
+                                size: 16,
+                              ),
                               SizedBox(width: 6),
                               Text(
                                 'Télécharger facture',
@@ -454,9 +520,7 @@ class _NotificationsPageState extends State<NotificationsPage> with TickerProvid
                         width: double.infinity,
                         child: Container(
                           decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [AppTheme.primary, AppTheme.primary.withValues(alpha: 0.8)],
-                            ),
+                            color: AppTheme.primary,
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Material(
@@ -471,7 +535,11 @@ class _NotificationsPageState extends State<NotificationsPage> with TickerProvid
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Icon(Icons.check_rounded, color: Colors.white, size: 16),
+                                    Icon(
+                                      Icons.check_rounded,
+                                      color: Colors.white,
+                                      size: 16,
+                                    ),
                                     SizedBox(width: 6),
                                     Text(
                                       'Marquer comme lu',
@@ -516,7 +584,6 @@ class _NotificationsPageState extends State<NotificationsPage> with TickerProvid
     }
   }
 
-
   Future<User?> _lookupUser(String userId) async {
     final users = await AuthProvider().watchUsers().first;
     for (final user in users) {
@@ -559,7 +626,8 @@ class _NotificationsPageState extends State<NotificationsPage> with TickerProvid
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (notification.imageUrl != null && notification.imageUrl!.isNotEmpty)
+              if (notification.imageUrl != null &&
+                  notification.imageUrl!.isNotEmpty)
                 ClipRRect(
                   borderRadius: BorderRadius.circular(16),
                   child: Image.network(
@@ -574,7 +642,8 @@ class _NotificationsPageState extends State<NotificationsPage> with TickerProvid
                     ),
                   ),
                 ),
-              if (notification.imageUrl != null && notification.imageUrl!.isNotEmpty)
+              if (notification.imageUrl != null &&
+                  notification.imageUrl!.isNotEmpty)
                 SizedBox(height: 16),
               Text(
                 notification.title,
@@ -598,7 +667,9 @@ class _NotificationsPageState extends State<NotificationsPage> with TickerProvid
                 padding: EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: AppTheme.primary.withValues(alpha: 0.05),
-                  border: Border.all(color: AppTheme.primary.withValues(alpha: 0.15)),
+                  border: Border.all(
+                    color: AppTheme.primary.withValues(alpha: 0.15),
+                  ),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Column(
@@ -664,7 +735,6 @@ class _NotificationsPageState extends State<NotificationsPage> with TickerProvid
     if (mounted) setState(() {});
   }
 
-
   Future<void> _markRead(String notificationId) async {
     await _notificationsService.markNotificationRead(
       notificationId: notificationId,
@@ -677,10 +747,10 @@ class _NotificationsPageState extends State<NotificationsPage> with TickerProvid
   Future<void> _downloadInvoice(AppNotification notification) async {
     try {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('📄 Génération du reçu en cours...')),
+        const SnackBar(content: Text('Génération du reçu en cours...')),
       );
     } catch (e) {
-      debugPrint('❌ Erreur facture: $e');
+      debugPrint('Erreur facture: $e');
     }
   }
 
@@ -693,10 +763,15 @@ class _NotificationsPageState extends State<NotificationsPage> with TickerProvid
       context: context,
       builder: (dialogCtx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           title: Text(
             'Diffuser une annonce',
-            style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 18),
+            style: GoogleFonts.poppins(
+              fontWeight: FontWeight.w700,
+              fontSize: 18,
+            ),
           ),
           content: SizedBox(
             width: 480,
@@ -707,7 +782,10 @@ class _NotificationsPageState extends State<NotificationsPage> with TickerProvid
                 children: [
                   Text(
                     'Envoyer une notification instantanée à tous ou à un groupe d\'utilisateurs.',
-                    style: GoogleFonts.poppins(fontSize: 12, color: Colors.black54),
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: Colors.black54,
+                    ),
                   ),
                   const SizedBox(height: 14),
                   TextField(
@@ -729,17 +807,34 @@ class _NotificationsPageState extends State<NotificationsPage> with TickerProvid
                   const SizedBox(height: 14),
                   Text(
                     'Destinataires :',
-                    style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600),
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   const SizedBox(height: 6),
                   DropdownButtonFormField<String>(
                     initialValue: targetGroup,
-                    decoration: const InputDecoration(prefixIcon: Icon(Icons.groups_rounded)),
+                    decoration: const InputDecoration(
+                      prefixIcon: Icon(Icons.groups_rounded),
+                    ),
                     items: const [
-                      DropdownMenuItem(value: 'all', child: Text('Tous les utilisateurs')),
-                      DropdownMenuItem(value: 'apprenant', child: Text('Apprenants / Stagiaires')),
-                      DropdownMenuItem(value: 'formateur', child: Text('Formateurs uniquement')),
-                      DropdownMenuItem(value: 'admin', child: Text('Administration uniquement')),
+                      DropdownMenuItem(
+                        value: 'all',
+                        child: Text('Tous les utilisateurs'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'apprenant',
+                        child: Text('Apprenants / Stagiaires'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'formateur',
+                        child: Text('Formateurs uniquement'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'admin',
+                        child: Text('Administration uniquement'),
+                      ),
                     ],
                     onChanged: (val) {
                       if (val != null) setDialogState(() => targetGroup = val);
@@ -760,12 +855,18 @@ class _NotificationsPageState extends State<NotificationsPage> with TickerProvid
                 final desc = descController.text.trim();
                 if (title.isEmpty || desc.isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Veuillez renseigner le titre et le message.')),
+                    const SnackBar(
+                      content: Text(
+                        'Veuillez renseigner le titre et le message.',
+                      ),
+                    ),
                   );
                   return;
                 }
 
-                final roles = targetGroup == 'all' ? <String>['all'] : <String>[targetGroup];
+                final roles = targetGroup == 'all'
+                    ? <String>['all']
+                    : <String>[targetGroup];
                 await _notificationsService.createNotification(
                   title: title,
                   description: desc,
