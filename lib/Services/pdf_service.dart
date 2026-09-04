@@ -1,5 +1,5 @@
-import 'dart:typed_data';
 import 'dart:math' as math;
+import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
@@ -32,21 +32,33 @@ class PdfService {
     final slateColor = PdfColor.fromHex('#334155');
     final lightBgColor = PdfColor.fromHex('#F8FAFC');
     final borderGrey = PdfColor.fromHex('#CBD5E1');
+    pw.MemoryImage? logoImage;
+    try {
+      final imageData = await rootBundle.load('images/logo.png');
+      logoImage = pw.MemoryImage(imageData.buffer.asUint8List());
+    } catch (_) {}
 
-    final studentName = '${inscription.prenom ?? ''} ${inscription.nom ?? ''}'.trim().toUpperCase();
-    final matricule = studentMatricule ??
+    final studentName = '${inscription.prenom ?? ''} ${inscription.nom ?? ''}'
+        .trim()
+        .toUpperCase();
+    final matricule =
+        studentMatricule ??
         (inscription.etudiantId.isNotEmpty
             ? (inscription.etudiantId.startsWith('MAT-')
-                ? inscription.etudiantId
-                : 'MAT-${inscription.etudiantId.length > 6 ? inscription.etudiantId.substring(inscription.etudiantId.length - 6) : inscription.etudiantId}')
+                  ? inscription.etudiantId
+                  : 'MAT-${inscription.etudiantId.length > 6 ? inscription.etudiantId.substring(inscription.etudiantId.length - 6) : inscription.etudiantId}')
             : 'MAT-OFFICIEL');
 
-    final totalDue = totalInscriptionDue ?? (formation.prix > 0 ? formation.prix : payment.montant);
+    final totalDue =
+        totalInscriptionDue ??
+        (formation.prix > 0 ? formation.prix : payment.montant);
     final paidAmount = cumulativePaid ?? payment.montant;
     final balance = remainingBalance ?? math.max(0.0, totalDue - paidAmount);
     final isFullySettled = balance <= 0;
 
-    final receiptRef = payment.referenceTransaction != null && payment.referenceTransaction!.trim().isNotEmpty
+    final receiptRef =
+        payment.referenceTransaction != null &&
+            payment.referenceTransaction!.trim().isNotEmpty
         ? payment.referenceTransaction!.trim()
         : 'REC-${payment.id.length > 8 ? payment.id.substring(payment.id.length - 8).toUpperCase() : payment.id.toUpperCase()}';
 
@@ -65,7 +77,10 @@ class PdfService {
                 padding: const pw.EdgeInsets.all(3),
                 child: pw.Container(
                   decoration: pw.BoxDecoration(
-                    border: pw.Border.all(color: PdfColor.fromHex('#FCA5A5'), width: 0.75),
+                    border: pw.Border.all(
+                      color: PdfColor.fromHex('#FCA5A5'),
+                      width: 0.75,
+                    ),
                   ),
                 ),
               ),
@@ -76,7 +91,7 @@ class PdfService {
                   child: pw.Transform.rotate(
                     angle: -math.pi / 5.5,
                     child: pw.Text(
-                      'M@LI-NTIC • REÇU OFFICIEL • PAIEMENT VALIDÉ',
+                      'REÇU OFFICIEL • PAIEMENT VALIDÉ',
                       style: pw.TextStyle(
                         fontSize: 26,
                         fontWeight: pw.FontWeight.bold,
@@ -90,7 +105,10 @@ class PdfService {
 
               // 3. Document Content
               pw.Padding(
-                padding: const pw.EdgeInsets.symmetric(horizontal: 22, vertical: 18),
+                padding: const pw.EdgeInsets.symmetric(
+                  horizontal: 22,
+                  vertical: 18,
+                ),
                 child: pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
@@ -105,21 +123,24 @@ class PdfService {
                             children: [
                               pw.Row(
                                 children: [
+                                  if (logoImage != null)
+                                    pw.Container(
+                                      width: 58,
+                                      height: 42,
+                                      margin: const pw.EdgeInsets.only(
+                                        right: 10,
+                                      ),
+                                      child: pw.Image(
+                                        logoImage,
+                                        fit: pw.BoxFit.contain,
+                                      ),
+                                    ),
                                   pw.Text(
-                                    'M@LI-NTIC',
+                                    'CENTRE DE FORMATION',
                                     style: pw.TextStyle(
-                                      fontSize: 24,
+                                      fontSize: 10,
                                       fontWeight: pw.FontWeight.bold,
                                       color: navyBlue,
-                                    ),
-                                  ),
-                                  pw.SizedBox(width: 4),
-                                  pw.Container(
-                                    width: 7,
-                                    height: 7,
-                                    decoration: pw.BoxDecoration(
-                                      color: crimsonRed,
-                                      shape: pw.BoxShape.circle,
                                     ),
                                   ),
                                 ],
@@ -137,17 +158,26 @@ class PdfService {
                               pw.SizedBox(height: 3),
                               pw.Text(
                                 'Agrément MEN-FP • Hamdallaye ACI 2000, Bamako (Mali)',
-                                style: pw.TextStyle(fontSize: 7.5, color: slateColor),
+                                style: pw.TextStyle(
+                                  fontSize: 7.5,
+                                  color: slateColor,
+                                ),
                               ),
                               pw.Text(
                                 'Tél : (+223) 70 00 11 22 / 60 00 11 22 • contact@mali-ntic.ml',
-                                style: pw.TextStyle(fontSize: 7.5, color: slateColor),
+                                style: pw.TextStyle(
+                                  fontSize: 7.5,
+                                  color: slateColor,
+                                ),
                               ),
                             ],
                           ),
                         ),
                         pw.Container(
-                          padding: const pw.EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          padding: const pw.EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 8,
+                          ),
                           decoration: pw.BoxDecoration(
                             color: navyBlue,
                             borderRadius: pw.BorderRadius.circular(6),
@@ -209,7 +239,10 @@ class PdfService {
                             decoration: pw.BoxDecoration(
                               color: lightBgColor,
                               borderRadius: pw.BorderRadius.circular(6),
-                              border: pw.Border.all(color: borderGrey, width: 0.8),
+                              border: pw.Border.all(
+                                color: borderGrey,
+                                width: 0.8,
+                              ),
                             ),
                             child: pw.Column(
                               crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -221,7 +254,9 @@ class PdfService {
                                       height: 12,
                                       decoration: pw.BoxDecoration(
                                         color: navyBlue,
-                                        borderRadius: pw.BorderRadius.circular(2),
+                                        borderRadius: pw.BorderRadius.circular(
+                                          2,
+                                        ),
                                       ),
                                     ),
                                     pw.SizedBox(width: 5),
@@ -237,7 +272,9 @@ class PdfService {
                                 ),
                                 pw.SizedBox(height: 6),
                                 pw.Text(
-                                  studentName.isNotEmpty ? studentName : 'APPRENANT M@LI-NTIC',
+                                  studentName.isNotEmpty
+                                      ? studentName
+                                      : 'APPRENANT M@LI-NTIC',
                                   style: pw.TextStyle(
                                     fontSize: 10.5,
                                     fontWeight: pw.FontWeight.bold,
@@ -247,24 +284,63 @@ class PdfService {
                                 pw.SizedBox(height: 3),
                                 pw.Row(
                                   children: [
-                                    pw.Text('Matricule : ', style: pw.TextStyle(fontSize: 8, color: slateColor)),
-                                    pw.Text(matricule, style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold, color: navyBlue)),
+                                    pw.Text(
+                                      'Matricule : ',
+                                      style: pw.TextStyle(
+                                        fontSize: 8,
+                                        color: slateColor,
+                                      ),
+                                    ),
+                                    pw.Text(
+                                      matricule,
+                                      style: pw.TextStyle(
+                                        fontSize: 8.5,
+                                        fontWeight: pw.FontWeight.bold,
+                                        color: navyBlue,
+                                      ),
+                                    ),
                                   ],
                                 ),
                                 pw.SizedBox(height: 2),
                                 pw.Row(
                                   children: [
-                                    pw.Text('Téléphone : ', style: pw.TextStyle(fontSize: 8, color: slateColor)),
-                                    pw.Text(inscription.telephone ?? 'Non renseigné', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: darkTextColor)),
+                                    pw.Text(
+                                      'Téléphone : ',
+                                      style: pw.TextStyle(
+                                        fontSize: 8,
+                                        color: slateColor,
+                                      ),
+                                    ),
+                                    pw.Text(
+                                      inscription.telephone ?? 'Non renseigné',
+                                      style: pw.TextStyle(
+                                        fontSize: 8,
+                                        fontWeight: pw.FontWeight.bold,
+                                        color: darkTextColor,
+                                      ),
+                                    ),
                                   ],
                                 ),
-                                if (inscription.email != null && inscription.email!.isNotEmpty) ...[
+                                if (inscription.email != null &&
+                                    inscription.email!.isNotEmpty) ...[
                                   pw.SizedBox(height: 2),
                                   pw.Row(
                                     children: [
-                                      pw.Text('E-mail : ', style: pw.TextStyle(fontSize: 8, color: slateColor)),
+                                      pw.Text(
+                                        'E-mail : ',
+                                        style: pw.TextStyle(
+                                          fontSize: 8,
+                                          color: slateColor,
+                                        ),
+                                      ),
                                       pw.Expanded(
-                                        child: pw.Text(inscription.email!, style: pw.TextStyle(fontSize: 8, color: slateColor)),
+                                        child: pw.Text(
+                                          inscription.email!,
+                                          style: pw.TextStyle(
+                                            fontSize: 8,
+                                            color: slateColor,
+                                          ),
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -283,7 +359,10 @@ class PdfService {
                             decoration: pw.BoxDecoration(
                               color: lightBgColor,
                               borderRadius: pw.BorderRadius.circular(6),
-                              border: pw.Border.all(color: borderGrey, width: 0.8),
+                              border: pw.Border.all(
+                                color: borderGrey,
+                                width: 0.8,
+                              ),
                             ),
                             child: pw.Column(
                               crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -295,7 +374,9 @@ class PdfService {
                                       height: 12,
                                       decoration: pw.BoxDecoration(
                                         color: crimsonRed,
-                                        borderRadius: pw.BorderRadius.circular(2),
+                                        borderRadius: pw.BorderRadius.circular(
+                                          2,
+                                        ),
                                       ),
                                     ),
                                     pw.SizedBox(width: 5),
@@ -319,33 +400,64 @@ class PdfService {
                                   ),
                                 ),
                                 pw.SizedBox(height: 3),
-                                if (inscription.modules != null && inscription.modules!.isNotEmpty) ...[
+                                if (inscription.modules != null &&
+                                    inscription.modules!.isNotEmpty) ...[
                                   pw.Text(
                                     'Modules : ${inscription.modules!.join(", ")}',
-                                    style: pw.TextStyle(fontSize: 8, color: slateColor),
+                                    style: pw.TextStyle(
+                                      fontSize: 8,
+                                      color: slateColor,
+                                    ),
                                     maxLines: 1,
                                   ),
                                   pw.SizedBox(height: 2),
                                 ],
                                 pw.Row(
-                                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment:
+                                      pw.MainAxisAlignment.spaceBetween,
                                   children: [
                                     pw.Row(
                                       children: [
-                                        pw.Text('Modalité : ', style: pw.TextStyle(fontSize: 8, color: slateColor)),
-                                        pw.Text(inscription.typeFormation ?? 'Présentiel', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: navyBlue)),
+                                        pw.Text(
+                                          'Modalité : ',
+                                          style: pw.TextStyle(
+                                            fontSize: 8,
+                                            color: slateColor,
+                                          ),
+                                        ),
+                                        pw.Text(
+                                          inscription.typeFormation ??
+                                              'Présentiel',
+                                          style: pw.TextStyle(
+                                            fontSize: 8,
+                                            fontWeight: pw.FontWeight.bold,
+                                            color: navyBlue,
+                                          ),
+                                        ),
                                       ],
                                     ),
                                     pw.Container(
-                                      padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      padding: const pw.EdgeInsets.symmetric(
+                                        horizontal: 6,
+                                        vertical: 2,
+                                      ),
                                       decoration: pw.BoxDecoration(
                                         color: PdfColor.fromHex('#EBF5FF'),
-                                        borderRadius: pw.BorderRadius.circular(4),
-                                        border: pw.Border.all(color: PdfColor.fromHex('#93C5FD'), width: 0.5),
+                                        borderRadius: pw.BorderRadius.circular(
+                                          4,
+                                        ),
+                                        border: pw.Border.all(
+                                          color: PdfColor.fromHex('#93C5FD'),
+                                          width: 0.5,
+                                        ),
                                       ),
                                       child: pw.Text(
                                         'Tranche ${payment.trancheNumero}/${payment.nombreTranches}',
-                                        style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold, color: navyBlue),
+                                        style: pw.TextStyle(
+                                          fontSize: 7.5,
+                                          fontWeight: pw.FontWeight.bold,
+                                          color: navyBlue,
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -374,32 +486,60 @@ class PdfService {
                           decoration: pw.BoxDecoration(color: navyBlue),
                           children: [
                             pw.Padding(
-                              padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                              padding: const pw.EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 6,
+                              ),
                               child: pw.Text(
                                 'DÉSIGNATION / LIBELLÉ',
-                                style: pw.TextStyle(color: PdfColors.white, fontWeight: pw.FontWeight.bold, fontSize: 8.5),
+                                style: pw.TextStyle(
+                                  color: PdfColors.white,
+                                  fontWeight: pw.FontWeight.bold,
+                                  fontSize: 8.5,
+                                ),
                               ),
                             ),
                             pw.Padding(
-                              padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                              padding: const pw.EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 6,
+                              ),
                               child: pw.Text(
                                 'MODE DE RÈGLEMENT',
-                                style: pw.TextStyle(color: PdfColors.white, fontWeight: pw.FontWeight.bold, fontSize: 8.5),
+                                style: pw.TextStyle(
+                                  color: PdfColors.white,
+                                  fontWeight: pw.FontWeight.bold,
+                                  fontSize: 8.5,
+                                ),
                               ),
                             ),
                             pw.Padding(
-                              padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                              padding: const pw.EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 6,
+                              ),
                               child: pw.Text(
                                 'STATUT',
-                                style: pw.TextStyle(color: PdfColors.white, fontWeight: pw.FontWeight.bold, fontSize: 8.5),
+                                style: pw.TextStyle(
+                                  color: PdfColors.white,
+                                  fontWeight: pw.FontWeight.bold,
+                                  fontSize: 8.5,
+                                ),
                               ),
                             ),
                             pw.Padding(
-                              padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                              padding: const pw.EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 6,
+                              ),
                               child: pw.Text(
                                 'MONTANT ENCAISSÉ',
                                 textAlign: pw.TextAlign.right,
-                                style: pw.TextStyle(color: PdfColors.white, fontWeight: pw.FontWeight.bold, fontSize: 8.5),
+                                style: pw.TextStyle(
+                                  color: PdfColors.white,
+                                  fontWeight: pw.FontWeight.bold,
+                                  fontSize: 8.5,
+                                ),
                               ),
                             ),
                           ],
@@ -416,19 +556,30 @@ class PdfService {
                                 children: [
                                   pw.Text(
                                     'Règlement Tranche ${payment.trancheNumero}/${payment.nombreTranches} — ${formation.titre}',
-                                    style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9.5, color: darkTextColor),
+                                    style: pw.TextStyle(
+                                      fontWeight: pw.FontWeight.bold,
+                                      fontSize: 9.5,
+                                      color: darkTextColor,
+                                    ),
                                   ),
-                                  if (payment.motif != null && payment.motif!.trim().isNotEmpty) ...[
+                                  if (payment.motif != null &&
+                                      payment.motif!.trim().isNotEmpty) ...[
                                     pw.SizedBox(height: 2),
                                     pw.Text(
                                       'Motif : ${payment.motif!.trim()}',
-                                      style: pw.TextStyle(fontSize: 8, color: slateColor),
+                                      style: pw.TextStyle(
+                                        fontSize: 8,
+                                        color: slateColor,
+                                      ),
                                     ),
                                   ],
                                   pw.SizedBox(height: 2),
                                   pw.Text(
                                     'Réf Transaction : $receiptRef',
-                                    style: pw.TextStyle(fontSize: 7.5, color: slateColor),
+                                    style: pw.TextStyle(
+                                      fontSize: 7.5,
+                                      color: slateColor,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -440,26 +591,46 @@ class PdfService {
                                 children: [
                                   pw.Text(
                                     _formatPaymentMethod(payment.methode),
-                                    style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9, color: navyBlue),
+                                    style: pw.TextStyle(
+                                      fontWeight: pw.FontWeight.bold,
+                                      fontSize: 9,
+                                      color: navyBlue,
+                                    ),
                                   ),
                                   pw.SizedBox(height: 2),
-                                  pw.Text('Guichet Caisse', style: pw.TextStyle(fontSize: 7.5, color: slateColor)),
+                                  pw.Text(
+                                    'Guichet Caisse',
+                                    style: pw.TextStyle(
+                                      fontSize: 7.5,
+                                      color: slateColor,
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
                             pw.Padding(
                               padding: const pw.EdgeInsets.all(8),
                               child: pw.Container(
-                                padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                                padding: const pw.EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 3,
+                                ),
                                 decoration: pw.BoxDecoration(
                                   color: PdfColor.fromHex('#DEF7EC'),
                                   borderRadius: pw.BorderRadius.circular(4),
-                                  border: pw.Border.all(color: PdfColor.fromHex('#31C48D'), width: 0.5),
+                                  border: pw.Border.all(
+                                    color: PdfColor.fromHex('#31C48D'),
+                                    width: 0.5,
+                                  ),
                                 ),
                                 child: pw.Text(
                                   'VALIDÉ & ENCAISSÉ',
                                   textAlign: pw.TextAlign.center,
-                                  style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold, color: PdfColor.fromHex('#03543F')),
+                                  style: pw.TextStyle(
+                                    fontSize: 7.5,
+                                    fontWeight: pw.FontWeight.bold,
+                                    color: PdfColor.fromHex('#03543F'),
+                                  ),
                                 ),
                               ),
                             ),
@@ -468,7 +639,11 @@ class PdfService {
                               child: pw.Text(
                                 '${payment.montant.toStringAsFixed(0)} FCFA',
                                 textAlign: pw.TextAlign.right,
-                                style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11, color: navyBlue),
+                                style: pw.TextStyle(
+                                  fontWeight: pw.FontWeight.bold,
+                                  fontSize: 11,
+                                  color: navyBlue,
+                                ),
                               ),
                             ),
                           ],
@@ -490,19 +665,30 @@ class PdfService {
                             decoration: pw.BoxDecoration(
                               color: lightBgColor,
                               borderRadius: pw.BorderRadius.circular(6),
-                              border: pw.Border.all(color: borderGrey, width: 0.8),
+                              border: pw.Border.all(
+                                color: borderGrey,
+                                width: 0.8,
+                              ),
                             ),
                             child: pw.Column(
                               crossAxisAlignment: pw.CrossAxisAlignment.start,
                               children: [
                                 pw.Text(
                                   'OBSERVATIONS & CONDITIONS :',
-                                  style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: navyBlue),
+                                  style: pw.TextStyle(
+                                    fontSize: 8,
+                                    fontWeight: pw.FontWeight.bold,
+                                    color: navyBlue,
+                                  ),
                                 ),
                                 pw.SizedBox(height: 3),
                                 pw.Text(
                                   '• Tout versement donne droit à l\'accès aux cours et aux supports pédagogiques officiels.\n• Les attestations et certificats de formation ne sont délivrés qu\'après règlement intégral du solde de la formation.',
-                                  style: pw.TextStyle(fontSize: 7.5, color: slateColor, height: 1.3),
+                                  style: pw.TextStyle(
+                                    fontSize: 7.5,
+                                    color: slateColor,
+                                    height: 1.3,
+                                  ),
                                 ),
                               ],
                             ),
@@ -530,19 +716,47 @@ class PdfService {
                           child: pw.Column(
                             children: [
                               pw.Row(
-                                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    pw.MainAxisAlignment.spaceBetween,
                                 children: [
-                                  pw.Text('Coût Total Formation :', style: pw.TextStyle(fontSize: 8.5, color: slateColor)),
-                                  pw.Text('${totalDue.toStringAsFixed(0)} FCFA', style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold, color: darkTextColor)),
+                                  pw.Text(
+                                    'Coût Total Formation :',
+                                    style: pw.TextStyle(
+                                      fontSize: 8.5,
+                                      color: slateColor,
+                                    ),
+                                  ),
+                                  pw.Text(
+                                    '${totalDue.toStringAsFixed(0)} FCFA',
+                                    style: pw.TextStyle(
+                                      fontSize: 8.5,
+                                      fontWeight: pw.FontWeight.bold,
+                                      color: darkTextColor,
+                                    ),
+                                  ),
                                 ],
                               ),
                               if (payment.remise > 0) ...[
                                 pw.SizedBox(height: 3),
                                 pw.Row(
-                                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment:
+                                      pw.MainAxisAlignment.spaceBetween,
                                   children: [
-                                    pw.Text('Remise accordée :', style: pw.TextStyle(fontSize: 8, color: crimsonRed)),
-                                    pw.Text('-${payment.remise.toStringAsFixed(0)} FCFA', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: crimsonRed)),
+                                    pw.Text(
+                                      'Remise accordée :',
+                                      style: pw.TextStyle(
+                                        fontSize: 8,
+                                        color: crimsonRed,
+                                      ),
+                                    ),
+                                    pw.Text(
+                                      '-${payment.remise.toStringAsFixed(0)} FCFA',
+                                      style: pw.TextStyle(
+                                        fontSize: 8,
+                                        fontWeight: pw.FontWeight.bold,
+                                        color: crimsonRed,
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ],
@@ -551,38 +765,84 @@ class PdfService {
                               pw.SizedBox(height: 4),
                               // CURRENT PAYMENT (HIGHLIGHTED)
                               pw.Container(
-                                padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                                padding: const pw.EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 5,
+                                ),
                                 decoration: pw.BoxDecoration(
                                   color: PdfColor.fromHex('#DEF7EC'),
                                   borderRadius: pw.BorderRadius.circular(4),
                                 ),
                                 child: pw.Row(
-                                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment:
+                                      pw.MainAxisAlignment.spaceBetween,
                                   children: [
-                                    pw.Text('MONTANT DU REÇU :', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9.5, color: PdfColor.fromHex('#03543F'))),
-                                    pw.Text('${payment.montant.toStringAsFixed(0)} FCFA', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11, color: PdfColor.fromHex('#03543F'))),
+                                    pw.Text(
+                                      'MONTANT DU REÇU :',
+                                      style: pw.TextStyle(
+                                        fontWeight: pw.FontWeight.bold,
+                                        fontSize: 9.5,
+                                        color: PdfColor.fromHex('#03543F'),
+                                      ),
+                                    ),
+                                    pw.Text(
+                                      '${payment.montant.toStringAsFixed(0)} FCFA',
+                                      style: pw.TextStyle(
+                                        fontWeight: pw.FontWeight.bold,
+                                        fontSize: 11,
+                                        color: PdfColor.fromHex('#03543F'),
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ),
                               pw.SizedBox(height: 5),
                               pw.Row(
-                                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    pw.MainAxisAlignment.spaceBetween,
                                 children: [
-                                  pw.Text('Cumul Total Payé :', style: pw.TextStyle(fontSize: 8.5, color: slateColor)),
-                                  pw.Text('${paidAmount.toStringAsFixed(0)} FCFA', style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold, color: darkTextColor)),
+                                  pw.Text(
+                                    'Cumul Total Payé :',
+                                    style: pw.TextStyle(
+                                      fontSize: 8.5,
+                                      color: slateColor,
+                                    ),
+                                  ),
+                                  pw.Text(
+                                    '${paidAmount.toStringAsFixed(0)} FCFA',
+                                    style: pw.TextStyle(
+                                      fontSize: 8.5,
+                                      fontWeight: pw.FontWeight.bold,
+                                      color: darkTextColor,
+                                    ),
+                                  ),
                                 ],
                               ),
                               pw.SizedBox(height: 3),
                               pw.Row(
-                                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    pw.MainAxisAlignment.spaceBetween,
                                 children: [
-                                  pw.Text('Solde Restant Dû :', style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold, color: isFullySettled ? PdfColor.fromHex('#03543F') : crimsonRed)),
                                   pw.Text(
-                                    isFullySettled ? '0 FCFA (SOLDÉ)' : '${balance.toStringAsFixed(0)} FCFA',
+                                    'Solde Restant Dû :',
+                                    style: pw.TextStyle(
+                                      fontSize: 8.5,
+                                      fontWeight: pw.FontWeight.bold,
+                                      color: isFullySettled
+                                          ? PdfColor.fromHex('#03543F')
+                                          : crimsonRed,
+                                    ),
+                                  ),
+                                  pw.Text(
+                                    isFullySettled
+                                        ? '0 FCFA (SOLDÉ)'
+                                        : '${balance.toStringAsFixed(0)} FCFA',
                                     style: pw.TextStyle(
                                       fontSize: 9,
                                       fontWeight: pw.FontWeight.bold,
-                                      color: isFullySettled ? PdfColor.fromHex('#03543F') : crimsonRed,
+                                      color: isFullySettled
+                                          ? PdfColor.fromHex('#03543F')
+                                          : crimsonRed,
                                     ),
                                   ),
                                 ],
@@ -604,13 +864,31 @@ class PdfService {
                         pw.Column(
                           crossAxisAlignment: pw.CrossAxisAlignment.start,
                           children: [
-                            pw.Text('L\'Apprenant / Déposant', style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold, color: darkTextColor)),
-                            pw.Text('(Pour acquit et acceptation)', style: const pw.TextStyle(fontSize: 7.5, color: PdfColors.grey600)),
+                            pw.Text(
+                              'L\'Apprenant / Déposant',
+                              style: pw.TextStyle(
+                                fontSize: 8.5,
+                                fontWeight: pw.FontWeight.bold,
+                                color: darkTextColor,
+                              ),
+                            ),
+                            pw.Text(
+                              '(Pour acquit et acceptation)',
+                              style: const pw.TextStyle(
+                                fontSize: 7.5,
+                                color: PdfColors.grey600,
+                              ),
+                            ),
                             pw.SizedBox(height: 35),
                             pw.Container(
                               width: 120,
                               decoration: const pw.BoxDecoration(
-                                border: pw.Border(bottom: pw.BorderSide(color: PdfColors.grey400, width: 0.8)),
+                                border: pw.Border(
+                                  bottom: pw.BorderSide(
+                                    color: PdfColors.grey400,
+                                    width: 0.8,
+                                  ),
+                                ),
                               ),
                             ),
                           ],
@@ -621,13 +899,27 @@ class PdfService {
                           children: [
                             pw.BarcodeWidget(
                               barcode: pw.Barcode.qrCode(),
-                              data: 'https://mali-ntic.ml/verify/receipt?ref=$receiptRef&amt=${payment.montant}&student=$studentName&date=${payment.dateCreation.toIso8601String()}',
+                              data:
+                                  'https://mali-ntic.ml/verify/receipt?ref=$receiptRef&amt=${payment.montant}&student=$studentName&date=${payment.dateCreation.toIso8601String()}',
                               width: 55,
                               height: 55,
                             ),
                             pw.SizedBox(height: 3),
-                            pw.Text('Contrôle d\'Authenticité', style: const pw.TextStyle(fontSize: 6.5, color: PdfColors.grey700)),
-                            pw.Text('Clé : SEC-${payment.id.hashCode.abs().toRadixString(16).toUpperCase()}', style: pw.TextStyle(fontSize: 6.5, fontWeight: pw.FontWeight.bold, color: navyBlue)),
+                            pw.Text(
+                              'Contrôle d\'Authenticité',
+                              style: const pw.TextStyle(
+                                fontSize: 6.5,
+                                color: PdfColors.grey700,
+                              ),
+                            ),
+                            pw.Text(
+                              'Clé : SEC-${payment.id.hashCode.abs().toRadixString(16).toUpperCase()}',
+                              style: pw.TextStyle(
+                                fontSize: 6.5,
+                                fontWeight: pw.FontWeight.bold,
+                                color: navyBlue,
+                              ),
+                            ),
                           ],
                         ),
 
@@ -635,33 +927,64 @@ class PdfService {
                         pw.Column(
                           crossAxisAlignment: pw.CrossAxisAlignment.end,
                           children: [
-                            pw.Text('Direction Financière & Caisse', style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold, color: navyBlue)),
-                            pw.Text('M@LI-NTIC Bamako', style: const pw.TextStyle(fontSize: 7.5, color: PdfColors.grey600)),
+                            pw.Text(
+                              'Direction Financière & Caisse',
+                              style: pw.TextStyle(
+                                fontSize: 8.5,
+                                fontWeight: pw.FontWeight.bold,
+                                color: navyBlue,
+                              ),
+                            ),
+                            pw.Text(
+                              'M@LI-NTIC Bamako',
+                              style: const pw.TextStyle(
+                                fontSize: 7.5,
+                                color: PdfColors.grey600,
+                              ),
+                            ),
                             pw.SizedBox(height: 6),
                             // Circular Official Stamp Vector
                             pw.Container(
                               width: 90,
                               height: 38,
                               decoration: pw.BoxDecoration(
-                                border: pw.Border.all(color: crimsonRed, width: 1.2),
+                                border: pw.Border.all(
+                                  color: crimsonRed,
+                                  width: 1.2,
+                                ),
                                 borderRadius: pw.BorderRadius.circular(6),
                               ),
                               padding: const pw.EdgeInsets.all(3),
                               child: pw.Center(
                                 child: pw.Column(
-                                  mainAxisAlignment: pw.MainAxisAlignment.center,
+                                  mainAxisAlignment:
+                                      pw.MainAxisAlignment.center,
                                   children: [
                                     pw.Text(
-                                      'M@LI-NTIC • SERVICE CAISSE',
-                                      style: pw.TextStyle(fontSize: 5.5, fontWeight: pw.FontWeight.bold, color: crimsonRed),
+                                      'SERVICE CAISSE',
+                                      style: pw.TextStyle(
+                                        fontSize: 5.5,
+                                        fontWeight: pw.FontWeight.bold,
+                                        color: crimsonRed,
+                                      ),
                                     ),
                                     pw.Text(
                                       'ENCAISSÉ & VALIDÉ',
-                                      style: pw.TextStyle(fontSize: 6.5, fontWeight: pw.FontWeight.bold, color: navyBlue),
+                                      style: pw.TextStyle(
+                                        fontSize: 6.5,
+                                        fontWeight: pw.FontWeight.bold,
+                                        color: navyBlue,
+                                      ),
                                     ),
                                     pw.Text(
-                                      _formatDate(payment.dateEffectuation ?? payment.dateCreation),
-                                      style: pw.TextStyle(fontSize: 5.5, color: crimsonRed),
+                                      _formatDate(
+                                        payment.dateEffectuation ??
+                                            payment.dateCreation,
+                                      ),
+                                      style: pw.TextStyle(
+                                        fontSize: 5.5,
+                                        color: crimsonRed,
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -678,8 +1001,11 @@ class PdfService {
                     pw.SizedBox(height: 4),
                     pw.Center(
                       child: pw.Text(
-                        'Document officiel émis par M@LI-NTIC • Toute rature ou falsification annule la validité du reçu • NIF: 084123987A • RCCM: MA.BKO.2024.B.1298',
-                        style: const pw.TextStyle(fontSize: 6.5, color: PdfColors.grey600),
+                        'Document officiel émis par le Centre de Formation • Toute rature ou falsification annule la validité du reçu • NIF: 084123987A • RCCM: MA.BKO.2024.B.1298',
+                        style: const pw.TextStyle(
+                          fontSize: 6.5,
+                          color: PdfColors.grey600,
+                        ),
                       ),
                     ),
                   ],
@@ -719,18 +1045,38 @@ class PdfService {
                     children: [
                       pw.Text(
                         'M@LI-NTIC',
-                        style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold, color: primaryColor),
+                        style: pw.TextStyle(
+                          fontSize: 24,
+                          fontWeight: pw.FontWeight.bold,
+                          color: primaryColor,
+                        ),
                       ),
-                      pw.Text('Programme Officiel de Formation', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
+                      pw.Text(
+                        'Programme Officiel de Formation',
+                        style: const pw.TextStyle(
+                          fontSize: 10,
+                          color: PdfColors.grey700,
+                        ),
+                      ),
                     ],
                   ),
                   pw.Container(
-                    padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const pw.EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                     decoration: pw.BoxDecoration(
                       color: secondaryColor,
                       borderRadius: pw.BorderRadius.circular(4),
                     ),
-                    child: pw.Text('BROCHURE OFFICIELLE', style: pw.TextStyle(color: PdfColors.white, fontWeight: pw.FontWeight.bold, fontSize: 10)),
+                    child: pw.Text(
+                      'BROCHURE OFFICIELLE',
+                      style: pw.TextStyle(
+                        color: PdfColors.white,
+                        fontWeight: pw.FontWeight.bold,
+                        fontSize: 10,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -741,12 +1087,19 @@ class PdfService {
               // Title
               pw.Text(
                 formation.titre,
-                style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold, color: darkTextColor),
+                style: pw.TextStyle(
+                  fontSize: 20,
+                  fontWeight: pw.FontWeight.bold,
+                  color: darkTextColor,
+                ),
               ),
               pw.SizedBox(height: 8),
               pw.Text(
                 formation.description,
-                style: const pw.TextStyle(fontSize: 11, color: PdfColors.grey800),
+                style: const pw.TextStyle(
+                  fontSize: 11,
+                  color: PdfColors.grey800,
+                ),
               ),
               pw.SizedBox(height: 20),
 
@@ -763,23 +1116,65 @@ class PdfService {
                   children: [
                     pw.Column(
                       children: [
-                        pw.Text('PRIX DE LA FORMATION', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColors.grey600)),
+                        pw.Text(
+                          'PRIX DE LA FORMATION',
+                          style: pw.TextStyle(
+                            fontSize: 8,
+                            fontWeight: pw.FontWeight.bold,
+                            color: PdfColors.grey600,
+                          ),
+                        ),
                         pw.SizedBox(height: 2),
-                        pw.Text('${formation.prix.toStringAsFixed(0)} FCFA', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold, color: primaryColor)),
+                        pw.Text(
+                          '${formation.prix.toStringAsFixed(0)} FCFA',
+                          style: pw.TextStyle(
+                            fontSize: 12,
+                            fontWeight: pw.FontWeight.bold,
+                            color: primaryColor,
+                          ),
+                        ),
                       ],
                     ),
                     pw.Column(
                       children: [
-                        pw.Text('DURÉE', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColors.grey600)),
+                        pw.Text(
+                          'DURÉE',
+                          style: pw.TextStyle(
+                            fontSize: 8,
+                            fontWeight: pw.FontWeight.bold,
+                            color: PdfColors.grey600,
+                          ),
+                        ),
                         pw.SizedBox(height: 2),
-                        pw.Text('${formation.dureeSemaines} Semaines', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold, color: darkTextColor)),
+                        pw.Text(
+                          '${formation.dureeSemaines} Semaines',
+                          style: pw.TextStyle(
+                            fontSize: 12,
+                            fontWeight: pw.FontWeight.bold,
+                            color: darkTextColor,
+                          ),
+                        ),
                       ],
                     ),
                     pw.Column(
                       children: [
-                        pw.Text('STATUT', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColors.grey600)),
+                        pw.Text(
+                          'STATUT',
+                          style: pw.TextStyle(
+                            fontSize: 8,
+                            fontWeight: pw.FontWeight.bold,
+                            color: PdfColors.grey600,
+                          ),
+                        ),
                         pw.SizedBox(height: 2),
-                        pw.Text('OUVERT AUX INSCRIPTIONS', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: secondaryColor)),
+                        pw.Text(
+                          'OUVERT AUX INSCRIPTIONS',
+                          style: pw.TextStyle(
+                            fontSize: 10,
+                            fontWeight: pw.FontWeight.bold,
+                            color: secondaryColor,
+                          ),
+                        ),
                       ],
                     ),
                   ],
@@ -788,7 +1183,14 @@ class PdfService {
               pw.SizedBox(height: 20),
 
               // Modules List
-              pw.Text('PROGRAMME DÉTAILLÉ DES MODULES:', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold, color: primaryColor)),
+              pw.Text(
+                'PROGRAMME DÉTAILLÉ DES MODULES:',
+                style: pw.TextStyle(
+                  fontSize: 12,
+                  fontWeight: pw.FontWeight.bold,
+                  color: primaryColor,
+                ),
+              ),
               pw.SizedBox(height: 10),
               if (formation.modules.isNotEmpty)
                 ...formation.modules.asMap().entries.map((entry) {
@@ -805,18 +1207,37 @@ class PdfService {
                             color: primaryColor,
                             shape: pw.BoxShape.circle,
                           ),
-                          child: pw.Text('${entry.key + 1}', style: pw.TextStyle(color: PdfColors.white, fontWeight: pw.FontWeight.bold, fontSize: 10)),
+                          child: pw.Text(
+                            '${entry.key + 1}',
+                            style: pw.TextStyle(
+                              color: PdfColors.white,
+                              fontWeight: pw.FontWeight.bold,
+                              fontSize: 10,
+                            ),
+                          ),
                         ),
                         pw.SizedBox(width: 10),
                         pw.Expanded(
-                          child: pw.Text(entry.value, style: pw.TextStyle(fontSize: 11, color: darkTextColor)),
+                          child: pw.Text(
+                            entry.value,
+                            style: pw.TextStyle(
+                              fontSize: 11,
+                              color: darkTextColor,
+                            ),
+                          ),
                         ),
                       ],
                     ),
                   );
                 })
               else
-                pw.Text('Programme détaillé disponible lors de l\'inscription.', style: pw.TextStyle(fontStyle: pw.FontStyle.italic, fontSize: 10)),
+                pw.Text(
+                  'Programme détaillé disponible lors de l\'inscription.',
+                  style: pw.TextStyle(
+                    fontStyle: pw.FontStyle.italic,
+                    fontSize: 10,
+                  ),
+                ),
 
               pw.Spacer(),
 
@@ -830,8 +1251,18 @@ class PdfService {
                 child: pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
-                    pw.Text('Inscriptions en ligne: ${Uri.base.origin.startsWith('http') ? Uri.base.origin : 'https://malintic.com'}', style: pw.TextStyle(color: PdfColors.white, fontSize: 10, fontWeight: pw.FontWeight.bold)),
-                    pw.Text('Contact: +223 70 00 11 22', style: pw.TextStyle(color: PdfColors.white, fontSize: 10)),
+                    pw.Text(
+                      'Inscriptions en ligne: ${Uri.base.origin.startsWith('http') ? Uri.base.origin : 'https://malintic.com'}',
+                      style: pw.TextStyle(
+                        color: PdfColors.white,
+                        fontSize: 10,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
+                    pw.Text(
+                      'Contact: +223 70 00 11 22',
+                      style: pw.TextStyle(color: PdfColors.white, fontSize: 10),
+                    ),
                   ],
                 ),
               ),
@@ -877,28 +1308,43 @@ class PdfService {
     }
 
     // Determine module list
-    final selectedModules = inscription.modules?.where((m) => m.trim().isNotEmpty).toList() ?? const <String>[];
+    final selectedModules =
+        inscription.modules?.where((m) => m.trim().isNotEmpty).toList() ??
+        const <String>[];
     final modulesList = selectedModules.isNotEmpty
         ? selectedModules
-        : (formation.modules.isNotEmpty ? formation.modules : [formation.titre]);
+        : (formation.modules.isNotEmpty
+              ? formation.modules
+              : [formation.titre]);
     final modulesString = modulesList.join(', ');
 
     // Determine dates & French period string
     final now = DateTime.now();
-    final dateFait = '${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year}';
+    final dateFait =
+        '${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year}';
 
-    final isSfp = formation.estStage ||
+    final isSfp =
+        formation.estStage ||
         formation.titre.toUpperCase().contains('SFP') ||
         formation.titre.toUpperCase().contains('STAGE') ||
         (formation.modules.length > 5);
 
     final titlePart1 = isSfp ? 'ATTESTATION DE STAGE DE' : 'ATTESTATION DE';
-    final titlePart2 = isSfp ? 'FORMATION PROFESSIONNELLE (SFP)' : 'FORMATION PROFESSIONNELLE';
+    final titlePart2 = isSfp
+        ? 'FORMATION PROFESSIONNELLE (SFP)'
+        : 'FORMATION PROFESSIONNELLE';
 
     // Prefer formation dates for the period string
-    final periodString = _formatFrenchPeriod(formation.dateDebut, formation.dateFin, now.year);
+    final periodString = _formatFrenchPeriod(
+      formation.dateDebut,
+      formation.dateFin,
+      now.year,
+    );
 
-    final studentFullName = '${(inscription.prenom ?? '')} ${(inscription.nom ?? '')}'.trim().isNotEmpty
+    final studentFullName =
+        '${(inscription.prenom ?? '')} ${(inscription.nom ?? '')}'
+            .trim()
+            .isNotEmpty
         ? '${(inscription.prenom ?? '')} ${(inscription.nom ?? '')}'.trim()
         : 'Sékou Kariba SAMAKÉ';
 
@@ -1100,7 +1546,10 @@ class PdfService {
                         decoration: pw.BoxDecoration(
                           shape: pw.BoxShape.circle,
                           color: lightGold,
-                          border: pw.Border.all(color: PdfColor.fromHex('#FDE68A'), width: 1.2),
+                          border: pw.Border.all(
+                            color: PdfColor.fromHex('#FDE68A'),
+                            width: 1.2,
+                          ),
                         ),
                         child: pw.Center(
                           // Golden Medallion Ring
@@ -1110,7 +1559,10 @@ class PdfService {
                             decoration: pw.BoxDecoration(
                               shape: pw.BoxShape.circle,
                               color: goldColor,
-                              border: pw.Border.all(color: darkGold, width: 2.2),
+                              border: pw.Border.all(
+                                color: darkGold,
+                                width: 2.2,
+                              ),
                             ),
                             child: pw.Center(
                               // Inner Warm Yellow Disc
@@ -1120,38 +1572,56 @@ class PdfService {
                                 decoration: pw.BoxDecoration(
                                   shape: pw.BoxShape.circle,
                                   color: warmYellow,
-                                  border: pw.Border.all(color: goldColor, width: 1.2),
+                                  border: pw.Border.all(
+                                    color: goldColor,
+                                    width: 1.2,
+                                  ),
                                 ),
                                 child: pw.Center(
                                   // Amber Gold 5-Point Star
                                   child: pw.CustomPaint(
                                     size: const PdfPoint(30, 30),
-                                    painter: (PdfGraphics canvas, PdfPoint size) {
-                                      final cx = size.x / 2;
-                                      final cy = size.y / 2;
-                                      const outerR = 14.0;
-                                      const innerR = 6.0;
+                                    painter:
+                                        (PdfGraphics canvas, PdfPoint size) {
+                                          final cx = size.x / 2;
+                                          final cy = size.y / 2;
+                                          const outerR = 14.0;
+                                          const innerR = 6.0;
 
-                                      canvas.setColor(darkGold);
-                                      for (int i = 0; i < 5; i++) {
-                                        final outerAngle = (i * 72 - 90) * 3.141592653589793 / 180;
-                                        final innerAngle = (i * 72 + 36 - 90) * 3.141592653589793 / 180;
+                                          canvas.setColor(darkGold);
+                                          for (int i = 0; i < 5; i++) {
+                                            final outerAngle =
+                                                (i * 72 - 90) *
+                                                3.141592653589793 /
+                                                180;
+                                            final innerAngle =
+                                                (i * 72 + 36 - 90) *
+                                                3.141592653589793 /
+                                                180;
 
-                                        final ox = cx + outerR * math.cos(outerAngle);
-                                        final oy = cy + outerR * math.sin(outerAngle);
-                                        final ix = cx + innerR * math.cos(innerAngle);
-                                        final iy = cy + innerR * math.sin(innerAngle);
+                                            final ox =
+                                                cx +
+                                                outerR * math.cos(outerAngle);
+                                            final oy =
+                                                cy +
+                                                outerR * math.sin(outerAngle);
+                                            final ix =
+                                                cx +
+                                                innerR * math.cos(innerAngle);
+                                            final iy =
+                                                cy +
+                                                innerR * math.sin(innerAngle);
 
-                                        if (i == 0) {
-                                          canvas.moveTo(ox, oy);
-                                        } else {
-                                          canvas.lineTo(ox, oy);
-                                        }
-                                        canvas.lineTo(ix, iy);
-                                      }
-                                      canvas.closePath();
-                                      canvas.fillPath();
-                                    },
+                                            if (i == 0) {
+                                              canvas.moveTo(ox, oy);
+                                            } else {
+                                              canvas.lineTo(ox, oy);
+                                            }
+                                            canvas.lineTo(ix, iy);
+                                          }
+                                          canvas.closePath();
+                                          canvas.fillPath();
+                                        },
                                   ),
                                 ),
                               ),
@@ -1166,7 +1636,10 @@ class PdfService {
 
               // 3. Main Certificate Document Body (Exact text and styling from model)
               pw.Padding(
-                padding: const pw.EdgeInsets.symmetric(horizontal: 50, vertical: 22),
+                padding: const pw.EdgeInsets.symmetric(
+                  horizontal: 50,
+                  vertical: 22,
+                ),
                 child: pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.center,
                   children: [
@@ -1208,11 +1681,7 @@ class PdfService {
                     pw.SizedBox(height: 8),
 
                     // Header Horizontal Blue Separator Line
-                    pw.Container(
-                      width: 580,
-                      height: 2.5,
-                      color: royalBlue,
-                    ),
+                    pw.Container(width: 580, height: 2.5, color: royalBlue),
 
                     pw.SizedBox(height: 14),
 
@@ -1439,7 +1908,10 @@ class PdfService {
                 padding: const pw.EdgeInsets.all(3),
                 child: pw.Container(
                   decoration: pw.BoxDecoration(
-                    border: pw.Border.all(color: PdfColor.fromHex('#FCA5A5'), width: 0.75),
+                    border: pw.Border.all(
+                      color: PdfColor.fromHex('#FCA5A5'),
+                      width: 0.75,
+                    ),
                   ),
                 ),
               ),
@@ -1464,7 +1936,10 @@ class PdfService {
 
               // Main Document
               pw.Padding(
-                padding: const pw.EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                padding: const pw.EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 16,
+                ),
                 child: pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
@@ -1491,7 +1966,10 @@ class PdfService {
                                   pw.Container(
                                     width: 6,
                                     height: 6,
-                                    decoration: pw.BoxDecoration(color: crimsonRed, shape: pw.BoxShape.circle),
+                                    decoration: pw.BoxDecoration(
+                                      color: crimsonRed,
+                                      shape: pw.BoxShape.circle,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -1507,13 +1985,19 @@ class PdfService {
                               ),
                               pw.Text(
                                 'Hamdallaye ACI 2000, Bamako • Tél : (+223) 70 00 11 22 • contact@mali-ntic.ml',
-                                style: pw.TextStyle(fontSize: 7.5, color: slateColor),
+                                style: pw.TextStyle(
+                                  fontSize: 7.5,
+                                  color: slateColor,
+                                ),
                               ),
                             ],
                           ),
                         ),
                         pw.Container(
-                          padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          padding: const pw.EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
                           decoration: pw.BoxDecoration(
                             color: navyBlue,
                             borderRadius: pw.BorderRadius.circular(6),
@@ -1524,16 +2008,27 @@ class PdfService {
                             children: [
                               pw.Text(
                                 'FICHE INDIVIDUELLE',
-                                style: pw.TextStyle(color: PdfColors.white, fontWeight: pw.FontWeight.bold, fontSize: 10.5),
+                                style: pw.TextStyle(
+                                  color: PdfColors.white,
+                                  fontWeight: pw.FontWeight.bold,
+                                  fontSize: 10.5,
+                                ),
                               ),
                               pw.SizedBox(height: 2),
                               pw.Text(
                                 'Matricule : $studentMatricule',
-                                style: pw.TextStyle(color: goldColor, fontWeight: pw.FontWeight.bold, fontSize: 8.5),
+                                style: pw.TextStyle(
+                                  color: goldColor,
+                                  fontWeight: pw.FontWeight.bold,
+                                  fontSize: 8.5,
+                                ),
                               ),
                               pw.Text(
                                 'Édité le : ${_formatDate(DateTime.now())}',
-                                style: const pw.TextStyle(color: PdfColors.white, fontSize: 7.5),
+                                style: const pw.TextStyle(
+                                  color: PdfColors.white,
+                                  fontSize: 7.5,
+                                ),
                               ),
                             ],
                           ),
@@ -1558,9 +2053,20 @@ class PdfService {
                         children: [
                           pw.Row(
                             children: [
-                              pw.Container(width: 4, height: 10, color: navyBlue),
+                              pw.Container(
+                                width: 4,
+                                height: 10,
+                                color: navyBlue,
+                              ),
                               pw.SizedBox(width: 5),
-                              pw.Text('ÉTAT CIVIL & COORDONNÉES', style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold, color: navyBlue)),
+                              pw.Text(
+                                'ÉTAT CIVIL & COORDONNÉES',
+                                style: pw.TextStyle(
+                                  fontSize: 8.5,
+                                  fontWeight: pw.FontWeight.bold,
+                                  color: navyBlue,
+                                ),
+                              ),
                             ],
                           ),
                           pw.SizedBox(height: 6),
@@ -1569,40 +2075,101 @@ class PdfService {
                               pw.Expanded(
                                 flex: 2,
                                 child: pw.Column(
-                                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                                  crossAxisAlignment:
+                                      pw.CrossAxisAlignment.start,
                                   children: [
-                                    pw.Text('Nom & Prénom :', style: pw.TextStyle(fontSize: 7.5, color: slateColor)),
-                                    pw.Text(fullName.isNotEmpty ? fullName : 'APPRENANT', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: darkTextColor)),
+                                    pw.Text(
+                                      'Nom & Prénom :',
+                                      style: pw.TextStyle(
+                                        fontSize: 7.5,
+                                        color: slateColor,
+                                      ),
+                                    ),
+                                    pw.Text(
+                                      fullName.isNotEmpty
+                                          ? fullName
+                                          : 'APPRENANT',
+                                      style: pw.TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: pw.FontWeight.bold,
+                                        color: darkTextColor,
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ),
                               pw.Expanded(
                                 flex: 2,
                                 child: pw.Column(
-                                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                                  crossAxisAlignment:
+                                      pw.CrossAxisAlignment.start,
                                   children: [
-                                    pw.Text('Téléphone :', style: pw.TextStyle(fontSize: 7.5, color: slateColor)),
-                                    pw.Text(telephone.isNotEmpty ? telephone : 'Non renseigné', style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold, color: darkTextColor)),
+                                    pw.Text(
+                                      'Téléphone :',
+                                      style: pw.TextStyle(
+                                        fontSize: 7.5,
+                                        color: slateColor,
+                                      ),
+                                    ),
+                                    pw.Text(
+                                      telephone.isNotEmpty
+                                          ? telephone
+                                          : 'Non renseigné',
+                                      style: pw.TextStyle(
+                                        fontSize: 8.5,
+                                        fontWeight: pw.FontWeight.bold,
+                                        color: darkTextColor,
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ),
                               pw.Expanded(
                                 flex: 2,
                                 child: pw.Column(
-                                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                                  crossAxisAlignment:
+                                      pw.CrossAxisAlignment.start,
                                   children: [
-                                    pw.Text('E-mail :', style: pw.TextStyle(fontSize: 7.5, color: slateColor)),
-                                    pw.Text(email.isNotEmpty ? email : 'Non renseigné', style: pw.TextStyle(fontSize: 8.5, color: darkTextColor)),
+                                    pw.Text(
+                                      'E-mail :',
+                                      style: pw.TextStyle(
+                                        fontSize: 7.5,
+                                        color: slateColor,
+                                      ),
+                                    ),
+                                    pw.Text(
+                                      email.isNotEmpty
+                                          ? email
+                                          : 'Non renseigné',
+                                      style: pw.TextStyle(
+                                        fontSize: 8.5,
+                                        color: darkTextColor,
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ),
                               pw.Expanded(
                                 flex: 1,
                                 child: pw.Column(
-                                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                                  crossAxisAlignment:
+                                      pw.CrossAxisAlignment.start,
                                   children: [
-                                    pw.Text('Genre :', style: pw.TextStyle(fontSize: 7.5, color: slateColor)),
-                                    pw.Text(genre ?? 'M', style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold, color: darkTextColor)),
+                                    pw.Text(
+                                      'Genre :',
+                                      style: pw.TextStyle(
+                                        fontSize: 7.5,
+                                        color: slateColor,
+                                      ),
+                                    ),
+                                    pw.Text(
+                                      genre ?? 'M',
+                                      style: pw.TextStyle(
+                                        fontSize: 8.5,
+                                        fontWeight: pw.FontWeight.bold,
+                                        color: darkTextColor,
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ),
@@ -1615,7 +2182,14 @@ class PdfService {
                     pw.SizedBox(height: 10),
 
                     // Section 2: Formations & Cursus
-                    pw.Text('CURSUS PÉDAGOGIQUE & FORMATIONS SUIVIES', style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold, color: navyBlue)),
+                    pw.Text(
+                      'CURSUS PÉDAGOGIQUE & FORMATIONS SUIVIES',
+                      style: pw.TextStyle(
+                        fontSize: 8.5,
+                        fontWeight: pw.FontWeight.bold,
+                        color: navyBlue,
+                      ),
+                    ),
                     pw.SizedBox(height: 4),
                     pw.Table(
                       border: pw.TableBorder.all(color: borderGrey, width: 0.8),
@@ -1630,20 +2204,60 @@ class PdfService {
                           decoration: pw.BoxDecoration(color: navyBlue),
                           children: [
                             pw.Padding(
-                              padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                              child: pw.Text('Formation / Intitulé', style: pw.TextStyle(color: PdfColors.white, fontWeight: pw.FontWeight.bold, fontSize: 7.5)),
+                              padding: const pw.EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 4,
+                              ),
+                              child: pw.Text(
+                                'Formation / Intitulé',
+                                style: pw.TextStyle(
+                                  color: PdfColors.white,
+                                  fontWeight: pw.FontWeight.bold,
+                                  fontSize: 7.5,
+                                ),
+                              ),
                             ),
                             pw.Padding(
-                              padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                              child: pw.Text('Modules Associés', style: pw.TextStyle(color: PdfColors.white, fontWeight: pw.FontWeight.bold, fontSize: 7.5)),
+                              padding: const pw.EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 4,
+                              ),
+                              child: pw.Text(
+                                'Modules Associés',
+                                style: pw.TextStyle(
+                                  color: PdfColors.white,
+                                  fontWeight: pw.FontWeight.bold,
+                                  fontSize: 7.5,
+                                ),
+                              ),
                             ),
                             pw.Padding(
-                              padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                              child: pw.Text('Modalité', style: pw.TextStyle(color: PdfColors.white, fontWeight: pw.FontWeight.bold, fontSize: 7.5)),
+                              padding: const pw.EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 4,
+                              ),
+                              child: pw.Text(
+                                'Modalité',
+                                style: pw.TextStyle(
+                                  color: PdfColors.white,
+                                  fontWeight: pw.FontWeight.bold,
+                                  fontSize: 7.5,
+                                ),
+                              ),
                             ),
                             pw.Padding(
-                              padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                              child: pw.Text('Progression', style: pw.TextStyle(color: PdfColors.white, fontWeight: pw.FontWeight.bold, fontSize: 7.5)),
+                              padding: const pw.EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 4,
+                              ),
+                              child: pw.Text(
+                                'Progression',
+                                style: pw.TextStyle(
+                                  color: PdfColors.white,
+                                  fontWeight: pw.FontWeight.bold,
+                                  fontSize: 7.5,
+                                ),
+                              ),
                             ),
                           ],
                         ),
@@ -1652,37 +2266,94 @@ class PdfService {
                             children: [
                               pw.Padding(
                                 padding: const pw.EdgeInsets.all(6),
-                                child: pw.Text('Aucune formation enregistrée', style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700)),
+                                child: pw.Text(
+                                  'Aucune formation enregistrée',
+                                  style: const pw.TextStyle(
+                                    fontSize: 8,
+                                    color: PdfColors.grey700,
+                                  ),
+                                ),
                               ),
-                              pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Text('-', style: const pw.TextStyle(fontSize: 8))),
-                              pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Text('-', style: const pw.TextStyle(fontSize: 8))),
-                              pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Text('-', style: const pw.TextStyle(fontSize: 8))),
+                              pw.Padding(
+                                padding: const pw.EdgeInsets.all(6),
+                                child: pw.Text(
+                                  '-',
+                                  style: const pw.TextStyle(fontSize: 8),
+                                ),
+                              ),
+                              pw.Padding(
+                                padding: const pw.EdgeInsets.all(6),
+                                child: pw.Text(
+                                  '-',
+                                  style: const pw.TextStyle(fontSize: 8),
+                                ),
+                              ),
+                              pw.Padding(
+                                padding: const pw.EdgeInsets.all(6),
+                                child: pw.Text(
+                                  '-',
+                                  style: const pw.TextStyle(fontSize: 8),
+                                ),
+                              ),
                             ],
                           )
                         else
                           ...formations.map((f) {
-                            final title = f['title']?.toString() ?? 'Formation M@LI-NTIC';
-                            final mods = (f['modules'] as List<dynamic>? ?? []).map((m) => m['title']?.toString() ?? '').where((m) => m.isNotEmpty).join(', ');
-                            final mode = f['modeSuivi']?.toString() ?? 'Présentiel';
-                            final progress = f['progress']?.toString() ?? 'En cours';
+                            final title =
+                                f['title']?.toString() ?? 'Formation M@LI-NTIC';
+                            final mods = (f['modules'] as List<dynamic>? ?? [])
+                                .map((m) => m['title']?.toString() ?? '')
+                                .where((m) => m.isNotEmpty)
+                                .join(', ');
+                            final mode =
+                                f['modeSuivi']?.toString() ?? 'Présentiel';
+                            final progress =
+                                f['progress']?.toString() ?? 'En cours';
 
                             return pw.TableRow(
                               children: [
                                 pw.Padding(
                                   padding: const pw.EdgeInsets.all(6),
-                                  child: pw.Text(title, style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: darkTextColor)),
+                                  child: pw.Text(
+                                    title,
+                                    style: pw.TextStyle(
+                                      fontSize: 8,
+                                      fontWeight: pw.FontWeight.bold,
+                                      color: darkTextColor,
+                                    ),
+                                  ),
                                 ),
                                 pw.Padding(
                                   padding: const pw.EdgeInsets.all(6),
-                                  child: pw.Text(mods.isNotEmpty ? mods : 'Tronc commun', style: pw.TextStyle(fontSize: 7.5, color: slateColor)),
+                                  child: pw.Text(
+                                    mods.isNotEmpty ? mods : 'Tronc commun',
+                                    style: pw.TextStyle(
+                                      fontSize: 7.5,
+                                      color: slateColor,
+                                    ),
+                                  ),
                                 ),
                                 pw.Padding(
                                   padding: const pw.EdgeInsets.all(6),
-                                  child: pw.Text(mode, style: pw.TextStyle(fontSize: 7.5, color: navyBlue, fontWeight: pw.FontWeight.bold)),
+                                  child: pw.Text(
+                                    mode,
+                                    style: pw.TextStyle(
+                                      fontSize: 7.5,
+                                      color: navyBlue,
+                                      fontWeight: pw.FontWeight.bold,
+                                    ),
+                                  ),
                                 ),
                                 pw.Padding(
                                   padding: const pw.EdgeInsets.all(6),
-                                  child: pw.Text(progress, style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold, color: crimsonRed)),
+                                  child: pw.Text(
+                                    progress,
+                                    style: pw.TextStyle(
+                                      fontSize: 7.5,
+                                      fontWeight: pw.FontWeight.bold,
+                                      color: crimsonRed,
+                                    ),
+                                  ),
                                 ),
                               ],
                             );
@@ -1703,42 +2374,102 @@ class PdfService {
                             decoration: pw.BoxDecoration(
                               color: lightBgColor,
                               borderRadius: pw.BorderRadius.circular(6),
-                              border: pw.Border.all(color: borderGrey, width: 0.8),
+                              border: pw.Border.all(
+                                color: borderGrey,
+                                width: 0.8,
+                              ),
                             ),
                             child: pw.Column(
                               crossAxisAlignment: pw.CrossAxisAlignment.start,
                               children: [
                                 pw.Row(
                                   children: [
-                                    pw.Container(width: 4, height: 10, color: goldColor),
+                                    pw.Container(
+                                      width: 4,
+                                      height: 10,
+                                      color: goldColor,
+                                    ),
                                     pw.SizedBox(width: 5),
-                                    pw.Text('SITUATION FINANCIÈRE', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: navyBlue)),
+                                    pw.Text(
+                                      'SITUATION FINANCIÈRE',
+                                      style: pw.TextStyle(
+                                        fontSize: 8,
+                                        fontWeight: pw.FontWeight.bold,
+                                        color: navyBlue,
+                                      ),
+                                    ),
                                   ],
                                 ),
                                 pw.SizedBox(height: 5),
                                 pw.Row(
-                                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment:
+                                      pw.MainAxisAlignment.spaceBetween,
                                   children: [
-                                    pw.Text('Total des Formations :', style: pw.TextStyle(fontSize: 7.5, color: slateColor)),
-                                    pw.Text('${totalDue.toStringAsFixed(0)} FCFA', style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold, color: darkTextColor)),
-                                  ],
-                                ),
-                                pw.SizedBox(height: 2),
-                                pw.Row(
-                                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    pw.Text('Montant Versé :', style: pw.TextStyle(fontSize: 7.5, color: slateColor)),
-                                    pw.Text('${totalPaid.toStringAsFixed(0)} FCFA', style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold, color: PdfColor.fromHex('#03543F'))),
-                                  ],
-                                ),
-                                pw.SizedBox(height: 2),
-                                pw.Row(
-                                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    pw.Text('Solde Restant :', style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold, color: isFullySettled ? PdfColor.fromHex('#03543F') : crimsonRed)),
                                     pw.Text(
-                                      isFullySettled ? '0 FCFA (SOLDÉ)' : '${remainingBalance.toStringAsFixed(0)} FCFA',
-                                      style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold, color: isFullySettled ? PdfColor.fromHex('#03543F') : crimsonRed),
+                                      'Total des Formations :',
+                                      style: pw.TextStyle(
+                                        fontSize: 7.5,
+                                        color: slateColor,
+                                      ),
+                                    ),
+                                    pw.Text(
+                                      '${totalDue.toStringAsFixed(0)} FCFA',
+                                      style: pw.TextStyle(
+                                        fontSize: 7.5,
+                                        fontWeight: pw.FontWeight.bold,
+                                        color: darkTextColor,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                pw.SizedBox(height: 2),
+                                pw.Row(
+                                  mainAxisAlignment:
+                                      pw.MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    pw.Text(
+                                      'Montant Versé :',
+                                      style: pw.TextStyle(
+                                        fontSize: 7.5,
+                                        color: slateColor,
+                                      ),
+                                    ),
+                                    pw.Text(
+                                      '${totalPaid.toStringAsFixed(0)} FCFA',
+                                      style: pw.TextStyle(
+                                        fontSize: 7.5,
+                                        fontWeight: pw.FontWeight.bold,
+                                        color: PdfColor.fromHex('#03543F'),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                pw.SizedBox(height: 2),
+                                pw.Row(
+                                  mainAxisAlignment:
+                                      pw.MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    pw.Text(
+                                      'Solde Restant :',
+                                      style: pw.TextStyle(
+                                        fontSize: 7.5,
+                                        fontWeight: pw.FontWeight.bold,
+                                        color: isFullySettled
+                                            ? PdfColor.fromHex('#03543F')
+                                            : crimsonRed,
+                                      ),
+                                    ),
+                                    pw.Text(
+                                      isFullySettled
+                                          ? '0 FCFA (SOLDÉ)'
+                                          : '${remainingBalance.toStringAsFixed(0)} FCFA',
+                                      style: pw.TextStyle(
+                                        fontSize: 7.5,
+                                        fontWeight: pw.FontWeight.bold,
+                                        color: isFullySettled
+                                            ? PdfColor.fromHex('#03543F')
+                                            : crimsonRed,
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -1756,40 +2487,97 @@ class PdfService {
                             decoration: pw.BoxDecoration(
                               color: lightBgColor,
                               borderRadius: pw.BorderRadius.circular(6),
-                              border: pw.Border.all(color: borderGrey, width: 0.8),
+                              border: pw.Border.all(
+                                color: borderGrey,
+                                width: 0.8,
+                              ),
                             ),
                             child: pw.Column(
                               crossAxisAlignment: pw.CrossAxisAlignment.start,
                               children: [
                                 pw.Row(
                                   children: [
-                                    pw.Container(width: 4, height: 10, color: crimsonRed),
+                                    pw.Container(
+                                      width: 4,
+                                      height: 10,
+                                      color: crimsonRed,
+                                    ),
                                     pw.SizedBox(width: 5),
-                                    pw.Text('ASSIDUITÉ & PRÉSENCES', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: crimsonRed)),
+                                    pw.Text(
+                                      'ASSIDUITÉ & PRÉSENCES',
+                                      style: pw.TextStyle(
+                                        fontSize: 8,
+                                        fontWeight: pw.FontWeight.bold,
+                                        color: crimsonRed,
+                                      ),
+                                    ),
                                   ],
                                 ),
                                 pw.SizedBox(height: 5),
                                 pw.Row(
-                                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment:
+                                      pw.MainAxisAlignment.spaceBetween,
                                   children: [
-                                    pw.Text('Séances Présent :', style: pw.TextStyle(fontSize: 7.5, color: slateColor)),
-                                    pw.Text('${assiduite['presentCount'] ?? 0} séance(s)', style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold, color: PdfColor.fromHex('#03543F'))),
+                                    pw.Text(
+                                      'Séances Présent :',
+                                      style: pw.TextStyle(
+                                        fontSize: 7.5,
+                                        color: slateColor,
+                                      ),
+                                    ),
+                                    pw.Text(
+                                      '${assiduite['presentCount'] ?? 0} séance(s)',
+                                      style: pw.TextStyle(
+                                        fontSize: 7.5,
+                                        fontWeight: pw.FontWeight.bold,
+                                        color: PdfColor.fromHex('#03543F'),
+                                      ),
+                                    ),
                                   ],
                                 ),
                                 pw.SizedBox(height: 2),
                                 pw.Row(
-                                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment:
+                                      pw.MainAxisAlignment.spaceBetween,
                                   children: [
-                                    pw.Text('Absences :', style: pw.TextStyle(fontSize: 7.5, color: slateColor)),
-                                    pw.Text('${assiduite['absentCount'] ?? 0} séance(s)', style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold, color: crimsonRed)),
+                                    pw.Text(
+                                      'Absences :',
+                                      style: pw.TextStyle(
+                                        fontSize: 7.5,
+                                        color: slateColor,
+                                      ),
+                                    ),
+                                    pw.Text(
+                                      '${assiduite['absentCount'] ?? 0} séance(s)',
+                                      style: pw.TextStyle(
+                                        fontSize: 7.5,
+                                        fontWeight: pw.FontWeight.bold,
+                                        color: crimsonRed,
+                                      ),
+                                    ),
                                   ],
                                 ),
                                 pw.SizedBox(height: 2),
                                 pw.Row(
-                                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment:
+                                      pw.MainAxisAlignment.spaceBetween,
                                   children: [
-                                    pw.Text('Taux Global d\'Assiduité :', style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold, color: navyBlue)),
-                                    pw.Text('${assiduite['rate'] ?? '100%'}', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: navyBlue)),
+                                    pw.Text(
+                                      'Taux Global d\'Assiduité :',
+                                      style: pw.TextStyle(
+                                        fontSize: 7.5,
+                                        fontWeight: pw.FontWeight.bold,
+                                        color: navyBlue,
+                                      ),
+                                    ),
+                                    pw.Text(
+                                      '${assiduite['rate'] ?? '100%'}',
+                                      style: pw.TextStyle(
+                                        fontSize: 8,
+                                        fontWeight: pw.FontWeight.bold,
+                                        color: navyBlue,
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ],
@@ -1803,27 +2591,105 @@ class PdfService {
 
                     // Section 4: Historique des Transactions
                     if (paiements.isNotEmpty) ...[
-                      pw.Text('HISTORIQUE DES VERSEMENTS & REÇUS', style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold, color: navyBlue)),
+                      pw.Text(
+                        'HISTORIQUE DES VERSEMENTS & REÇUS',
+                        style: pw.TextStyle(
+                          fontSize: 8.5,
+                          fontWeight: pw.FontWeight.bold,
+                          color: navyBlue,
+                        ),
+                      ),
                       pw.SizedBox(height: 4),
                       pw.Table(
-                        border: pw.TableBorder.all(color: borderGrey, width: 0.8),
+                        border: pw.TableBorder.all(
+                          color: borderGrey,
+                          width: 0.8,
+                        ),
                         children: [
                           pw.TableRow(
-                            decoration: pw.BoxDecoration(color: PdfColor.fromHex('#F1F5F9')),
+                            decoration: pw.BoxDecoration(
+                              color: PdfColor.fromHex('#F1F5F9'),
+                            ),
                             children: [
-                              pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('Date', style: pw.TextStyle(fontSize: 7, fontWeight: pw.FontWeight.bold))),
-                              pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('Réf. / Reçu', style: pw.TextStyle(fontSize: 7, fontWeight: pw.FontWeight.bold))),
-                              pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('Mode', style: pw.TextStyle(fontSize: 7, fontWeight: pw.FontWeight.bold))),
-                              pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('Montant', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontSize: 7, fontWeight: pw.FontWeight.bold))),
+                              pw.Padding(
+                                padding: const pw.EdgeInsets.all(4),
+                                child: pw.Text(
+                                  'Date',
+                                  style: pw.TextStyle(
+                                    fontSize: 7,
+                                    fontWeight: pw.FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              pw.Padding(
+                                padding: const pw.EdgeInsets.all(4),
+                                child: pw.Text(
+                                  'Réf. / Reçu',
+                                  style: pw.TextStyle(
+                                    fontSize: 7,
+                                    fontWeight: pw.FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              pw.Padding(
+                                padding: const pw.EdgeInsets.all(4),
+                                child: pw.Text(
+                                  'Mode',
+                                  style: pw.TextStyle(
+                                    fontSize: 7,
+                                    fontWeight: pw.FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              pw.Padding(
+                                padding: const pw.EdgeInsets.all(4),
+                                child: pw.Text(
+                                  'Montant',
+                                  textAlign: pw.TextAlign.right,
+                                  style: pw.TextStyle(
+                                    fontSize: 7,
+                                    fontWeight: pw.FontWeight.bold,
+                                  ),
+                                ),
+                              ),
                             ],
                           ),
                           ...paiements.take(4).map((p) {
                             return pw.TableRow(
                               children: [
-                                pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text(p['date']?.toString() ?? '', style: const pw.TextStyle(fontSize: 7))),
-                                pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text(p['reference']?.toString() ?? '', style: const pw.TextStyle(fontSize: 7))),
-                                pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text(p['methode']?.toString() ?? '', style: const pw.TextStyle(fontSize: 7))),
-                                pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('${p['montant']?.toString() ?? '0'} FCFA', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontSize: 7, fontWeight: pw.FontWeight.bold, color: navyBlue))),
+                                pw.Padding(
+                                  padding: const pw.EdgeInsets.all(4),
+                                  child: pw.Text(
+                                    p['date']?.toString() ?? '',
+                                    style: const pw.TextStyle(fontSize: 7),
+                                  ),
+                                ),
+                                pw.Padding(
+                                  padding: const pw.EdgeInsets.all(4),
+                                  child: pw.Text(
+                                    p['reference']?.toString() ?? '',
+                                    style: const pw.TextStyle(fontSize: 7),
+                                  ),
+                                ),
+                                pw.Padding(
+                                  padding: const pw.EdgeInsets.all(4),
+                                  child: pw.Text(
+                                    p['methode']?.toString() ?? '',
+                                    style: const pw.TextStyle(fontSize: 7),
+                                  ),
+                                ),
+                                pw.Padding(
+                                  padding: const pw.EdgeInsets.all(4),
+                                  child: pw.Text(
+                                    '${p['montant']?.toString() ?? '0'} FCFA',
+                                    textAlign: pw.TextAlign.right,
+                                    style: pw.TextStyle(
+                                      fontSize: 7,
+                                      fontWeight: pw.FontWeight.bold,
+                                      color: navyBlue,
+                                    ),
+                                  ),
+                                ),
                               ],
                             );
                           }),
@@ -1841,41 +2707,90 @@ class PdfService {
                         pw.Column(
                           crossAxisAlignment: pw.CrossAxisAlignment.start,
                           children: [
-                            pw.Text('L\'Apprenant(e)', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: darkTextColor)),
+                            pw.Text(
+                              'L\'Apprenant(e)',
+                              style: pw.TextStyle(
+                                fontSize: 8,
+                                fontWeight: pw.FontWeight.bold,
+                                color: darkTextColor,
+                              ),
+                            ),
                             pw.SizedBox(height: 25),
-                            pw.Container(width: 100, decoration: const pw.BoxDecoration(border: pw.Border(bottom: pw.BorderSide(color: PdfColors.grey400, width: 0.8)))),
+                            pw.Container(
+                              width: 100,
+                              decoration: const pw.BoxDecoration(
+                                border: pw.Border(
+                                  bottom: pw.BorderSide(
+                                    color: PdfColors.grey400,
+                                    width: 0.8,
+                                  ),
+                                ),
+                              ),
+                            ),
                           ],
                         ),
                         pw.Column(
                           children: [
                             pw.BarcodeWidget(
                               barcode: pw.Barcode.qrCode(),
-                              data: 'https://mali-ntic.ml/verify/student?mat=$studentMatricule&nom=$fullName',
+                              data:
+                                  'https://mali-ntic.ml/verify/student?mat=$studentMatricule&nom=$fullName',
                               width: 45,
                               height: 45,
                             ),
                             pw.SizedBox(height: 2),
-                            pw.Text('Vérification Officielle', style: const pw.TextStyle(fontSize: 6, color: PdfColors.grey700)),
+                            pw.Text(
+                              'Vérification Officielle',
+                              style: const pw.TextStyle(
+                                fontSize: 6,
+                                color: PdfColors.grey700,
+                              ),
+                            ),
                           ],
                         ),
                         pw.Column(
                           crossAxisAlignment: pw.CrossAxisAlignment.end,
                           children: [
-                            pw.Text('Direction des Études M@LI-NTIC', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: navyBlue)),
+                            pw.Text(
+                              'Direction des Études M@LI-NTIC',
+                              style: pw.TextStyle(
+                                fontSize: 8,
+                                fontWeight: pw.FontWeight.bold,
+                                color: navyBlue,
+                              ),
+                            ),
                             pw.SizedBox(height: 4),
                             pw.Container(
                               width: 85,
                               height: 32,
                               decoration: pw.BoxDecoration(
-                                border: pw.Border.all(color: crimsonRed, width: 1),
+                                border: pw.Border.all(
+                                  color: crimsonRed,
+                                  width: 1,
+                                ),
                                 borderRadius: pw.BorderRadius.circular(4),
                               ),
                               child: pw.Center(
                                 child: pw.Column(
-                                  mainAxisAlignment: pw.MainAxisAlignment.center,
+                                  mainAxisAlignment:
+                                      pw.MainAxisAlignment.center,
                                   children: [
-                                    pw.Text('M@LI-NTIC • ÉTUDES', style: pw.TextStyle(fontSize: 5.5, fontWeight: pw.FontWeight.bold, color: crimsonRed)),
-                                    pw.Text('DOSSIER VALIDÉ', style: pw.TextStyle(fontSize: 6, fontWeight: pw.FontWeight.bold, color: navyBlue)),
+                                    pw.Text(
+                                      'M@LI-NTIC • ÉTUDES',
+                                      style: pw.TextStyle(
+                                        fontSize: 5.5,
+                                        fontWeight: pw.FontWeight.bold,
+                                        color: crimsonRed,
+                                      ),
+                                    ),
+                                    pw.Text(
+                                      'DOSSIER VALIDÉ',
+                                      style: pw.TextStyle(
+                                        fontSize: 6,
+                                        fontWeight: pw.FontWeight.bold,
+                                        color: navyBlue,
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ),
@@ -1889,7 +2804,10 @@ class PdfService {
                     pw.Center(
                       child: pw.Text(
                         'Document académique officiel délivré par M@LI-NTIC Bamako • Agrément MEN-FP',
-                        style: const pw.TextStyle(fontSize: 6, color: PdfColors.grey600),
+                        style: const pw.TextStyle(
+                          fontSize: 6,
+                          color: PdfColors.grey600,
+                        ),
                       ),
                     ),
                   ],
@@ -1941,11 +2859,31 @@ class PdfService {
                 pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
-                    pw.Text('M@LI-NTIC', style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold, color: primaryColor)),
+                    pw.Text(
+                      'M@LI-NTIC',
+                      style: pw.TextStyle(
+                        fontSize: 14,
+                        fontWeight: pw.FontWeight.bold,
+                        color: primaryColor,
+                      ),
+                    ),
                     pw.Container(
-                      padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: pw.BoxDecoration(color: secondaryColor, borderRadius: pw.BorderRadius.circular(3)),
-                      child: pw.Text('CARTE ÉTUDIANT', style: pw.TextStyle(color: PdfColors.white, fontSize: 7, fontWeight: pw.FontWeight.bold)),
+                      padding: const pw.EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: pw.BoxDecoration(
+                        color: secondaryColor,
+                        borderRadius: pw.BorderRadius.circular(3),
+                      ),
+                      child: pw.Text(
+                        'CARTE ÉTUDIANT',
+                        style: pw.TextStyle(
+                          color: PdfColors.white,
+                          fontSize: 7,
+                          fontWeight: pw.FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -1962,10 +2900,18 @@ class PdfService {
                       decoration: pw.BoxDecoration(
                         color: PdfColor.fromHex('#F1F5F9'),
                         borderRadius: pw.BorderRadius.circular(4),
-                        border: pw.Border.all(color: PdfColor.fromHex('#CBD5E1')),
+                        border: pw.Border.all(
+                          color: PdfColor.fromHex('#CBD5E1'),
+                        ),
                       ),
                       child: pw.Center(
-                        child: pw.Text('PHOTO', style: const pw.TextStyle(fontSize: 7, color: PdfColors.grey600)),
+                        child: pw.Text(
+                          'PHOTO',
+                          style: const pw.TextStyle(
+                            fontSize: 7,
+                            color: PdfColors.grey600,
+                          ),
+                        ),
                       ),
                     ),
                     pw.SizedBox(width: 8),
@@ -1973,11 +2919,44 @@ class PdfService {
                       child: pw.Column(
                         crossAxisAlignment: pw.CrossAxisAlignment.start,
                         children: [
-                          pw.Text('$prenom $nom'.toUpperCase(), style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: darkTextColor)),
-                          pw.Text('Matricule: $studentMatricule', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: primaryColor)),
-                          pw.Text('Tél: $telephone', style: const pw.TextStyle(fontSize: 7, color: PdfColors.grey800)),
-                          pw.Text('Email: $email', style: const pw.TextStyle(fontSize: 7, color: PdfColors.grey800)),
-                          pw.Text('Formation: $formationTitre', style: pw.TextStyle(fontSize: 7, fontWeight: pw.FontWeight.bold, color: secondaryColor)),
+                          pw.Text(
+                            '$prenom $nom'.toUpperCase(),
+                            style: pw.TextStyle(
+                              fontSize: 10,
+                              fontWeight: pw.FontWeight.bold,
+                              color: darkTextColor,
+                            ),
+                          ),
+                          pw.Text(
+                            'Matricule: $studentMatricule',
+                            style: pw.TextStyle(
+                              fontSize: 8,
+                              fontWeight: pw.FontWeight.bold,
+                              color: primaryColor,
+                            ),
+                          ),
+                          pw.Text(
+                            'Tél: $telephone',
+                            style: const pw.TextStyle(
+                              fontSize: 7,
+                              color: PdfColors.grey800,
+                            ),
+                          ),
+                          pw.Text(
+                            'Email: $email',
+                            style: const pw.TextStyle(
+                              fontSize: 7,
+                              color: PdfColors.grey800,
+                            ),
+                          ),
+                          pw.Text(
+                            'Formation: $formationTitre',
+                            style: pw.TextStyle(
+                              fontSize: 7,
+                              fontWeight: pw.FontWeight.bold,
+                              color: secondaryColor,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -1991,7 +2970,13 @@ class PdfService {
                 ),
                 pw.Spacer(),
                 pw.Center(
-                  child: pw.Text('Centre M@LI-NTIC Bamako | www.mali-ntic.ml', style: const pw.TextStyle(fontSize: 6, color: PdfColors.grey600)),
+                  child: pw.Text(
+                    'Centre M@LI-NTIC Bamako | www.mali-ntic.ml',
+                    style: const pw.TextStyle(
+                      fontSize: 6,
+                      color: PdfColors.grey600,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -2028,18 +3013,22 @@ class PdfService {
     final lightBgColor = PdfColor.fromHex('#F8FAFC');
     final borderGrey = PdfColor.fromHex('#CBD5E1');
 
-    final actualFormationTitle = formationTitle ?? formationTitre ?? 'Formation M@LI-NTIC';
+    final actualFormationTitle =
+        formationTitle ?? formationTitre ?? 'Formation M@LI-NTIC';
     final actualModuleTitle = moduleTitle ?? moduleTitre;
     final seanceDate = dateSeance ?? DateTime.now();
     final dateStr = '${jour.toUpperCase()} ${_formatDate(seanceDate)}';
-    final qrData = 'MALINTIC-EMARGEMENT|FORM:${actualFormationTitle.replaceAll("|", "")}|MOD:${actualModuleTitle ?? "TRONC-COMMUN"}|DATE:$dateStr|HEURE:$heureDebut-$heureFin';
+    final qrData =
+        'MALINTIC-EMARGEMENT|FORM:${actualFormationTitle.replaceAll("|", "")}|MOD:${actualModuleTitle ?? "TRONC-COMMUN"}|DATE:$dateStr|HEURE:$heureDebut-$heureFin';
 
     // Normalize student list into rows
     final List<Map<String, String>> studentRows = [];
     if (students != null && students.isNotEmpty) {
       for (final s in students) {
         studentRows.add({
-          'matricule': s.matricule ?? 'MAT-${s.id.substring(0, math.min(6, s.id.length)).toUpperCase()}',
+          'matricule':
+              s.matricule ??
+              'MAT-${s.id.substring(0, math.min(6, s.id.length)).toUpperCase()}',
           'nom': s.nomComplet.toUpperCase(),
           'phone': s.phone,
         });
@@ -2049,11 +3038,14 @@ class PdfService {
         final prenom = a['prenom']?.toString() ?? '';
         final nom = a['nom']?.toString() ?? '';
         final nomComplet = '$prenom $nom'.trim().toUpperCase();
-        final tel = a['telephone']?.toString() ?? a['phone']?.toString() ?? 'N/A';
+        final tel =
+            a['telephone']?.toString() ?? a['phone']?.toString() ?? 'N/A';
         final mat = a['matricule']?.toString() ?? 'MAT-OFFICIEL';
         studentRows.add({
           'matricule': mat,
-          'nom': nomComplet.isNotEmpty ? nomComplet : (a['nom']?.toString() ?? 'APPRENANT'),
+          'nom': nomComplet.isNotEmpty
+              ? nomComplet
+              : (a['nom']?.toString() ?? 'APPRENANT'),
           'phone': tel,
         });
       }
@@ -2072,9 +3064,24 @@ class PdfService {
               // 1. TOP NATIONAL BORDER & HEADER
               pw.Row(
                 children: [
-                  pw.Expanded(child: pw.Container(height: 3.5, color: PdfColor.fromHex('#10B981'))),
-                  pw.Expanded(child: pw.Container(height: 3.5, color: PdfColor.fromHex('#F59E0B'))),
-                  pw.Expanded(child: pw.Container(height: 3.5, color: PdfColor.fromHex('#EF4444'))),
+                  pw.Expanded(
+                    child: pw.Container(
+                      height: 3.5,
+                      color: PdfColor.fromHex('#10B981'),
+                    ),
+                  ),
+                  pw.Expanded(
+                    child: pw.Container(
+                      height: 3.5,
+                      color: PdfColor.fromHex('#F59E0B'),
+                    ),
+                  ),
+                  pw.Expanded(
+                    child: pw.Container(
+                      height: 3.5,
+                      color: PdfColor.fromHex('#EF4444'),
+                    ),
+                  ),
                 ],
               ),
               pw.SizedBox(height: 8),
@@ -2106,7 +3113,10 @@ class PdfService {
                     ],
                   ),
                   pw.Container(
-                    padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    padding: const pw.EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
                     decoration: pw.BoxDecoration(
                       color: navyBlue,
                       borderRadius: pw.BorderRadius.circular(4),
@@ -2144,8 +3154,22 @@ class PdfService {
                           child: pw.RichText(
                             text: pw.TextSpan(
                               children: [
-                                pw.TextSpan(text: 'Formation : ', style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold, color: navyBlue)),
-                                pw.TextSpan(text: actualFormationTitle, style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold, color: darkTextColor)),
+                                pw.TextSpan(
+                                  text: 'Formation : ',
+                                  style: pw.TextStyle(
+                                    fontSize: 8.5,
+                                    fontWeight: pw.FontWeight.bold,
+                                    color: navyBlue,
+                                  ),
+                                ),
+                                pw.TextSpan(
+                                  text: actualFormationTitle,
+                                  style: pw.TextStyle(
+                                    fontSize: 8.5,
+                                    fontWeight: pw.FontWeight.bold,
+                                    color: darkTextColor,
+                                  ),
+                                ),
                               ],
                             ),
                           ),
@@ -2156,8 +3180,21 @@ class PdfService {
                           child: pw.RichText(
                             text: pw.TextSpan(
                               children: [
-                                pw.TextSpan(text: 'Module : ', style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold, color: navyBlue)),
-                                pw.TextSpan(text: actualModuleTitle ?? 'Tronc Commun', style: pw.TextStyle(fontSize: 8.5, color: darkTextColor)),
+                                pw.TextSpan(
+                                  text: 'Module : ',
+                                  style: pw.TextStyle(
+                                    fontSize: 8.5,
+                                    fontWeight: pw.FontWeight.bold,
+                                    color: navyBlue,
+                                  ),
+                                ),
+                                pw.TextSpan(
+                                  text: actualModuleTitle ?? 'Tronc Commun',
+                                  style: pw.TextStyle(
+                                    fontSize: 8.5,
+                                    color: darkTextColor,
+                                  ),
+                                ),
                               ],
                             ),
                           ),
@@ -2172,8 +3209,22 @@ class PdfService {
                           child: pw.RichText(
                             text: pw.TextSpan(
                               children: [
-                                pw.TextSpan(text: 'Formateur : ', style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold, color: navyBlue)),
-                                pw.TextSpan(text: formateurNom, style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold, color: darkTextColor)),
+                                pw.TextSpan(
+                                  text: 'Formateur : ',
+                                  style: pw.TextStyle(
+                                    fontSize: 8.5,
+                                    fontWeight: pw.FontWeight.bold,
+                                    color: navyBlue,
+                                  ),
+                                ),
+                                pw.TextSpan(
+                                  text: formateurNom,
+                                  style: pw.TextStyle(
+                                    fontSize: 8.5,
+                                    fontWeight: pw.FontWeight.bold,
+                                    color: darkTextColor,
+                                  ),
+                                ),
                               ],
                             ),
                           ),
@@ -2184,8 +3235,21 @@ class PdfService {
                           child: pw.RichText(
                             text: pw.TextSpan(
                               children: [
-                                pw.TextSpan(text: 'Cohorte / Groupe : ', style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold, color: navyBlue)),
-                                pw.TextSpan(text: cohortName ?? 'Tous Groupes', style: pw.TextStyle(fontSize: 8.5, color: darkTextColor)),
+                                pw.TextSpan(
+                                  text: 'Cohorte / Groupe : ',
+                                  style: pw.TextStyle(
+                                    fontSize: 8.5,
+                                    fontWeight: pw.FontWeight.bold,
+                                    color: navyBlue,
+                                  ),
+                                ),
+                                pw.TextSpan(
+                                  text: cohortName ?? 'Tous Groupes',
+                                  style: pw.TextStyle(
+                                    fontSize: 8.5,
+                                    color: darkTextColor,
+                                  ),
+                                ),
                               ],
                             ),
                           ),
@@ -2200,8 +3264,21 @@ class PdfService {
                           child: pw.RichText(
                             text: pw.TextSpan(
                               children: [
-                                pw.TextSpan(text: 'Séance : ', style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold, color: navyBlue)),
-                                pw.TextSpan(text: '$dateStr ($heureDebut - $heureFin)', style: pw.TextStyle(fontSize: 8.5, color: darkTextColor)),
+                                pw.TextSpan(
+                                  text: 'Séance : ',
+                                  style: pw.TextStyle(
+                                    fontSize: 8.5,
+                                    fontWeight: pw.FontWeight.bold,
+                                    color: navyBlue,
+                                  ),
+                                ),
+                                pw.TextSpan(
+                                  text: '$dateStr ($heureDebut - $heureFin)',
+                                  style: pw.TextStyle(
+                                    fontSize: 8.5,
+                                    color: darkTextColor,
+                                  ),
+                                ),
                               ],
                             ),
                           ),
@@ -2212,8 +3289,22 @@ class PdfService {
                           child: pw.RichText(
                             text: pw.TextSpan(
                               children: [
-                                pw.TextSpan(text: 'Salle / Modalité : ', style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold, color: navyBlue)),
-                                pw.TextSpan(text: '$modalite ${salleOuLien != null && salleOuLien.isNotEmpty ? "• $salleOuLien" : ""}', style: pw.TextStyle(fontSize: 8.5, color: darkTextColor)),
+                                pw.TextSpan(
+                                  text: 'Salle / Modalité : ',
+                                  style: pw.TextStyle(
+                                    fontSize: 8.5,
+                                    fontWeight: pw.FontWeight.bold,
+                                    color: navyBlue,
+                                  ),
+                                ),
+                                pw.TextSpan(
+                                  text:
+                                      '$modalite ${salleOuLien != null && salleOuLien.isNotEmpty ? "• $salleOuLien" : ""}',
+                                  style: pw.TextStyle(
+                                    fontSize: 8.5,
+                                    color: darkTextColor,
+                                  ),
+                                ),
                               ],
                             ),
                           ),
@@ -2242,41 +3333,275 @@ class PdfService {
                   pw.TableRow(
                     decoration: pw.BoxDecoration(color: navyBlue),
                     children: [
-                      pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Center(child: pw.Text('N°', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColors.white)))),
-                      pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Center(child: pw.Text('Matricule', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColors.white)))),
-                      pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('Nom & Prénom de l\'Apprenant', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColors.white))),
-                      pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Center(child: pw.Text('Contact', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColors.white)))),
-                      pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Center(child: pw.Text('Statut Présence', style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold, color: PdfColors.white)))),
-                      pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Center(child: pw.Text('Signature Apprenant', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColors.white)))),
-                      pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Center(child: pw.Text('Observations', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColors.white)))),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(5),
+                        child: pw.Center(
+                          child: pw.Text(
+                            'N°',
+                            style: pw.TextStyle(
+                              fontSize: 8,
+                              fontWeight: pw.FontWeight.bold,
+                              color: PdfColors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(5),
+                        child: pw.Center(
+                          child: pw.Text(
+                            'Matricule',
+                            style: pw.TextStyle(
+                              fontSize: 8,
+                              fontWeight: pw.FontWeight.bold,
+                              color: PdfColors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(5),
+                        child: pw.Text(
+                          'Nom & Prénom de l\'Apprenant',
+                          style: pw.TextStyle(
+                            fontSize: 8,
+                            fontWeight: pw.FontWeight.bold,
+                            color: PdfColors.white,
+                          ),
+                        ),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(5),
+                        child: pw.Center(
+                          child: pw.Text(
+                            'Contact',
+                            style: pw.TextStyle(
+                              fontSize: 8,
+                              fontWeight: pw.FontWeight.bold,
+                              color: PdfColors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(5),
+                        child: pw.Center(
+                          child: pw.Text(
+                            'Statut Présence',
+                            style: pw.TextStyle(
+                              fontSize: 7.5,
+                              fontWeight: pw.FontWeight.bold,
+                              color: PdfColors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(5),
+                        child: pw.Center(
+                          child: pw.Text(
+                            'Signature Apprenant',
+                            style: pw.TextStyle(
+                              fontSize: 8,
+                              fontWeight: pw.FontWeight.bold,
+                              color: PdfColors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(5),
+                        child: pw.Center(
+                          child: pw.Text(
+                            'Observations',
+                            style: pw.TextStyle(
+                              fontSize: 8,
+                              fontWeight: pw.FontWeight.bold,
+                              color: PdfColors.white,
+                            ),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
 
                   for (int i = 0; i < totalRows; i++) ...[
                     if (i < studentRows.length) ...[
                       pw.TableRow(
-                        decoration: pw.BoxDecoration(color: i % 2 == 0 ? PdfColors.white : PdfColor.fromHex('#F8FAFC')),
+                        decoration: pw.BoxDecoration(
+                          color: i % 2 == 0
+                              ? PdfColors.white
+                              : PdfColor.fromHex('#F8FAFC'),
+                        ),
                         children: [
-                          pw.Container(height: 22, alignment: pw.Alignment.center, child: pw.Text('${i + 1}', style: pw.TextStyle(fontSize: 8, color: slateColor))),
-                          pw.Container(height: 22, alignment: pw.Alignment.center, child: pw.Text(studentRows[i]['matricule']!, style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold, color: navyBlue))),
-                          pw.Container(height: 22, alignment: pw.Alignment.centerLeft, padding: const pw.EdgeInsets.only(left: 4), child: pw.Text(studentRows[i]['nom']!, style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: darkTextColor))),
-                          pw.Container(height: 22, alignment: pw.Alignment.center, child: pw.Text(studentRows[i]['phone']!, style: pw.TextStyle(fontSize: 7.5, color: slateColor))),
-                          pw.Container(height: 22, alignment: pw.Alignment.center, child: pw.Text('[  ] P   [  ] A   [  ] R', style: pw.TextStyle(fontSize: 7, color: slateColor))),
-                          pw.Container(height: 22, alignment: pw.Alignment.center, child: pw.Text('..........................', style: pw.TextStyle(fontSize: 7, color: borderGrey))),
-                          pw.Container(height: 22, alignment: pw.Alignment.center, child: pw.Text('', style: pw.TextStyle(fontSize: 7, color: slateColor))),
+                          pw.Container(
+                            height: 22,
+                            alignment: pw.Alignment.center,
+                            child: pw.Text(
+                              '${i + 1}',
+                              style: pw.TextStyle(
+                                fontSize: 8,
+                                color: slateColor,
+                              ),
+                            ),
+                          ),
+                          pw.Container(
+                            height: 22,
+                            alignment: pw.Alignment.center,
+                            child: pw.Text(
+                              studentRows[i]['matricule']!,
+                              style: pw.TextStyle(
+                                fontSize: 7.5,
+                                fontWeight: pw.FontWeight.bold,
+                                color: navyBlue,
+                              ),
+                            ),
+                          ),
+                          pw.Container(
+                            height: 22,
+                            alignment: pw.Alignment.centerLeft,
+                            padding: const pw.EdgeInsets.only(left: 4),
+                            child: pw.Text(
+                              studentRows[i]['nom']!,
+                              style: pw.TextStyle(
+                                fontSize: 8,
+                                fontWeight: pw.FontWeight.bold,
+                                color: darkTextColor,
+                              ),
+                            ),
+                          ),
+                          pw.Container(
+                            height: 22,
+                            alignment: pw.Alignment.center,
+                            child: pw.Text(
+                              studentRows[i]['phone']!,
+                              style: pw.TextStyle(
+                                fontSize: 7.5,
+                                color: slateColor,
+                              ),
+                            ),
+                          ),
+                          pw.Container(
+                            height: 22,
+                            alignment: pw.Alignment.center,
+                            child: pw.Text(
+                              '[  ] P   [  ] A   [  ] R',
+                              style: pw.TextStyle(
+                                fontSize: 7,
+                                color: slateColor,
+                              ),
+                            ),
+                          ),
+                          pw.Container(
+                            height: 22,
+                            alignment: pw.Alignment.center,
+                            child: pw.Text(
+                              '..........................',
+                              style: pw.TextStyle(
+                                fontSize: 7,
+                                color: borderGrey,
+                              ),
+                            ),
+                          ),
+                          pw.Container(
+                            height: 22,
+                            alignment: pw.Alignment.center,
+                            child: pw.Text(
+                              '',
+                              style: pw.TextStyle(
+                                fontSize: 7,
+                                color: slateColor,
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ] else ...[
                       pw.TableRow(
-                        decoration: pw.BoxDecoration(color: i % 2 == 0 ? PdfColors.white : PdfColor.fromHex('#F8FAFC')),
+                        decoration: pw.BoxDecoration(
+                          color: i % 2 == 0
+                              ? PdfColors.white
+                              : PdfColor.fromHex('#F8FAFC'),
+                        ),
                         children: [
-                          pw.Container(height: 22, alignment: pw.Alignment.center, child: pw.Text('${i + 1}', style: pw.TextStyle(fontSize: 8, color: borderGrey))),
-                          pw.Container(height: 22, alignment: pw.Alignment.center, child: pw.Text('................', style: pw.TextStyle(fontSize: 7, color: borderGrey))),
-                          pw.Container(height: 22, alignment: pw.Alignment.centerLeft, padding: const pw.EdgeInsets.only(left: 4), child: pw.Text('...................................................', style: pw.TextStyle(fontSize: 7, color: borderGrey))),
-                          pw.Container(height: 22, alignment: pw.Alignment.center, child: pw.Text('................', style: pw.TextStyle(fontSize: 7, color: borderGrey))),
-                          pw.Container(height: 22, alignment: pw.Alignment.center, child: pw.Text('[  ] P   [  ] A   [  ] R', style: pw.TextStyle(fontSize: 7, color: borderGrey))),
-                          pw.Container(height: 22, alignment: pw.Alignment.center, child: pw.Text('..........................', style: pw.TextStyle(fontSize: 7, color: borderGrey))),
-                          pw.Container(height: 22, alignment: pw.Alignment.center, child: pw.Text('', style: pw.TextStyle(fontSize: 7, color: borderGrey))),
+                          pw.Container(
+                            height: 22,
+                            alignment: pw.Alignment.center,
+                            child: pw.Text(
+                              '${i + 1}',
+                              style: pw.TextStyle(
+                                fontSize: 8,
+                                color: borderGrey,
+                              ),
+                            ),
+                          ),
+                          pw.Container(
+                            height: 22,
+                            alignment: pw.Alignment.center,
+                            child: pw.Text(
+                              '................',
+                              style: pw.TextStyle(
+                                fontSize: 7,
+                                color: borderGrey,
+                              ),
+                            ),
+                          ),
+                          pw.Container(
+                            height: 22,
+                            alignment: pw.Alignment.centerLeft,
+                            padding: const pw.EdgeInsets.only(left: 4),
+                            child: pw.Text(
+                              '...................................................',
+                              style: pw.TextStyle(
+                                fontSize: 7,
+                                color: borderGrey,
+                              ),
+                            ),
+                          ),
+                          pw.Container(
+                            height: 22,
+                            alignment: pw.Alignment.center,
+                            child: pw.Text(
+                              '................',
+                              style: pw.TextStyle(
+                                fontSize: 7,
+                                color: borderGrey,
+                              ),
+                            ),
+                          ),
+                          pw.Container(
+                            height: 22,
+                            alignment: pw.Alignment.center,
+                            child: pw.Text(
+                              '[  ] P   [  ] A   [  ] R',
+                              style: pw.TextStyle(
+                                fontSize: 7,
+                                color: borderGrey,
+                              ),
+                            ),
+                          ),
+                          pw.Container(
+                            height: 22,
+                            alignment: pw.Alignment.center,
+                            child: pw.Text(
+                              '..........................',
+                              style: pw.TextStyle(
+                                fontSize: 7,
+                                color: borderGrey,
+                              ),
+                            ),
+                          ),
+                          pw.Container(
+                            height: 22,
+                            alignment: pw.Alignment.center,
+                            child: pw.Text(
+                              '',
+                              style: pw.TextStyle(
+                                fontSize: 7,
+                                color: borderGrey,
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ],
@@ -2300,11 +3625,27 @@ class PdfService {
                     pw.Column(
                       crossAxisAlignment: pw.CrossAxisAlignment.start,
                       children: [
-                        pw.Text('BILAN DE LA SÉANCE :', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: navyBlue)),
+                        pw.Text(
+                          'BILAN DE LA SÉANCE :',
+                          style: pw.TextStyle(
+                            fontSize: 8,
+                            fontWeight: pw.FontWeight.bold,
+                            color: navyBlue,
+                          ),
+                        ),
                         pw.SizedBox(height: 2),
-                        pw.Text('• Inscrits convoqués : ${studentRows.length}', style: pw.TextStyle(fontSize: 7.5, color: slateColor)),
-                        pw.Text('• Total Présents (P) : .........   • Absents (A) : .........   • Retards (R) : .........', style: pw.TextStyle(fontSize: 7.5, color: slateColor)),
-                        pw.Text('• Taux de présence constaté : .............. %', style: pw.TextStyle(fontSize: 7.5, color: slateColor)),
+                        pw.Text(
+                          '• Inscrits convoqués : ${studentRows.length}',
+                          style: pw.TextStyle(fontSize: 7.5, color: slateColor),
+                        ),
+                        pw.Text(
+                          '• Total Présents (P) : .........   • Absents (A) : .........   • Retards (R) : .........',
+                          style: pw.TextStyle(fontSize: 7.5, color: slateColor),
+                        ),
+                        pw.Text(
+                          '• Taux de présence constaté : .............. %',
+                          style: pw.TextStyle(fontSize: 7.5, color: slateColor),
+                        ),
                       ],
                     ),
                     pw.Container(
@@ -2322,18 +3663,44 @@ class PdfService {
                         pw.Column(
                           crossAxisAlignment: pw.CrossAxisAlignment.center,
                           children: [
-                            pw.Text('Signature Formateur', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: darkTextColor)),
+                            pw.Text(
+                              'Signature Formateur',
+                              style: pw.TextStyle(
+                                fontSize: 8,
+                                fontWeight: pw.FontWeight.bold,
+                                color: darkTextColor,
+                              ),
+                            ),
                             pw.SizedBox(height: 22),
-                            pw.Text(formateurNom, style: pw.TextStyle(fontSize: 7.5, color: slateColor)),
+                            pw.Text(
+                              formateurNom,
+                              style: pw.TextStyle(
+                                fontSize: 7.5,
+                                color: slateColor,
+                              ),
+                            ),
                           ],
                         ),
                         pw.SizedBox(width: 20),
                         pw.Column(
                           crossAxisAlignment: pw.CrossAxisAlignment.center,
                           children: [
-                            pw.Text('Direction Pédagogique', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: navyBlue)),
+                            pw.Text(
+                              'Direction Pédagogique',
+                              style: pw.TextStyle(
+                                fontSize: 8,
+                                fontWeight: pw.FontWeight.bold,
+                                color: navyBlue,
+                              ),
+                            ),
                             pw.SizedBox(height: 22),
-                            pw.Text('Visa & Cachet Officiel', style: pw.TextStyle(fontSize: 7.5, color: slateColor)),
+                            pw.Text(
+                              'Visa & Cachet Officiel',
+                              style: pw.TextStyle(
+                                fontSize: 7.5,
+                                color: slateColor,
+                              ),
+                            ),
                           ],
                         ),
                       ],
@@ -2393,12 +3760,24 @@ class PdfService {
 
   String _formatFrenchPeriod(DateTime? start, DateTime? end, int fallbackYear) {
     const months = [
-      'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
-      'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
+      'Janvier',
+      'Février',
+      'Mars',
+      'Avril',
+      'Mai',
+      'Juin',
+      'Juillet',
+      'Août',
+      'Septembre',
+      'Octobre',
+      'Novembre',
+      'Décembre',
     ];
     if (start != null && end != null) {
-      final startStr = '${start.day.toString().padLeft(2, '0')} ${months[start.month - 1]}';
-      final endStr = '${end.day.toString().padLeft(2, '0')} ${months[end.month - 1]} ${end.year}';
+      final startStr =
+          '${start.day.toString().padLeft(2, '0')} ${months[start.month - 1]}';
+      final endStr =
+          '${end.day.toString().padLeft(2, '0')} ${months[end.month - 1]} ${end.year}';
       return '$startStr au $endStr';
     }
     if (start != null) {
@@ -2435,12 +3814,16 @@ class PdfService {
     final lightBgColor = PdfColor.fromHex('#F8FAFC');
     final borderGrey = PdfColor.fromHex('#CBD5E1');
 
-    final refSlip = 'HON-${DateTime.now().year}-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
+    final refSlip =
+        'HON-${DateTime.now().year}-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
     final brutCalculated = (totalHeures * tauxHoraire) + primesOuBonus;
     final netPayable = math.max(0.0, brutCalculated - acompteVerse);
-    final periodStr = periode ?? '${_formatDate(DateTime(DateTime.now().year, DateTime.now().month, 1))} au ${_formatDate(DateTime.now())}';
+    final periodStr =
+        periode ??
+        '${_formatDate(DateTime(DateTime.now().year, DateTime.now().month, 1))} au ${_formatDate(DateTime.now())}';
 
-    final qrData = 'MALINTIC-HONORAIRES|REF:$refSlip|FORMATEUR:$formateurNom|PERIODE:$periodStr|NET:${netPayable.toStringAsFixed(0)}FCFA';
+    final qrData =
+        'MALINTIC-HONORAIRES|REF:$refSlip|FORMATEUR:$formateurNom|PERIODE:$periodStr|NET:${netPayable.toStringAsFixed(0)}FCFA';
 
     pdf.addPage(
       pw.Page(
@@ -2453,9 +3836,24 @@ class PdfService {
               // 1. NATIONAL TRICOLOR TOP BAR
               pw.Row(
                 children: [
-                  pw.Expanded(child: pw.Container(height: 3.5, color: PdfColor.fromHex('#10B981'))),
-                  pw.Expanded(child: pw.Container(height: 3.5, color: PdfColor.fromHex('#F59E0B'))),
-                  pw.Expanded(child: pw.Container(height: 3.5, color: PdfColor.fromHex('#EF4444'))),
+                  pw.Expanded(
+                    child: pw.Container(
+                      height: 3.5,
+                      color: PdfColor.fromHex('#10B981'),
+                    ),
+                  ),
+                  pw.Expanded(
+                    child: pw.Container(
+                      height: 3.5,
+                      color: PdfColor.fromHex('#F59E0B'),
+                    ),
+                  ),
+                  pw.Expanded(
+                    child: pw.Container(
+                      height: 3.5,
+                      color: PdfColor.fromHex('#EF4444'),
+                    ),
+                  ),
                 ],
               ),
               pw.SizedBox(height: 10),
@@ -2470,15 +3868,28 @@ class PdfService {
                     children: [
                       pw.Text(
                         'CENTRE DE FORMATION PROFESSIONNELLE M@LI_NTIC',
-                        style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: navyBlue),
+                        style: pw.TextStyle(
+                          fontSize: 11,
+                          fontWeight: pw.FontWeight.bold,
+                          color: navyBlue,
+                        ),
                       ),
                       pw.SizedBox(height: 2),
-                      pw.Text('Agrément N° 2024/0842/MEN-DG - Bamako, République du Mali', style: pw.TextStyle(fontSize: 7.5, color: slateColor)),
-                      pw.Text('Département Financier & Pédagogique • contact@malintic.ml', style: pw.TextStyle(fontSize: 7.5, color: slateColor)),
+                      pw.Text(
+                        'Agrément N° 2024/0842/MEN-DG - Bamako, République du Mali',
+                        style: pw.TextStyle(fontSize: 7.5, color: slateColor),
+                      ),
+                      pw.Text(
+                        'Département Financier & Pédagogique • contact@malintic.ml',
+                        style: pw.TextStyle(fontSize: 7.5, color: slateColor),
+                      ),
                     ],
                   ),
                   pw.Container(
-                    padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    padding: const pw.EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
                     decoration: pw.BoxDecoration(
                       color: navyBlue,
                       borderRadius: pw.BorderRadius.circular(5),
@@ -2486,8 +3897,18 @@ class PdfService {
                     child: pw.Column(
                       crossAxisAlignment: pw.CrossAxisAlignment.end,
                       children: [
-                        pw.Text('BULLETIN D\'HONORAIRES', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: PdfColors.white)),
-                        pw.Text('Réf: $refSlip', style: pw.TextStyle(fontSize: 7.5, color: goldColor)),
+                        pw.Text(
+                          'BULLETIN D\'HONORAIRES',
+                          style: pw.TextStyle(
+                            fontSize: 9,
+                            fontWeight: pw.FontWeight.bold,
+                            color: PdfColors.white,
+                          ),
+                        ),
+                        pw.Text(
+                          'Réf: $refSlip',
+                          style: pw.TextStyle(fontSize: 7.5, color: goldColor),
+                        ),
                       ],
                     ),
                   ),
@@ -2512,22 +3933,63 @@ class PdfService {
                     pw.Column(
                       crossAxisAlignment: pw.CrossAxisAlignment.start,
                       children: [
-                        pw.Text('BÉNÉFICIAIRE (FORMATEUR / CONSULTANT)', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: navyBlue)),
+                        pw.Text(
+                          'BÉNÉFICIAIRE (FORMATEUR / CONSULTANT)',
+                          style: pw.TextStyle(
+                            fontSize: 8,
+                            fontWeight: pw.FontWeight.bold,
+                            color: navyBlue,
+                          ),
+                        ),
                         pw.SizedBox(height: 3),
-                        pw.Text(formateurNom.toUpperCase(), style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: darkTextColor)),
+                        pw.Text(
+                          formateurNom.toUpperCase(),
+                          style: pw.TextStyle(
+                            fontSize: 10,
+                            fontWeight: pw.FontWeight.bold,
+                            color: darkTextColor,
+                          ),
+                        ),
                         pw.SizedBox(height: 2),
-                        pw.Text('Matricule : ${matricule ?? "N/A"} • Spécialité : ${specialite ?? "Informatique & NTIC"}', style: pw.TextStyle(fontSize: 8, color: slateColor)),
-                        pw.Text('Contact : $telephone • $email', style: pw.TextStyle(fontSize: 8, color: slateColor)),
+                        pw.Text(
+                          'Matricule : ${matricule ?? "N/A"} • Spécialité : ${specialite ?? "Informatique & NTIC"}',
+                          style: pw.TextStyle(fontSize: 8, color: slateColor),
+                        ),
+                        pw.Text(
+                          'Contact : $telephone • $email',
+                          style: pw.TextStyle(fontSize: 8, color: slateColor),
+                        ),
                       ],
                     ),
                     pw.Column(
                       crossAxisAlignment: pw.CrossAxisAlignment.end,
                       children: [
-                        pw.Text('PÉRIODE DE PRESTATION', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: navyBlue)),
+                        pw.Text(
+                          'PÉRIODE DE PRESTATION',
+                          style: pw.TextStyle(
+                            fontSize: 8,
+                            fontWeight: pw.FontWeight.bold,
+                            color: navyBlue,
+                          ),
+                        ),
                         pw.SizedBox(height: 3),
-                        pw.Text(periodStr, style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: darkTextColor)),
+                        pw.Text(
+                          periodStr,
+                          style: pw.TextStyle(
+                            fontSize: 9,
+                            fontWeight: pw.FontWeight.bold,
+                            color: darkTextColor,
+                          ),
+                        ),
                         pw.SizedBox(height: 2),
-                        pw.Text('Taux horaire conventionné : ${tauxHoraire.toStringAsFixed(0)} FCFA / heure', style: pw.TextStyle(fontSize: 8, color: crimsonRed, fontWeight: pw.FontWeight.bold)),
+                        pw.Text(
+                          'Taux horaire conventionné : ${tauxHoraire.toStringAsFixed(0)} FCFA / heure',
+                          style: pw.TextStyle(
+                            fontSize: 8,
+                            color: crimsonRed,
+                            fontWeight: pw.FontWeight.bold,
+                          ),
+                        ),
                       ],
                     ),
                   ],
@@ -2537,7 +3999,14 @@ class PdfService {
               pw.SizedBox(height: 10),
 
               // 4. BREAKDOWN OF MODULES & HOURS
-              pw.Text('DÉTAIL DES MODULES & HEURES D\'ENSEIGNEMENT EFFECTUÉES', style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold, color: navyBlue)),
+              pw.Text(
+                'DÉTAIL DES MODULES & HEURES D\'ENSEIGNEMENT EFFECTUÉES',
+                style: pw.TextStyle(
+                  fontSize: 8.5,
+                  fontWeight: pw.FontWeight.bold,
+                  color: navyBlue,
+                ),
+              ),
               pw.SizedBox(height: 4),
 
               pw.Table(
@@ -2554,26 +4023,166 @@ class PdfService {
                   pw.TableRow(
                     decoration: pw.BoxDecoration(color: navyBlue),
                     children: [
-                      pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Center(child: pw.Text('N°', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColors.white)))),
-                      pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('Formation', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColors.white))),
-                      pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('Module / Thématique', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColors.white))),
-                      pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Center(child: pw.Text('Heures', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColors.white)))),
-                      pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Center(child: pw.Text('Taux (FCFA)', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColors.white)))),
-                      pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Center(child: pw.Text('Montant Brut', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColors.white)))),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(5),
+                        child: pw.Center(
+                          child: pw.Text(
+                            'N°',
+                            style: pw.TextStyle(
+                              fontSize: 8,
+                              fontWeight: pw.FontWeight.bold,
+                              color: PdfColors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(5),
+                        child: pw.Text(
+                          'Formation',
+                          style: pw.TextStyle(
+                            fontSize: 8,
+                            fontWeight: pw.FontWeight.bold,
+                            color: PdfColors.white,
+                          ),
+                        ),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(5),
+                        child: pw.Text(
+                          'Module / Thématique',
+                          style: pw.TextStyle(
+                            fontSize: 8,
+                            fontWeight: pw.FontWeight.bold,
+                            color: PdfColors.white,
+                          ),
+                        ),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(5),
+                        child: pw.Center(
+                          child: pw.Text(
+                            'Heures',
+                            style: pw.TextStyle(
+                              fontSize: 8,
+                              fontWeight: pw.FontWeight.bold,
+                              color: PdfColors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(5),
+                        child: pw.Center(
+                          child: pw.Text(
+                            'Taux (FCFA)',
+                            style: pw.TextStyle(
+                              fontSize: 8,
+                              fontWeight: pw.FontWeight.bold,
+                              color: PdfColors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(5),
+                        child: pw.Center(
+                          child: pw.Text(
+                            'Montant Brut',
+                            style: pw.TextStyle(
+                              fontSize: 8,
+                              fontWeight: pw.FontWeight.bold,
+                              color: PdfColors.white,
+                            ),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
 
                   if (modulesEnseignes.isNotEmpty) ...[
                     for (int i = 0; i < modulesEnseignes.length; i++) ...[
                       pw.TableRow(
-                        decoration: pw.BoxDecoration(color: i % 2 == 0 ? PdfColors.white : PdfColor.fromHex('#F8FAFC')),
+                        decoration: pw.BoxDecoration(
+                          color: i % 2 == 0
+                              ? PdfColors.white
+                              : PdfColor.fromHex('#F8FAFC'),
+                        ),
                         children: [
-                          pw.Container(height: 20, alignment: pw.Alignment.center, child: pw.Text('${i + 1}', style: pw.TextStyle(fontSize: 8, color: slateColor))),
-                          pw.Container(height: 20, alignment: pw.Alignment.centerLeft, padding: const pw.EdgeInsets.only(left: 4), child: pw.Text(modulesEnseignes[i]['formation']?.toString() ?? 'Formation Générale', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: darkTextColor))),
-                          pw.Container(height: 20, alignment: pw.Alignment.centerLeft, padding: const pw.EdgeInsets.only(left: 4), child: pw.Text(modulesEnseignes[i]['module']?.toString() ?? 'Tronc Commun', style: pw.TextStyle(fontSize: 7.5, color: slateColor))),
-                          pw.Container(height: 20, alignment: pw.Alignment.center, child: pw.Text('${modulesEnseignes[i]['heures'] ?? "0"} h', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: darkTextColor))),
-                          pw.Container(height: 20, alignment: pw.Alignment.center, child: pw.Text(tauxHoraire.toStringAsFixed(0), style: pw.TextStyle(fontSize: 7.5, color: slateColor))),
-                          pw.Container(height: 20, alignment: pw.Alignment.centerRight, padding: const pw.EdgeInsets.only(right: 6), child: pw.Text('${((modulesEnseignes[i]['heures'] as num? ?? 0) * tauxHoraire).toStringAsFixed(0)} FCFA', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: navyBlue))),
+                          pw.Container(
+                            height: 20,
+                            alignment: pw.Alignment.center,
+                            child: pw.Text(
+                              '${i + 1}',
+                              style: pw.TextStyle(
+                                fontSize: 8,
+                                color: slateColor,
+                              ),
+                            ),
+                          ),
+                          pw.Container(
+                            height: 20,
+                            alignment: pw.Alignment.centerLeft,
+                            padding: const pw.EdgeInsets.only(left: 4),
+                            child: pw.Text(
+                              modulesEnseignes[i]['formation']?.toString() ??
+                                  'Formation Générale',
+                              style: pw.TextStyle(
+                                fontSize: 8,
+                                fontWeight: pw.FontWeight.bold,
+                                color: darkTextColor,
+                              ),
+                            ),
+                          ),
+                          pw.Container(
+                            height: 20,
+                            alignment: pw.Alignment.centerLeft,
+                            padding: const pw.EdgeInsets.only(left: 4),
+                            child: pw.Text(
+                              modulesEnseignes[i]['module']?.toString() ??
+                                  'Tronc Commun',
+                              style: pw.TextStyle(
+                                fontSize: 7.5,
+                                color: slateColor,
+                              ),
+                            ),
+                          ),
+                          pw.Container(
+                            height: 20,
+                            alignment: pw.Alignment.center,
+                            child: pw.Text(
+                              '${modulesEnseignes[i]['heures'] ?? "0"} h',
+                              style: pw.TextStyle(
+                                fontSize: 8,
+                                fontWeight: pw.FontWeight.bold,
+                                color: darkTextColor,
+                              ),
+                            ),
+                          ),
+                          pw.Container(
+                            height: 20,
+                            alignment: pw.Alignment.center,
+                            child: pw.Text(
+                              tauxHoraire.toStringAsFixed(0),
+                              style: pw.TextStyle(
+                                fontSize: 7.5,
+                                color: slateColor,
+                              ),
+                            ),
+                          ),
+                          pw.Container(
+                            height: 20,
+                            alignment: pw.Alignment.centerRight,
+                            padding: const pw.EdgeInsets.only(right: 6),
+                            child: pw.Text(
+                              '${((modulesEnseignes[i]['heures'] as num? ?? 0) * tauxHoraire).toStringAsFixed(0)} FCFA',
+                              style: pw.TextStyle(
+                                fontSize: 8,
+                                fontWeight: pw.FontWeight.bold,
+                                color: navyBlue,
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ],
@@ -2581,12 +4190,75 @@ class PdfService {
                     pw.TableRow(
                       decoration: pw.BoxDecoration(color: PdfColors.white),
                       children: [
-                        pw.Container(height: 20, alignment: pw.Alignment.center, child: pw.Text('1', style: pw.TextStyle(fontSize: 8, color: slateColor))),
-                        pw.Container(height: 20, alignment: pw.Alignment.centerLeft, padding: const pw.EdgeInsets.only(left: 4), child: pw.Text('Enseignement & Encadrement Pédagogique', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: darkTextColor))),
-                        pw.Container(height: 20, alignment: pw.Alignment.centerLeft, padding: const pw.EdgeInsets.only(left: 4), child: pw.Text('Modules Assignés - Centre M@LI_NTIC', style: pw.TextStyle(fontSize: 7.5, color: slateColor))),
-                        pw.Container(height: 20, alignment: pw.Alignment.center, child: pw.Text('${totalHeures.toStringAsFixed(0)} h', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: darkTextColor))),
-                        pw.Container(height: 20, alignment: pw.Alignment.center, child: pw.Text(tauxHoraire.toStringAsFixed(0), style: pw.TextStyle(fontSize: 7.5, color: slateColor))),
-                        pw.Container(height: 20, alignment: pw.Alignment.centerRight, padding: const pw.EdgeInsets.only(right: 6), child: pw.Text('${(totalHeures * tauxHoraire).toStringAsFixed(0)} FCFA', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: navyBlue))),
+                        pw.Container(
+                          height: 20,
+                          alignment: pw.Alignment.center,
+                          child: pw.Text(
+                            '1',
+                            style: pw.TextStyle(fontSize: 8, color: slateColor),
+                          ),
+                        ),
+                        pw.Container(
+                          height: 20,
+                          alignment: pw.Alignment.centerLeft,
+                          padding: const pw.EdgeInsets.only(left: 4),
+                          child: pw.Text(
+                            'Enseignement & Encadrement Pédagogique',
+                            style: pw.TextStyle(
+                              fontSize: 8,
+                              fontWeight: pw.FontWeight.bold,
+                              color: darkTextColor,
+                            ),
+                          ),
+                        ),
+                        pw.Container(
+                          height: 20,
+                          alignment: pw.Alignment.centerLeft,
+                          padding: const pw.EdgeInsets.only(left: 4),
+                          child: pw.Text(
+                            'Modules Assignés - Centre M@LI_NTIC',
+                            style: pw.TextStyle(
+                              fontSize: 7.5,
+                              color: slateColor,
+                            ),
+                          ),
+                        ),
+                        pw.Container(
+                          height: 20,
+                          alignment: pw.Alignment.center,
+                          child: pw.Text(
+                            '${totalHeures.toStringAsFixed(0)} h',
+                            style: pw.TextStyle(
+                              fontSize: 8,
+                              fontWeight: pw.FontWeight.bold,
+                              color: darkTextColor,
+                            ),
+                          ),
+                        ),
+                        pw.Container(
+                          height: 20,
+                          alignment: pw.Alignment.center,
+                          child: pw.Text(
+                            tauxHoraire.toStringAsFixed(0),
+                            style: pw.TextStyle(
+                              fontSize: 7.5,
+                              color: slateColor,
+                            ),
+                          ),
+                        ),
+                        pw.Container(
+                          height: 20,
+                          alignment: pw.Alignment.centerRight,
+                          padding: const pw.EdgeInsets.only(right: 6),
+                          child: pw.Text(
+                            '${(totalHeures * tauxHoraire).toStringAsFixed(0)} FCFA',
+                            style: pw.TextStyle(
+                              fontSize: 8,
+                              fontWeight: pw.FontWeight.bold,
+                              color: navyBlue,
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   ],
@@ -2611,15 +4283,33 @@ class PdfService {
                       child: pw.Column(
                         crossAxisAlignment: pw.CrossAxisAlignment.start,
                         children: [
-                          pw.Text('CONDITIONS DE RÈGLEMENT & OBSERVATIONS :', style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold, color: navyBlue)),
+                          pw.Text(
+                            'CONDITIONS DE RÈGLEMENT & OBSERVATIONS :',
+                            style: pw.TextStyle(
+                              fontSize: 7.5,
+                              fontWeight: pw.FontWeight.bold,
+                              color: navyBlue,
+                            ),
+                          ),
                           pw.SizedBox(height: 3),
                           pw.Text(
                             '• Les honoraires sont calculés sur la base des séances effectives renseignées sur les feuilles d\'émargement officielles.\n• Tout versement libère l\'administration après signature conjointe du présent bulletin.',
-                            style: pw.TextStyle(fontSize: 7, color: slateColor, height: 1.3),
+                            style: pw.TextStyle(
+                              fontSize: 7,
+                              color: slateColor,
+                              height: 1.3,
+                            ),
                           ),
                           if (note != null && note.isNotEmpty) ...[
                             pw.SizedBox(height: 4),
-                            pw.Text('Note: $note', style: pw.TextStyle(fontSize: 7.5, fontStyle: pw.FontStyle.italic, color: darkTextColor)),
+                            pw.Text(
+                              'Note: $note',
+                              style: pw.TextStyle(
+                                fontSize: 7.5,
+                                fontStyle: pw.FontStyle.italic,
+                                color: darkTextColor,
+                              ),
+                            ),
                           ],
                         ],
                       ),
@@ -2640,52 +4330,125 @@ class PdfService {
                       child: pw.Column(
                         children: [
                           pw.Row(
-                            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                            mainAxisAlignment:
+                                pw.MainAxisAlignment.spaceBetween,
                             children: [
-                              pw.Text('Total Heures :', style: pw.TextStyle(fontSize: 8, color: slateColor)),
-                              pw.Text('${totalHeures.toStringAsFixed(0)} h', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold)),
+                              pw.Text(
+                                'Total Heures :',
+                                style: pw.TextStyle(
+                                  fontSize: 8,
+                                  color: slateColor,
+                                ),
+                              ),
+                              pw.Text(
+                                '${totalHeures.toStringAsFixed(0)} h',
+                                style: pw.TextStyle(
+                                  fontSize: 8,
+                                  fontWeight: pw.FontWeight.bold,
+                                ),
+                              ),
                             ],
                           ),
                           pw.SizedBox(height: 2),
                           pw.Row(
-                            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                            mainAxisAlignment:
+                                pw.MainAxisAlignment.spaceBetween,
                             children: [
-                              pw.Text('Total Brut :', style: pw.TextStyle(fontSize: 8, color: slateColor)),
-                              pw.Text('${brutCalculated.toStringAsFixed(0)} FCFA', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: darkTextColor)),
+                              pw.Text(
+                                'Total Brut :',
+                                style: pw.TextStyle(
+                                  fontSize: 8,
+                                  color: slateColor,
+                                ),
+                              ),
+                              pw.Text(
+                                '${brutCalculated.toStringAsFixed(0)} FCFA',
+                                style: pw.TextStyle(
+                                  fontSize: 8,
+                                  fontWeight: pw.FontWeight.bold,
+                                  color: darkTextColor,
+                                ),
+                              ),
                             ],
                           ),
                           if (primesOuBonus > 0) ...[
                             pw.SizedBox(height: 2),
                             pw.Row(
-                              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                              mainAxisAlignment:
+                                  pw.MainAxisAlignment.spaceBetween,
                               children: [
-                                pw.Text('Primes / Bonus :', style: pw.TextStyle(fontSize: 7.5, color: PdfColor.fromHex('#10B981'))),
-                                pw.Text('+${primesOuBonus.toStringAsFixed(0)} FCFA', style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold, color: PdfColor.fromHex('#10B981'))),
+                                pw.Text(
+                                  'Primes / Bonus :',
+                                  style: pw.TextStyle(
+                                    fontSize: 7.5,
+                                    color: PdfColor.fromHex('#10B981'),
+                                  ),
+                                ),
+                                pw.Text(
+                                  '+${primesOuBonus.toStringAsFixed(0)} FCFA',
+                                  style: pw.TextStyle(
+                                    fontSize: 7.5,
+                                    fontWeight: pw.FontWeight.bold,
+                                    color: PdfColor.fromHex('#10B981'),
+                                  ),
+                                ),
                               ],
                             ),
                           ],
                           if (acompteVerse > 0) ...[
                             pw.SizedBox(height: 2),
                             pw.Row(
-                              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                              mainAxisAlignment:
+                                  pw.MainAxisAlignment.spaceBetween,
                               children: [
-                                pw.Text('Acomptes versés :', style: pw.TextStyle(fontSize: 7.5, color: crimsonRed)),
-                                pw.Text('-${acompteVerse.toStringAsFixed(0)} FCFA', style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold, color: crimsonRed)),
+                                pw.Text(
+                                  'Acomptes versés :',
+                                  style: pw.TextStyle(
+                                    fontSize: 7.5,
+                                    color: crimsonRed,
+                                  ),
+                                ),
+                                pw.Text(
+                                  '-${acompteVerse.toStringAsFixed(0)} FCFA',
+                                  style: pw.TextStyle(
+                                    fontSize: 7.5,
+                                    fontWeight: pw.FontWeight.bold,
+                                    color: crimsonRed,
+                                  ),
+                                ),
                               ],
                             ),
                           ],
                           pw.Divider(color: borderGrey, thickness: 0.5),
                           pw.Container(
-                            padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                            padding: const pw.EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 4,
+                            ),
                             decoration: pw.BoxDecoration(
                               color: navyBlue,
                               borderRadius: pw.BorderRadius.circular(4),
                             ),
                             child: pw.Row(
-                              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                              mainAxisAlignment:
+                                  pw.MainAxisAlignment.spaceBetween,
                               children: [
-                                pw.Text('NET À PAYER :', style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold, color: PdfColors.white)),
-                                pw.Text('${netPayable.toStringAsFixed(0)} FCFA', style: pw.TextStyle(fontSize: 9.5, fontWeight: pw.FontWeight.bold, color: goldColor)),
+                                pw.Text(
+                                  'NET À PAYER :',
+                                  style: pw.TextStyle(
+                                    fontSize: 8.5,
+                                    fontWeight: pw.FontWeight.bold,
+                                    color: PdfColors.white,
+                                  ),
+                                ),
+                                pw.Text(
+                                  '${netPayable.toStringAsFixed(0)} FCFA',
+                                  style: pw.TextStyle(
+                                    fontSize: 9.5,
+                                    fontWeight: pw.FontWeight.bold,
+                                    color: goldColor,
+                                  ),
+                                ),
                               ],
                             ),
                           ),
@@ -2712,9 +4475,19 @@ class PdfService {
                     pw.Column(
                       crossAxisAlignment: pw.CrossAxisAlignment.center,
                       children: [
-                        pw.Text('Le Formateur / Prestataire', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: darkTextColor)),
+                        pw.Text(
+                          'Le Formateur / Prestataire',
+                          style: pw.TextStyle(
+                            fontSize: 8,
+                            fontWeight: pw.FontWeight.bold,
+                            color: darkTextColor,
+                          ),
+                        ),
                         pw.SizedBox(height: 20),
-                        pw.Text(formateurNom, style: pw.TextStyle(fontSize: 7.5, color: slateColor)),
+                        pw.Text(
+                          formateurNom,
+                          style: pw.TextStyle(fontSize: 7.5, color: slateColor),
+                        ),
                       ],
                     ),
 
@@ -2732,9 +4505,19 @@ class PdfService {
                     pw.Column(
                       crossAxisAlignment: pw.CrossAxisAlignment.center,
                       children: [
-                        pw.Text('Direction Administrative & Financière', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: navyBlue)),
+                        pw.Text(
+                          'Direction Administrative & Financière',
+                          style: pw.TextStyle(
+                            fontSize: 8,
+                            fontWeight: pw.FontWeight.bold,
+                            color: navyBlue,
+                          ),
+                        ),
                         pw.SizedBox(height: 20),
-                        pw.Text('M@LI_NTIC • Visa & Bon à Payer', style: pw.TextStyle(fontSize: 7.5, color: slateColor)),
+                        pw.Text(
+                          'M@LI_NTIC • Visa & Bon à Payer',
+                          style: pw.TextStyle(fontSize: 7.5, color: slateColor),
+                        ),
                       ],
                     ),
                   ],
@@ -2749,5 +4532,3 @@ class PdfService {
     return pdf.save();
   }
 }
-
-

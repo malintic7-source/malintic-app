@@ -46,10 +46,18 @@ class PaymentReportService {
                       ),
                       pw.SizedBox(height: 4),
                       pw.Text(
-                        'Malintic',
+                        'Centre de Formation Professionnelle',
                         style: pw.TextStyle(
                           fontSize: 12,
                           color: PdfColor.fromInt(0xFF6B7280),
+                        ),
+                      ),
+                      pw.SizedBox(height: 3),
+                      pw.Text(
+                        'Édité le ${_formatDate(DateTime.now())} • ${payments.length} opération(s)',
+                        style: const pw.TextStyle(
+                          fontSize: 8,
+                          color: PdfColors.grey600,
                         ),
                       ),
                     ],
@@ -295,6 +303,7 @@ class PaymentReportService {
                         final str = rawDate.toString();
                         dateStr = str.contains('T') ? str.split('T')[0] : (str.contains(' ') ? str.split(' ')[0] : str);
                       }
+
                     }
 
                     // Resolve Amount
@@ -441,7 +450,7 @@ class PaymentReportService {
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
                   pw.Text(
-                    'Document officiel M@LI-NTIC - Traçabilité financière certifiée',
+                    'Document officiel - Traçabilité financière certifiée',
                     style: pw.TextStyle(
                       fontSize: 8.5,
                       color: PdfColor.fromInt(0xFF6B7280),
@@ -463,6 +472,12 @@ class PaymentReportService {
     );
 
     return pdf.save();
+  }
+
+  static String _formatDate(DateTime date) {
+    final day = date.day.toString().padLeft(2, '0');
+    final month = date.month.toString().padLeft(2, '0');
+    return '$day/$month/${date.year}';
   }
 
   static PdfColor _getStatusColor(String status) {

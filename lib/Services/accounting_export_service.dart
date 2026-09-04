@@ -88,7 +88,10 @@ class AccountingExportService {
     for (final p in payments) {
       final pDate = p.dateEffectuation ?? p.dateCreation;
       if (startDate != null && pDate.isBefore(startDate)) continue;
-      if (endDate != null && pDate.isAfter(endDate.add(const Duration(days: 1)))) continue;
+      if (endDate != null &&
+          pDate.isAfter(endDate.add(const Duration(days: 1)))) {
+        continue;
+      }
 
       if (p.status == PaymentStatus.effectue) {
         totalEncaisse += p.montant;
@@ -99,7 +102,9 @@ class AccountingExportService {
       }
 
       // Enregistrement dédupliqué de la remise (max remise accordée sur ce dossier d'inscription)
-      final dossierKey = p.inscriptionId.isNotEmpty ? p.inscriptionId : '${p.apprenantId}_${p.formationId}';
+      final dossierKey = p.inscriptionId.isNotEmpty
+          ? p.inscriptionId
+          : '${p.apprenantId}_${p.formationId}';
       if (p.remise > 0) {
         final currentMax = remisesByInscription[dossierKey] ?? 0;
         if (p.remise > currentMax) {
@@ -108,9 +113,12 @@ class AccountingExportService {
       }
 
       final userName = usersMap?[p.apprenantId]?.nomComplet ?? p.apprenantId;
-      final formationName = formationsMap?[p.formationId]?.titre ?? p.formationId;
+      final formationName =
+          formationsMap?[p.formationId]?.titre ?? p.formationId;
       final dateStr = _formatDateTime(pDate);
-      final echeanceStr = p.dateEcheance != null ? _formatDate(p.dateEcheance!) : '-';
+      final echeanceStr = p.dateEcheance != null
+          ? _formatDate(p.dateEcheance!)
+          : '-';
       final modeStr = _formatMethodName(p.methode);
       final statusStr = p.status == PaymentStatus.effectue
           ? 'EFFECTUÉ'
@@ -121,11 +129,18 @@ class AccountingExportService {
       );
     }
 
-    final totalRemise = remisesByInscription.values.fold<double>(0, (sum, r) => sum + r);
+    final totalRemise = remisesByInscription.values.fold<double>(
+      0,
+      (sum, r) => sum + r,
+    );
 
     buffer.writeln();
-    buffer.writeln('TOTAL ENCAISSÉ (VALIDÉ);;;;${totalEncaisse.toStringAsFixed(0)};;TOTAL REMISES (DÉDUPLIQUÉ);${totalRemise.toStringAsFixed(0)};');
-    buffer.writeln('TOTAL EN ATTENTE;;;;${totalEnAttente.toStringAsFixed(0)};;TOTAL ÉCHOUÉ / REJETÉ;${totalEchoue.toStringAsFixed(0)};');
+    buffer.writeln(
+      'TOTAL ENCAISSÉ (VALIDÉ);;;;${totalEncaisse.toStringAsFixed(0)};;TOTAL REMISES (DÉDUPLIQUÉ);${totalRemise.toStringAsFixed(0)};',
+    );
+    buffer.writeln(
+      'TOTAL EN ATTENTE;;;;${totalEnAttente.toStringAsFixed(0)};;TOTAL ÉCHOUÉ / REJETÉ;${totalEchoue.toStringAsFixed(0)};',
+    );
 
     // UTF-8 BOM + UTF-8 bytes
     final utf8Bytes = utf8.encode(buffer.toString());
@@ -155,14 +170,19 @@ class AccountingExportService {
     final filteredPayments = payments.where((p) {
       final pDate = p.dateEffectuation ?? p.dateCreation;
       if (startDate != null && pDate.isBefore(startDate)) return false;
-      if (endDate != null && pDate.isAfter(endDate.add(const Duration(days: 1)))) return false;
+      if (endDate != null &&
+          pDate.isAfter(endDate.add(const Duration(days: 1)))) {
+        return false;
+      }
       return true;
     }).toList();
 
     double totalEncaisse = 0;
     double totalEnAttente = 0;
+    double totalEchoue = 0;
     int countValide = 0;
     int countAttente = 0;
+    int countEchoue = 0;
     final Map<String, double> parMode = {};
 
     for (final p in filteredPayments) {
@@ -174,6 +194,9 @@ class AccountingExportService {
       } else if (p.status == PaymentStatus.enAttente) {
         totalEnAttente += p.montant;
         countAttente++;
+      } else {
+        totalEchoue += p.montant;
+        countEchoue++;
       }
     }
 
@@ -190,7 +213,9 @@ class AccountingExportService {
           margin: const pw.EdgeInsets.only(bottom: 20),
           padding: const pw.EdgeInsets.only(bottom: 12),
           decoration: const pw.BoxDecoration(
-            border: pw.Border(bottom: pw.BorderSide(color: PdfColors.grey300, width: 1)),
+            border: pw.Border(
+              bottom: pw.BorderSide(color: PdfColors.grey300, width: 1),
+            ),
           ),
           child: pw.Row(
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
@@ -199,12 +224,30 @@ class AccountingExportService {
               pw.Row(
                 children: [
                   if (logoImage != null)
-                    pw.Container(width: 45, height: 45, margin: const pw.EdgeInsets.only(right: 12), child: pw.Image(logoImage)),
+                    pw.Container(
+                      width: 45,
+                      height: 45,
+                      margin: const pw.EdgeInsets.only(right: 12),
+                      child: pw.Image(logoImage),
+                    ),
                   pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
-                      pw.Text('MALINTIC SFP', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold, color: primaryColor)),
-                      pw.Text('Centre d\'Excellence & Formation Professionnelle', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
+                      pw.Text(
+                        'MALINTIC SFP',
+                        style: pw.TextStyle(
+                          fontSize: 18,
+                          fontWeight: pw.FontWeight.bold,
+                          color: primaryColor,
+                        ),
+                      ),
+                      pw.Text(
+                        'Centre d\'Excellence & Formation Professionnelle',
+                        style: const pw.TextStyle(
+                          fontSize: 9,
+                          color: PdfColors.grey700,
+                        ),
+                      ),
                     ],
                   ),
                 ],
@@ -212,8 +255,21 @@ class AccountingExportService {
               pw.Column(
                 crossAxisAlignment: pw.CrossAxisAlignment.end,
                 children: [
-                  pw.Text(title, style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold, color: textDark)),
-                  pw.Text('Date : ${_formatDate(DateTime.now())}', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey600)),
+                  pw.Text(
+                    title,
+                    style: pw.TextStyle(
+                      fontSize: 13,
+                      fontWeight: pw.FontWeight.bold,
+                      color: textDark,
+                    ),
+                  ),
+                  pw.Text(
+                    'Date : ${_formatDate(DateTime.now())}',
+                    style: const pw.TextStyle(
+                      fontSize: 9,
+                      color: PdfColors.grey600,
+                    ),
+                  ),
                 ],
               ),
             ],
@@ -223,13 +279,27 @@ class AccountingExportService {
           margin: const pw.EdgeInsets.only(top: 15),
           padding: const pw.EdgeInsets.only(top: 8),
           decoration: const pw.BoxDecoration(
-            border: pw.Border(top: pw.BorderSide(color: PdfColors.grey300, width: 0.5)),
+            border: pw.Border(
+              top: pw.BorderSide(color: PdfColors.grey300, width: 0.5),
+            ),
           ),
           child: pw.Row(
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
             children: [
-              pw.Text('Malintic - Document comptable officiel et confidentiel', style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey500)),
-              pw.Text('Page ${context.pageNumber} / ${context.pagesCount}', style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600)),
+              pw.Text(
+                'Malintic - Document comptable officiel et confidentiel',
+                style: const pw.TextStyle(
+                  fontSize: 8,
+                  color: PdfColors.grey500,
+                ),
+              ),
+              pw.Text(
+                'Page ${context.pageNumber} / ${context.pagesCount}',
+                style: const pw.TextStyle(
+                  fontSize: 8,
+                  color: PdfColors.grey600,
+                ),
+              ),
             ],
           ),
         ),
@@ -245,24 +315,54 @@ class AccountingExportService {
             child: pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
               children: [
-                _buildKpiPdfItem('Total Encaissé', '${_formatCurrency(totalEncaisse)} FCFA', successColor, '$countValide transaction(s)'),
-                _buildKpiPdfItem('En Attente', '${_formatCurrency(totalEnAttente)} FCFA', warningColor, '$countAttente transaction(s)'),
-                _buildKpiPdfItem('Total Transactions', '${filteredPayments.length}', primaryColor, '$countValide validée(s)'),
+                _buildKpiPdfItem(
+                  'Total Encaissé',
+                  '${_formatCurrency(totalEncaisse)} FCFA',
+                  successColor,
+                  '$countValide transaction(s)',
+                ),
+                _buildKpiPdfItem(
+                  'En Attente',
+                  '${_formatCurrency(totalEnAttente)} FCFA',
+                  warningColor,
+                  '$countAttente transaction(s)',
+                ),
+                _buildKpiPdfItem(
+                  'Total Transactions',
+                  '${filteredPayments.length}',
+                  primaryColor,
+                  '$countValide validée(s)',
+                ),
               ],
             ),
           ),
           pw.SizedBox(height: 18),
+          pw.Text(
+            'Période : ${startDate != null ? _formatDate(startDate) : 'Depuis le début'} au ${endDate != null ? _formatDate(endDate) : _formatDate(DateTime.now())}  •  Rejets : ${_formatCurrency(totalEchoue)} FCFA ($countEchoue)',
+            style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey700),
+          ),
+          pw.SizedBox(height: 12),
 
           // Répartition par mode de paiement
           if (parMode.isNotEmpty) ...[
-            pw.Text('VENTILATION PAR MODE DE RÈGLEMENT', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: textDark)),
+            pw.Text(
+              'VENTILATION PAR MODE DE RÈGLEMENT',
+              style: pw.TextStyle(
+                fontSize: 10,
+                fontWeight: pw.FontWeight.bold,
+                color: textDark,
+              ),
+            ),
             pw.SizedBox(height: 6),
             pw.Wrap(
               spacing: 8,
               runSpacing: 6,
               children: parMode.entries.map((e) {
                 return pw.Container(
-                  padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding: const pw.EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
                   decoration: pw.BoxDecoration(
                     color: PdfColors.white,
                     borderRadius: pw.BorderRadius.circular(6),
@@ -271,8 +371,22 @@ class AccountingExportService {
                   child: pw.Row(
                     mainAxisSize: pw.MainAxisSize.min,
                     children: [
-                      pw.Text('${e.key} : ', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: primaryColor)),
-                      pw.Text('${_formatCurrency(e.value)} FCFA', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: textDark)),
+                      pw.Text(
+                        '${e.key} : ',
+                        style: pw.TextStyle(
+                          fontSize: 9,
+                          fontWeight: pw.FontWeight.bold,
+                          color: primaryColor,
+                        ),
+                      ),
+                      pw.Text(
+                        '${_formatCurrency(e.value)} FCFA',
+                        style: pw.TextStyle(
+                          fontSize: 9,
+                          fontWeight: pw.FontWeight.bold,
+                          color: textDark,
+                        ),
+                      ),
                     ],
                   ),
                 );
@@ -282,7 +396,14 @@ class AccountingExportService {
           ],
 
           // Tableau détaillé des règlements
-          pw.Text('JOURNAL DÉTAILLÉ DES TRANSACTIONS', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: textDark)),
+          pw.Text(
+            'JOURNAL DÉTAILLÉ DES TRANSACTIONS',
+            style: pw.TextStyle(
+              fontSize: 10,
+              fontWeight: pw.FontWeight.bold,
+              color: textDark,
+            ),
+          ),
           pw.SizedBox(height: 8),
           pw.Table(
             border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.5),
@@ -297,7 +418,9 @@ class AccountingExportService {
             children: [
               // Header
               pw.TableRow(
-                decoration: const pw.BoxDecoration(color: PdfColor(0.12, 0.16, 0.23)),
+                decoration: const pw.BoxDecoration(
+                  color: PdfColor(0.12, 0.16, 0.23),
+                ),
                 children: [
                   _buildTableHeader('Date'),
                   _buildTableHeader('Apprenant / Client'),
@@ -312,8 +435,10 @@ class AccountingExportService {
                 final isEven = filteredPayments.indexOf(p) % 2 == 0;
                 final isValide = p.status == PaymentStatus.effectue;
                 final isEchoue = p.status == PaymentStatus.echoue;
-                final userName = usersMap?[p.apprenantId]?.nomComplet ?? p.apprenantId;
-                final formationName = formationsMap?[p.formationId]?.titre ?? p.formationId;
+                final userName =
+                    usersMap?[p.apprenantId]?.nomComplet ?? p.apprenantId;
+                final formationName =
+                    formationsMap?[p.formationId]?.titre ?? p.formationId;
                 final pDate = p.dateEffectuation ?? p.dateCreation;
 
                 final statusColor = isValide
@@ -324,13 +449,21 @@ class AccountingExportService {
                     : (isEchoue ? 'ÉCHOUÉ' : 'EN ATTENTE');
 
                 return pw.TableRow(
-                  decoration: pw.BoxDecoration(color: isEven ? PdfColors.white : const PdfColor(0.97, 0.98, 0.98)),
+                  decoration: pw.BoxDecoration(
+                    color: isEven
+                        ? PdfColors.white
+                        : const PdfColor(0.97, 0.98, 0.98),
+                  ),
                   children: [
                     _buildTableCell(_formatDate(pDate)),
                     _buildTableCell(userName, isBold: true),
                     _buildTableCell(formationName),
                     _buildTableCell(_formatMethodName(p.methode)),
-                    _buildTableCell('${_formatCurrency(p.montant)} F', align: pw.TextAlign.right, isBold: true),
+                    _buildTableCell(
+                      '${_formatCurrency(p.montant)} F',
+                      align: pw.TextAlign.right,
+                      isBold: true,
+                    ),
                     _buildTableCell(
                       statusLabel,
                       color: statusColor,
@@ -371,10 +504,18 @@ class AccountingExportService {
 
     // Récupérer les apprenants valides de cette formation
     final studentMap = {for (final s in students) s.id: s};
-    final validInscriptions = inscriptions.where((i) => i.formationId == formation.id && (i.status == InscriptionStatus.acceptee || i.paiementEffectue)).toList();
+    final validInscriptions = inscriptions
+        .where(
+          (i) =>
+              i.formationId == formation.id &&
+              (i.status == InscriptionStatus.acceptee || i.paiementEffectue),
+        )
+        .toList();
 
     // Déterminer le nombre de colonnes de séances (par défaut 6 cases de présence)
-    final numCols = seances != null && seances.isNotEmpty ? seances.length.clamp(4, 8) : 6;
+    final numCols = seances != null && seances.isNotEmpty
+        ? seances.length.clamp(4, 8)
+        : 6;
 
     pdf.addPage(
       pw.Page(
@@ -392,12 +533,31 @@ class AccountingExportService {
                   pw.Row(
                     children: [
                       if (logoImage != null)
-                        pw.Container(width: 48, height: 48, margin: const pw.EdgeInsets.only(right: 12), child: pw.Image(logoImage)),
+                        pw.Container(
+                          width: 48,
+                          height: 48,
+                          margin: const pw.EdgeInsets.only(right: 12),
+                          child: pw.Image(logoImage),
+                        ),
                       pw.Column(
                         crossAxisAlignment: pw.CrossAxisAlignment.start,
                         children: [
-                          pw.Text('MALINTIC - CENTRE DE FORMATION', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold, color: primaryColor)),
-                          pw.Text('FEUILLE D\'ÉMARGEMENT ET DE PRÉSENCE OFFICIELLE', style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: textDark)),
+                          pw.Text(
+                            'MALINTIC - CENTRE DE FORMATION',
+                            style: pw.TextStyle(
+                              fontSize: 16,
+                              fontWeight: pw.FontWeight.bold,
+                              color: primaryColor,
+                            ),
+                          ),
+                          pw.Text(
+                            'FEUILLE D\'ÉMARGEMENT ET DE PRÉSENCE OFFICIELLE',
+                            style: pw.TextStyle(
+                              fontSize: 11,
+                              fontWeight: pw.FontWeight.bold,
+                              color: textDark,
+                            ),
+                          ),
                         ],
                       ),
                     ],
@@ -405,10 +565,34 @@ class AccountingExportService {
                   pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.end,
                     children: [
-                      pw.Text('Formation : ${formation.titre}', style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: primaryColor)),
-                      if (moduleName != null) pw.Text('Module : $moduleName', style: pw.TextStyle(fontSize: 10, color: textDark)),
-                      if (formateurName != null) pw.Text('Formateur : $formateurName', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
-                      pw.Text('Imprimé le : ${_formatDate(DateTime.now())}', style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600)),
+                      pw.Text(
+                        'Formation : ${formation.titre}',
+                        style: pw.TextStyle(
+                          fontSize: 11,
+                          fontWeight: pw.FontWeight.bold,
+                          color: primaryColor,
+                        ),
+                      ),
+                      if (moduleName != null)
+                        pw.Text(
+                          'Module : $moduleName',
+                          style: pw.TextStyle(fontSize: 10, color: textDark),
+                        ),
+                      if (formateurName != null)
+                        pw.Text(
+                          'Formateur : $formateurName',
+                          style: const pw.TextStyle(
+                            fontSize: 9,
+                            color: PdfColors.grey700,
+                          ),
+                        ),
+                      pw.Text(
+                        'Imprimé le : ${_formatDate(DateTime.now())}',
+                        style: const pw.TextStyle(
+                          fontSize: 8,
+                          color: PdfColors.grey600,
+                        ),
+                      ),
                     ],
                   ),
                 ],
@@ -418,18 +602,25 @@ class AccountingExportService {
               // Tableau de présence
               pw.Expanded(
                 child: pw.Table(
-                  border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.6),
+                  border: pw.TableBorder.all(
+                    color: PdfColors.grey400,
+                    width: 0.6,
+                  ),
                   columnWidths: {
                     0: const pw.FixedColumnWidth(28), // N°
                     1: const pw.FlexColumnWidth(3.2), // Nom & Prénom
                     2: const pw.FlexColumnWidth(2.0), // Téléphone
                     for (int c = 0; c < numCols; c++)
-                      3 + c: const pw.FlexColumnWidth(1.8), // Colonnes de dates/émargement
+                      3 + c: const pw.FlexColumnWidth(
+                        1.8,
+                      ), // Colonnes de dates/émargement
                   },
                   children: [
                     // Ligne En-têtes du tableau
                     pw.TableRow(
-                      decoration: const pw.BoxDecoration(color: PdfColor(0.06, 0.09, 0.16)),
+                      decoration: const pw.BoxDecoration(
+                        color: PdfColor(0.06, 0.09, 0.16),
+                      ),
                       children: [
                         _buildTableHeader('N°', align: pw.TextAlign.center),
                         _buildTableHeader('Nom & Prénom de l\'Apprenant'),
@@ -444,36 +635,58 @@ class AccountingExportService {
                       ],
                     ),
                     // Lignes apprenants
-                    ...List.generate(validInscriptions.isEmpty ? 8 : validInscriptions.length, (index) {
-                      if (index < validInscriptions.length) {
-                        final insc = validInscriptions[index];
-                        final user = studentMap[insc.apprenantId];
-                        final nomComplet = user?.nomComplet ?? '${insc.prenom ?? ""} ${insc.nom ?? ""}'.trim();
-                        final tel = user?.phone ?? insc.telephone ?? '-';
+                    ...List.generate(
+                      validInscriptions.isEmpty ? 8 : validInscriptions.length,
+                      (index) {
+                        if (index < validInscriptions.length) {
+                          final insc = validInscriptions[index];
+                          final user = studentMap[insc.apprenantId];
+                          final nomComplet =
+                              user?.nomComplet ??
+                              '${insc.prenom ?? ""} ${insc.nom ?? ""}'.trim();
+                          final tel = user?.phone ?? insc.telephone ?? '-';
 
-                        return pw.TableRow(
-                          decoration: pw.BoxDecoration(color: index % 2 == 0 ? PdfColors.white : const PdfColor(0.97, 0.98, 0.98)),
-                          children: [
-                            _buildTableCell('${index + 1}', align: pw.TextAlign.center),
-                            _buildTableCell(nomComplet.isEmpty ? 'Apprenant ${index + 1}' : nomComplet, isBold: true),
-                            _buildTableCell(tel),
-                            for (int c = 0; c < numCols; c++)
-                              pw.Container(height: 26), // Case vide pour signature manuscrite
-                          ],
-                        );
-                      } else {
-                        // Ligne vide pour ajout manuel
-                        return pw.TableRow(
-                          children: [
-                            _buildTableCell('${index + 1}', align: pw.TextAlign.center),
-                            _buildTableCell(''),
-                            _buildTableCell(''),
-                            for (int c = 0; c < numCols; c++)
-                              pw.Container(height: 26),
-                          ],
-                        );
-                      }
-                    }),
+                          return pw.TableRow(
+                            decoration: pw.BoxDecoration(
+                              color: index % 2 == 0
+                                  ? PdfColors.white
+                                  : const PdfColor(0.97, 0.98, 0.98),
+                            ),
+                            children: [
+                              _buildTableCell(
+                                '${index + 1}',
+                                align: pw.TextAlign.center,
+                              ),
+                              _buildTableCell(
+                                nomComplet.isEmpty
+                                    ? 'Apprenant ${index + 1}'
+                                    : nomComplet,
+                                isBold: true,
+                              ),
+                              _buildTableCell(tel),
+                              for (int c = 0; c < numCols; c++)
+                                pw.Container(
+                                  height: 26,
+                                ), // Case vide pour signature manuscrite
+                            ],
+                          );
+                        } else {
+                          // Ligne vide pour ajout manuel
+                          return pw.TableRow(
+                            children: [
+                              _buildTableCell(
+                                '${index + 1}',
+                                align: pw.TextAlign.center,
+                              ),
+                              _buildTableCell(''),
+                              _buildTableCell(''),
+                              for (int c = 0; c < numCols; c++)
+                                pw.Container(height: 26),
+                            ],
+                          );
+                        }
+                      },
+                    ),
                   ],
                 ),
               ),
@@ -487,13 +700,23 @@ class AccountingExportService {
                     width: 200,
                     padding: const pw.EdgeInsets.all(8),
                     decoration: pw.BoxDecoration(
-                      border: pw.Border.all(color: PdfColors.grey400, width: 0.5),
+                      border: pw.Border.all(
+                        color: PdfColors.grey400,
+                        width: 0.5,
+                      ),
                       borderRadius: pw.BorderRadius.circular(4),
                     ),
                     child: pw.Column(
                       crossAxisAlignment: pw.CrossAxisAlignment.start,
                       children: [
-                        pw.Text('Visa & Signature du Formateur :', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: textDark)),
+                        pw.Text(
+                          'Visa & Signature du Formateur :',
+                          style: pw.TextStyle(
+                            fontSize: 8,
+                            fontWeight: pw.FontWeight.bold,
+                            color: textDark,
+                          ),
+                        ),
                         pw.SizedBox(height: 24),
                       ],
                     ),
@@ -502,13 +725,23 @@ class AccountingExportService {
                     width: 200,
                     padding: const pw.EdgeInsets.all(8),
                     decoration: pw.BoxDecoration(
-                      border: pw.Border.all(color: PdfColors.grey400, width: 0.5),
+                      border: pw.Border.all(
+                        color: PdfColors.grey400,
+                        width: 0.5,
+                      ),
                       borderRadius: pw.BorderRadius.circular(4),
                     ),
                     child: pw.Column(
                       crossAxisAlignment: pw.CrossAxisAlignment.start,
                       children: [
-                        pw.Text('Direction Pédagogique Malintic :', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: textDark)),
+                        pw.Text(
+                          'Direction Pédagogique Malintic :',
+                          style: pw.TextStyle(
+                            fontSize: 8,
+                            fontWeight: pw.FontWeight.bold,
+                            color: textDark,
+                          ),
+                        ),
                         pw.SizedBox(height: 24),
                       ],
                     ),
@@ -525,25 +758,50 @@ class AccountingExportService {
   }
 
   // Helpers de rendu PDF
-  static pw.Widget _buildKpiPdfItem(String label, String value, PdfColor color, String sub) {
+  static pw.Widget _buildKpiPdfItem(
+    String label,
+    String value,
+    PdfColor color,
+    String sub,
+  ) {
     return pw.Column(
       children: [
-        pw.Text(label, style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey600)),
+        pw.Text(
+          label,
+          style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey600),
+        ),
         pw.SizedBox(height: 3),
-        pw.Text(value, style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold, color: color)),
+        pw.Text(
+          value,
+          style: pw.TextStyle(
+            fontSize: 13,
+            fontWeight: pw.FontWeight.bold,
+            color: color,
+          ),
+        ),
         pw.SizedBox(height: 2),
-        pw.Text(sub, style: const pw.TextStyle(fontSize: 7.5, color: PdfColors.grey500)),
+        pw.Text(
+          sub,
+          style: const pw.TextStyle(fontSize: 7.5, color: PdfColors.grey500),
+        ),
       ],
     );
   }
 
-  static pw.Widget _buildTableHeader(String text, {pw.TextAlign align = pw.TextAlign.left}) {
+  static pw.Widget _buildTableHeader(
+    String text, {
+    pw.TextAlign align = pw.TextAlign.left,
+  }) {
     return pw.Padding(
       padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
       child: pw.Text(
         text,
         textAlign: align,
-        style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold, color: PdfColors.white),
+        style: pw.TextStyle(
+          fontSize: 8.5,
+          fontWeight: pw.FontWeight.bold,
+          color: PdfColors.white,
+        ),
       ),
     );
   }
@@ -559,7 +817,11 @@ class AccountingExportService {
       child: pw.Text(
         text,
         textAlign: align,
-        style: pw.TextStyle(fontSize: 8, fontWeight: isBold ? pw.FontWeight.bold : pw.FontWeight.normal, color: color),
+        style: pw.TextStyle(
+          fontSize: 8,
+          fontWeight: isBold ? pw.FontWeight.bold : pw.FontWeight.normal,
+          color: color,
+        ),
       ),
     );
   }
